@@ -3,3 +3,4 @@ pub mod html;
 pub mod css;
 
 pub use cli::render_cli;
+pub use html::render_html;
