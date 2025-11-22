@@ -5,8 +5,8 @@ use std::fs;
 use naux::lexer::lex;
 use naux::parser::parser::Parser as AstParser;
 use naux::parser::error::format_parse_error;
-use naux::runtime::{eval_script, RuntimeEvent};
-use naux::runtime::error::{format_runtime_error, format_runtime_error_html};
+use naux::runtime::eval_script;
+use naux::runtime::error::format_runtime_error;
 use naux::renderer::{render_cli, render_html};
 
 #[derive(Parser, Debug)]
