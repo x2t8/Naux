@@ -1,0 +1,19 @@
+# Naux Example Program
+
+~ rite Main
+    $name = "Cốt"
+    !say "Xin chào " + $name
+
+    @loop 3
+        !say "Loop..."
+    @loop_end
+
+    !ask "God, what should I do?"
+
+    !ui stack
+        !card
+            !text $name size=22 color=#ff79c6
+            !button "Click me" glow=#ff0066 -> !say "Clicked!"
+        !card_end
+    !ui_end
+~ end
