@@ -1,0 +1,43 @@
+~ fn max($a, $b)
+    ~ if $a > $b
+        ^ $a
+    ~ else
+        ^ $b
+    ~ end
+~ end
+
+~ fn knap($w, $v, $cap)
+    $n = len($w)
+    $dp = []
+    $i = 0
+    ~ loop (($n + 1) * ($cap + 1))
+        $dp = queue_push($dp, 0)
+    ~ end
+
+    $i = 1
+    ~ loop $n
+        $c = 1
+        ~ loop $cap
+            $idx = $i * ($cap + 1) + $c
+            $prev = ($i - 1) * ($cap + 1) + $c
+            $best = $dp[$prev]
+            ~ if $w[$i - 1] <= $c
+                $take_idx = ($i - 1) * ($cap + 1) + ($c - $w[$i - 1])
+                $candidate = $v[$i - 1] + $dp[$take_idx]
+                $best = max($best, $candidate)
+            ~ end
+            $dp[$idx] = $best
+            $c = $c + 1
+        ~ end
+        $i = $i + 1
+    ~ end
+    ^ $dp[$n * ($cap + 1) + $cap]
+~ end
+
+~ rite
+    $weights = [2, 3, 4, 5]
+    $values = [3, 4, 5, 6]
+    $cap = 5
+    $ans = knap($weights, $values, $cap)
+    !say "Knapsack best = " + $ans
+~ end

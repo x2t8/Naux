@@ -16,6 +16,10 @@ pub enum Expr {
     List(Vec<Expr>),
     Map(Vec<(String, Expr)>),
     Var(String),
+    Call {
+        callee: Box<Expr>,
+        args: Vec<Expr>,
+    },
     Binary {
         op: BinaryOp,
         left: Box<Expr>,
@@ -65,6 +69,16 @@ pub enum Stmt {
         body: Vec<Stmt>,
         span: Option<Span>,
     },
+    Unsafe {
+        body: Vec<Stmt>,
+        span: Option<Span>,
+    },
+    FnDef {
+        name: String,
+        params: Vec<String>,
+        body: Vec<Stmt>,
+        span: Option<Span>,
+    },
     Assign {
         name: String,
         expr: Expr,
@@ -97,7 +111,7 @@ pub enum Stmt {
         span: Option<Span>,
     },
     Return {
-        value: Option<Expr>,
+        value: Expr,
         span: Option<Span>,
     },
     Import {

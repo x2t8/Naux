@@ -10,6 +10,7 @@ pub enum TokenKind {
     Arrow,      // ->
     Dot,
     Comma,
+    Caret,
     LParen,
     RParen,
     LBrace,
@@ -20,6 +21,10 @@ pub enum TokenKind {
     Minus,
     Star,
     Slash,
+    Percent,
+    AndAnd,
+    OrOr,
+    Colon,
     Op(String),
 
     // Literals / idents
@@ -31,6 +36,9 @@ pub enum TokenKind {
     If,
     Else,
     Rite,
+    Unsafe,
+    Import,
+    Fn,
     Loop,
     Each,
     While,

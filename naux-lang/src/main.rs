@@ -1,84 +1,136 @@
-use clap::Parser;
+mod cli;
+mod lexer;
+mod parser;
+mod runtime;
+mod renderer;
+mod oracle;
+mod ast;
+mod token;
+mod stdlib;
+mod vm;
 
-use std::fs;
+use clap::{Parser as ClapParser, Subcommand, ValueEnum};
+use colored::*;
 
-use naux::lexer::lex;
-use naux::parser::parser::Parser as AstParser;
-use naux::parser::error::format_parse_error;
-use naux::runtime::eval_script;
-use naux::runtime::error::format_runtime_error;
-use naux::renderer::{render_cli, render_html};
+// ===== Banner đỏ theo yêu cầu =====
+const NAUX_BANNER: &str = r#"
+ _   _    ___  _   _  __   __
+███╗   ██╗  █████╗  ██╗   ██╗██╗  ██╗
+████╗  ██║ ██╔══██╗ ██║   ██║╚██╗██╔╝
+██╔██╗ ██║ ███████║ ██║   ██║ ╚███╔╝ 
+██║╚██╗██║ ██╔══██║ ██║   ██║ ██╔██╗ 
+██║ ╚████║ ██║  ██║ ╚██████╔╝██║╚██╗ 
+╚═╝  ╚═══╝ ╚═╝  ╚═╝  ╚═════╝ ╚═╝ ╚═╝ 
+"#;
 
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Input .nx file
-    #[arg(short, long)]
-    file: Option<String>,
-
-    /// Output mode: json|cli|html
-    #[arg(short, long, default_value = "json")]
-    mode: String,
+fn print_banner() {
+    println!("{}", NAUX_BANNER.truecolor(255, 0, 0).bold());
 }
 
+const NAUX_VERSION: &str = "0.2.0-dev";
+
+/// NAUX CLI top-level
+#[derive(ClapParser, Debug)]
+#[command(
+    name = "naux",
+    about = "NAUX — Nexus Ascendant Unbound eXecutor",
+    disable_version_flag = true,
+)]
+pub struct CliArgs {
+    #[command(subcommand)]
+    pub command: Commands,
+
+    /// Print version and exit
+    #[arg(long)]
+    pub version: bool,
+}
+
+/// Subcommands
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    /// Run a ritual (.nx file)
+    Run {
+        file: String,
+        #[arg(long, default_value = "cli")]
+        mode: RenderMode,
+        /// Execution engine (interp/vm)
+        #[arg(long, default_value = "interp")]
+        engine: EngineMode,
+    },
+
+    /// Build ritual package (future compiler/VM)
+    Build {
+        file: String,
+    },
+
+    /// Format a ritual script
+    Fmt {
+        file: String,
+    },
+
+    /// Initialize a NAUX project scaffold
+    Init {
+        path: String,
+    },
+}
+
+/// Renderer mode
+#[derive(ValueEnum, Debug, Clone)]
+pub enum RenderMode {
+    Cli,
+    Html,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+pub enum EngineMode {
+    Interp,
+    Vm,
+}
 fn main() {
-    let args = Args::parse();
-    let path = match args.file {
-        Some(p) => p,
-        None => {
-            eprintln!("No input file provided. Use --file <path>");
-            std::process::exit(1);
-        }
-    };
+    let args = CliArgs::parse();
 
-    let src = match fs::read_to_string(&path) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Failed to read file {}: {}", path, e);
-            std::process::exit(1);
-        }
-    };
+    // Handle version flag
+    if args.version {
+        println!("NAUX {}", NAUX_VERSION);
+        return;
+    }
 
-    let tokens = match lex(&src) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("Lex error at line {}, col {}: {}", e.span.line, e.span.column, e.message);
-            std::process::exit(1);
-        }
-    };
+    // Show banner
+    print_banner();
 
-    let mut parser = AstParser::new(tokens);
-    let stmts = match parser.parse_script() {
-        Ok(ast) => ast,
-        Err(e) => {
-            eprintln!("{}", format_parse_error(&src, &e));
-            std::process::exit(1);
-        }
-    };
+    match args.command {
+        // ---- RUN ----
+        Commands::Run { file, mode, engine } => {
+            let mode = match mode {
+                RenderMode::Cli => cli::run::RenderMode::Cli,
+                RenderMode::Html => cli::run::RenderMode::Html,
+            };
+            let engine = match engine {
+                EngineMode::Interp => cli::run::EngineMode::Interp,
+                EngineMode::Vm => cli::run::EngineMode::Vm,
+            };
 
-    let (_env, events, runtime_errors) = eval_script(&stmts);
+            std::process::exit(match cli::run::run(&file, mode, engine) {
+                Ok(_) => 0,
+                Err(code) => code,
+            });
+        }
 
-    match args.mode.as_str() {
-        "cli" => {
-            if !runtime_errors.is_empty() {
-                for err in &runtime_errors {
-                    eprintln!("{}", format_runtime_error(&src, err));
-                }
-            }
-            render_cli(&events);
+        // ---- BUILD ----
+        Commands::Build { file } => {
+            println!("{}", "⚒️  Building ritual…".yellow().bold());
+            cli::build::build(&file);
         }
-        "html" => {
-            let html = render_html(&events, &runtime_errors);
-            println!("{}", html);
+
+        // ---- FORMAT ----
+        Commands::Fmt { file } => {
+            println!("{}", "✨ Formatting ritual…".cyan().bold());
+            cli::format::format(&file);
         }
-        "json" | _ => {
-            if !runtime_errors.is_empty() {
-                for err in &runtime_errors {
-                    eprintln!("{}", format_runtime_error(&src, err));
-                }
-            }
-            // crude JSON-ish: just Debug print
-            println!("{:?}", events);
+
+        Commands::Init { path } => {
+            println!("{}", "⚙️  Initializing project…".bright_blue());
+            cli::init::init_project(&path);
         }
     }
 }

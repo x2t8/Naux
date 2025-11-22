@@ -1,8 +1,11 @@
+#![allow(dead_code, unused_imports)]
+
 pub mod value;
 pub mod env;
 pub mod eval;
 pub mod events;
 pub mod error;
+pub mod run;
 
 pub use eval::eval_script;
 pub use events::RuntimeEvent;

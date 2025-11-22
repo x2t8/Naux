@@ -1,5 +1,6 @@
-use crate::runtime::events::RuntimeEvent;
+use crate::parser::error::ParseError;
 use crate::runtime::error::RuntimeError;
+use crate::runtime::events::RuntimeEvent;
 
 pub fn render_html(events: &[RuntimeEvent], errors: &[RuntimeError]) -> String {
     let mut out = String::new();
@@ -24,6 +25,52 @@ pub fn render_html(events: &[RuntimeEvent], errors: &[RuntimeError]) -> String {
     }
     out.push_str("</body></html>");
     out
+}
+
+pub fn render_parser_error(src: &str, err: &ParseError, path: &str) -> String {
+    render_error_page("ParserError", &err.message, src, Some(err.span.clone()), path)
+}
+
+pub fn render_runtime_error(src: &str, err: &RuntimeError, path: &str) -> String {
+    render_error_page("RuntimeError", &err.message, src, err.span.clone(), path)
+}
+
+pub fn render_lex_error(src: &str, err: &crate::token::LexError, path: &str) -> String {
+    render_error_page("LexError", &err.message, src, Some(err.span.clone()), path)
+}
+
+pub fn render_error_page(kind: &str, msg: &str, src: &str, span: Option<crate::ast::Span>, path: &str) -> String {
+    let (line, col, snippet) = if let Some(sp) = span {
+        let (line, col) = byte_to_line_col(src, sp);
+        let snip = src.lines().nth(line.saturating_sub(1)).unwrap_or("").to_string();
+        (line, col, snip)
+    } else {
+        (0, 0, String::new())
+    };
+
+    format!(r#"<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>NAUX — {kind}</title>
+<style>
+body {{ font-family: monospace; background:#111; color:#eee; padding:20px; }}
+pre {{ background:#222; padding:10px; }}
+.error {{ color:#ff5c8a; font-weight:700; }}
+</style>
+</head>
+<body>
+<h1>{kind}</h1>
+<p class="error"><strong>{msg}</strong></p>
+<p>{path}:{line}:{col}</p>
+<pre>{snippet}</pre>
+</body>
+</html>
+"#)
+}
+
+fn byte_to_line_col(_src: &str, span: crate::ast::Span) -> (usize, usize) {
+    (span.line, span.column)
 }
 
 fn html_escape(s: &str) -> String {

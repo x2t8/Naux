@@ -1,0 +1,11 @@
+~ rite
+    $g = graph_new()
+
+    graph_add_edge($g, "A", "B", 1)
+    graph_add_edge($g, "A", "C", 1)
+    graph_add_edge($g, "B", "D", 1)
+    graph_add_edge($g, "C", "D", 1)
+
+    $order = graph_bfs($g, "A")
+    !say to_text($order)
+~ end

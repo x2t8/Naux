@@ -76,6 +76,14 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
                 col += 1;
                 continue;
             }
+            '^' => {
+                tokens.push(Token {
+                    kind: TokenKind::Caret,
+                    span,
+                });
+                col += 1;
+                continue;
+            }
             '+' => {
                 tokens.push(Token { kind: TokenKind::Plus, span });
                 col += 1;
@@ -83,6 +91,11 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
             }
             '*' => {
                 tokens.push(Token { kind: TokenKind::Star, span });
+                col += 1;
+                continue;
+            }
+            '%' => {
+                tokens.push(Token { kind: TokenKind::Percent, span });
                 col += 1;
                 continue;
             }
@@ -155,6 +168,11 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
                 col += 1;
                 continue;
             }
+            ':' => {
+                tokens.push(Token { kind: TokenKind::Colon, span });
+                col += 1;
+                continue;
+            }
             _ => {}
         }
 
@@ -193,6 +211,24 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
             });
             col = cur_col + 1;
             continue;
+        }
+
+        // Logical ops
+        if ch == '&' {
+            if let Some((_, '&')) = chars.peek() {
+                chars.next();
+                tokens.push(Token { kind: TokenKind::AndAnd, span });
+                col += 2;
+                continue;
+            }
+        }
+        if ch == '|' {
+            if let Some((_, '|')) = chars.peek() {
+                chars.next();
+                tokens.push(Token { kind: TokenKind::OrOr, span });
+                col += 2;
+                continue;
+            }
         }
 
         // Comparison ops
@@ -279,6 +315,9 @@ fn keyword_or_ident(s: &str) -> TokenKind {
         "if" => TokenKind::If,
         "else" => TokenKind::Else,
         "rite" => TokenKind::Rite,
+        "unsafe" => TokenKind::Unsafe,
+        "import" => TokenKind::Import,
+        "fn" => TokenKind::Fn,
         "loop" => TokenKind::Loop,
         "each" => TokenKind::Each,
         "while" => TokenKind::While,

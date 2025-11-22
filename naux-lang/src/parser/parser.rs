@@ -12,6 +12,11 @@ impl Parser {
         Self { tokens, pos: 0 }
     }
 
+    pub fn from_tokens(tokens: &[Token]) -> Result<Vec<Stmt>, ParseError> {
+        let mut p = Parser::new(tokens.to_vec());
+        p.parse_script()
+    }
+
     pub fn parse_script(&mut self) -> Result<Vec<Stmt>, ParseError> {
         let mut stmts = Vec::new();
         while !self.is_eof() {
@@ -29,6 +34,8 @@ impl Parser {
             TokenKind::Tilde => self.parse_tilde_stmt(),
             TokenKind::Dollar => self.parse_assign(),
             TokenKind::Bang => self.parse_action_stmt(),
+            TokenKind::Caret => self.parse_return_stmt(),
+            TokenKind::Import => self.parse_import_stmt(),
             _ => Err(self.error_expected("statement")),
         }
     }
@@ -37,6 +44,8 @@ impl Parser {
         self.expect(TokenKind::Tilde)?;
         match &self.current().kind {
             TokenKind::Rite => self.parse_rite_block(),
+            TokenKind::Unsafe => self.parse_unsafe_block(),
+            TokenKind::Fn => self.parse_fn_block(),
             TokenKind::If => self.parse_if_block(),
             TokenKind::Loop => self.parse_loop_block(),
             TokenKind::Each => self.parse_each_block(),
@@ -60,6 +69,55 @@ impl Parser {
         self.expect(TokenKind::Tilde)?;
         self.expect(TokenKind::End)?;
         Ok(Stmt::Rite { body, span: Some(span) })
+    }
+
+    fn parse_unsafe_block(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.current().span.clone();
+        self.expect(TokenKind::Unsafe)?;
+        self.optional_newlines();
+        let mut body = Vec::new();
+        while !(self.current().kind == TokenKind::Tilde && self.peek_kind() == Some(&TokenKind::End)) {
+            if self.is_eof() {
+                return Err(self.error_expected("~ end"));
+            }
+            body.push(self.parse_stmt()?);
+            self.optional_newlines();
+        }
+        self.expect(TokenKind::Tilde)?;
+        self.expect(TokenKind::End)?;
+        Ok(Stmt::Unsafe { body, span: Some(span) })
+    }
+
+    fn parse_fn_block(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.current().span.clone();
+        self.expect(TokenKind::Fn)?;
+        let name = self.parse_ident_string()?;
+        self.expect(TokenKind::LParen)?;
+        let mut params = Vec::new();
+        if self.current().kind != TokenKind::RParen {
+            loop {
+                if self.current().kind == TokenKind::Dollar {
+                    self.advance();
+                }
+                let param = self.parse_ident_string()?;
+                params.push(param);
+                if self.current().kind == TokenKind::Comma {
+                    self.advance();
+                    continue;
+                }
+                break;
+            }
+        }
+        self.expect(TokenKind::RParen)?;
+        self.optional_newlines();
+        let mut body = Vec::new();
+        while !(self.current().kind == TokenKind::Tilde && self.peek_kind() == Some(&TokenKind::End)) {
+            body.push(self.parse_stmt()?);
+            self.optional_newlines();
+        }
+        self.expect(TokenKind::Tilde)?;
+        self.expect(TokenKind::End)?;
+        Ok(Stmt::FnDef { name, params, body, span: Some(span) })
     }
 
     fn parse_if_block(&mut self) -> Result<Stmt, ParseError> {
@@ -143,6 +201,32 @@ impl Parser {
         Ok(Stmt::Assign { name, expr, span: Some(span) })
     }
 
+    fn parse_return_stmt(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.current().span.clone();
+        self.expect(TokenKind::Caret)?;
+        let value = self.parse_expr()?;
+        Ok(Stmt::Return { value, span: Some(span) })
+    }
+
+    fn parse_import_stmt(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.current().span.clone();
+        self.expect(TokenKind::Import)?;
+        let path = match self.current().kind.clone() {
+            TokenKind::StringLit(s) => {
+                self.advance();
+                s
+            }
+            other => {
+                return Err(ParseError {
+                    kind: ParseErrorKind::UnexpectedToken(other),
+                    span: self.current().span.clone(),
+                    message: "Expected string literal after import".into(),
+                })
+            }
+        };
+        Ok(Stmt::Import { module: path, span: Some(span) })
+    }
+
     fn parse_action_stmt(&mut self) -> Result<Stmt, ParseError> {
         let span = self.current().span.clone();
         self.expect(TokenKind::Bang)?;
@@ -209,13 +293,65 @@ impl Parser {
                 let expr = self.parse_unary_expr()?;
                 Ok(Expr::Unary { op: UnaryOp::Neg, expr: Box::new(expr) })
             }
-            _ => self.parse_primary(),
+            _ => self.parse_postfix(),
         }
+    }
+
+    fn parse_postfix(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.parse_primary()?;
+        loop {
+            match self.current().kind {
+                TokenKind::LParen => {
+                    self.advance(); // consume (
+                    let mut args = Vec::new();
+                    if self.current().kind != TokenKind::RParen {
+                        loop {
+                            let arg = self.parse_expr()?;
+                            args.push(arg);
+                            if self.current().kind == TokenKind::Comma {
+                                self.advance();
+                                continue;
+                            }
+                            break;
+                        }
+                    }
+                    self.expect(TokenKind::RParen)?;
+                    expr = Expr::Call {
+                        callee: Box::new(expr),
+                        args,
+                    };
+                }
+                TokenKind::LBracket => {
+                    self.advance();
+                    let idx = self.parse_expr()?;
+                    self.expect(TokenKind::RBracket)?;
+                    expr = Expr::Index {
+                        target: Box::new(expr),
+                        index: Box::new(idx),
+                    };
+                }
+                TokenKind::Dot => {
+                    self.advance();
+                    let field = self.parse_ident_string()?;
+                    expr = Expr::Field {
+                        target: Box::new(expr),
+                        field,
+                    };
+                }
+                _ => break,
+            }
+        }
+        Ok(expr)
     }
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         let tok = self.current().clone();
         match tok.kind {
+            TokenKind::Dollar => {
+                self.advance();
+                let name = self.parse_ident_string()?;
+                Ok(Expr::Var(name))
+            }
             TokenKind::Number(n) => {
                 self.advance();
                 Ok(Expr::Number(n))
@@ -240,6 +376,44 @@ impl Parser {
                 self.expect(TokenKind::RParen)?;
                 Ok(expr)
             }
+            TokenKind::LBracket => {
+                // list literal
+                self.advance();
+                let mut items = Vec::new();
+                if self.current().kind != TokenKind::RBracket {
+                    loop {
+                        let item = self.parse_expr()?;
+                        items.push(item);
+                        if self.current().kind == TokenKind::Comma {
+                            self.advance();
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                self.expect(TokenKind::RBracket)?;
+                Ok(Expr::List(items))
+            }
+            TokenKind::LBrace => {
+                // map literal with ident keys
+                self.advance();
+                let mut entries = Vec::new();
+                if self.current().kind != TokenKind::RBrace {
+                    loop {
+                        let key = self.parse_ident_string()?;
+                        self.expect(TokenKind::Colon)?;
+                        let val = self.parse_expr()?;
+                        entries.push((key, val));
+                        if self.current().kind == TokenKind::Comma {
+                            self.advance();
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                self.expect(TokenKind::RBrace)?;
+                Ok(Expr::Map(entries))
+            }
             _ => Err(self.error_custom("Expected expression")),
         }
     }
@@ -250,12 +424,15 @@ impl Parser {
             TokenKind::Minus => Some((BinaryOp::Sub, 10, false)),
             TokenKind::Star => Some((BinaryOp::Mul, 20, false)),
             TokenKind::Slash => Some((BinaryOp::Div, 20, false)),
+            TokenKind::Percent => Some((BinaryOp::Mod, 20, false)),
             TokenKind::Op(ref s) if s == "==" => Some((BinaryOp::Eq, 5, false)),
             TokenKind::Op(ref s) if s == "!=" => Some((BinaryOp::Ne, 5, false)),
             TokenKind::Op(ref s) if s == ">" => Some((BinaryOp::Gt, 5, false)),
             TokenKind::Op(ref s) if s == "<" => Some((BinaryOp::Lt, 5, false)),
             TokenKind::Op(ref s) if s == ">=" => Some((BinaryOp::Ge, 5, false)),
             TokenKind::Op(ref s) if s == "<=" => Some((BinaryOp::Le, 5, false)),
+            TokenKind::AndAnd => Some((BinaryOp::And, 3, false)),
+            TokenKind::OrOr => Some((BinaryOp::Or, 2, false)),
             _ => None,
         }
     }

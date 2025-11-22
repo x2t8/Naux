@@ -1,0 +1,11 @@
+~ rite
+    $g = graph_new()
+
+    graph_add_edge($g, "A", "B", 1)
+    graph_add_edge($g, "B", "C", 2)
+    graph_add_edge($g, "A", "C", 10)
+    graph_add_edge($g, "C", "D", 1)
+
+    $path = graph_dijkstra($g, "A", "D")
+    !say to_text($path)
+~ end

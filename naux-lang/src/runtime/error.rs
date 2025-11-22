@@ -29,14 +29,29 @@ pub fn format_runtime_error(src: &str, err: &RuntimeError) -> String {
     }
 }
 
-pub fn format_runtime_error_html(src: &str, err: &RuntimeError) -> String {
+pub fn format_runtime_error_with_file(src: &str, err: &RuntimeError, filename: &str) -> String {
+    if let Some(span) = &err.span {
+        let line_idx = span.line.saturating_sub(1);
+        let line_text = src.lines().nth(line_idx).unwrap_or("");
+        let caret = format!("{}^", " ".repeat(span.column.saturating_sub(1)));
+        format!(
+            "Runtime error: {}\n --> {}:{}:{}\n {}\n {}",
+            err.message, filename, span.line, span.column, line_text, caret
+        )
+    } else {
+        format!("Runtime error: {}", err.message)
+    }
+}
+
+pub fn format_runtime_error_html(src: &str, err: &RuntimeError, filename: &str) -> String {
     if let Some(span) = &err.span {
         let line_idx = span.line.saturating_sub(1);
         let line_text = src.lines().nth(line_idx).unwrap_or("");
         let caret = "&nbsp;".repeat(span.column.saturating_sub(1)) + "^";
         format!(
-            "<div class=\"error\"><strong>Runtime error:</strong> {}<br/>line {}, col {}<pre>{}</pre><pre>{}</pre></div>",
+            "<div class=\"error\"><strong>Runtime error:</strong> {}<br/>{}:{}:{}<pre>{}</pre><pre>{}</pre></div>",
             html_escape(&err.message),
+            html_escape(filename),
             span.line,
             span.column,
             html_escape(line_text),
