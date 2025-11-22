@@ -1,1 +1,1 @@
-// TODO: HTML renderer
+// TODO: HTML renderer (stub)

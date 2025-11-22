@@ -16,6 +16,11 @@ pub enum TokenKind {
     RBrace,
     LBracket,
     RBracket,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Op(String),
 
     // Literals / idents
     Ident(String),

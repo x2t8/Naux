@@ -76,6 +76,21 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
                 col += 1;
                 continue;
             }
+            '+' => {
+                tokens.push(Token { kind: TokenKind::Plus, span });
+                col += 1;
+                continue;
+            }
+            '*' => {
+                tokens.push(Token { kind: TokenKind::Star, span });
+                col += 1;
+                continue;
+            }
+            '/' => {
+                tokens.push(Token { kind: TokenKind::Slash, span });
+                col += 1;
+                continue;
+            }
             '(' => {
                 tokens.push(Token {
                     kind: TokenKind::LParen,
@@ -136,6 +151,9 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
                     col += 2;
                     continue;
                 }
+                tokens.push(Token { kind: TokenKind::Minus, span });
+                col += 1;
+                continue;
             }
             _ => {}
         }
@@ -174,6 +192,32 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
                 span,
             });
             col = cur_col + 1;
+            continue;
+        }
+
+        // Comparison ops
+        if input[col.saturating_sub(1)..].starts_with("==")
+            || input[col.saturating_sub(1)..].starts_with("!=")
+            || input[col.saturating_sub(1)..].starts_with(">=")
+            || input[col.saturating_sub(1)..].starts_with("<=")
+        {
+            let start = col.saturating_sub(1);
+            let op = &input[start..start + 2];
+            tokens.push(Token {
+                kind: TokenKind::Op(op.into()),
+                span,
+            });
+            // advance two chars
+            chars.next();
+            col += 2;
+            continue;
+        }
+        if ch == '>' || ch == '<' {
+            tokens.push(Token {
+                kind: TokenKind::Op(ch.to_string()),
+                span,
+            });
+            col += 1;
             continue;
         }
 
