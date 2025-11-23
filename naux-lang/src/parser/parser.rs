@@ -1,4 +1,4 @@
-use crate::ast::{ActionKind, BinaryOp, Expr, Stmt, UnaryOp};
+use crate::ast::{ActionKind, BinaryOp, Expr, ExprKind, Span, Stmt, UnaryOp};
 use crate::parser::error::{ParseError, ParseErrorKind};
 use crate::token::{Token, TokenKind};
 
@@ -55,7 +55,7 @@ impl Parser {
     }
 
     fn parse_rite_block(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::Rite)?;
         self.optional_newlines();
         let mut body = Vec::new();
@@ -68,11 +68,11 @@ impl Parser {
         }
         self.expect(TokenKind::Tilde)?;
         self.expect(TokenKind::End)?;
-        Ok(Stmt::Rite { body, span: Some(span) })
+        Ok(Stmt::Rite { body, span })
     }
 
     fn parse_unsafe_block(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::Unsafe)?;
         self.optional_newlines();
         let mut body = Vec::new();
@@ -85,11 +85,11 @@ impl Parser {
         }
         self.expect(TokenKind::Tilde)?;
         self.expect(TokenKind::End)?;
-        Ok(Stmt::Unsafe { body, span: Some(span) })
+        Ok(Stmt::Unsafe { body, span })
     }
 
     fn parse_fn_block(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::Fn)?;
         let name = self.parse_ident_string()?;
         self.expect(TokenKind::LParen)?;
@@ -117,11 +117,11 @@ impl Parser {
         }
         self.expect(TokenKind::Tilde)?;
         self.expect(TokenKind::End)?;
-        Ok(Stmt::FnDef { name, params, body, span: Some(span) })
+        Ok(Stmt::FnDef { name, params, body, span })
     }
 
     fn parse_if_block(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::If)?;
         let cond = self.parse_expr()?;
         self.optional_newlines();
@@ -142,11 +142,11 @@ impl Parser {
         }
         self.expect(TokenKind::Tilde)?;
         self.expect(TokenKind::End)?;
-        Ok(Stmt::If { cond, then_block, else_block, span: Some(span) })
+        Ok(Stmt::If { cond, then_block, else_block, span })
     }
 
     fn parse_loop_block(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::Loop)?;
         let count = self.parse_expr()?;
         self.optional_newlines();
@@ -157,11 +157,11 @@ impl Parser {
         }
         self.expect(TokenKind::Tilde)?;
         self.expect(TokenKind::End)?;
-        Ok(Stmt::Loop { count, body, span: Some(span) })
+        Ok(Stmt::Loop { count, body, span })
     }
 
     fn parse_each_block(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::Each)?;
         let var = self.parse_ident_string()?;
         self.expect(TokenKind::In)?;
@@ -174,11 +174,11 @@ impl Parser {
         }
         self.expect(TokenKind::Tilde)?;
         self.expect(TokenKind::End)?;
-        Ok(Stmt::Each { var, iter, body, span: Some(span) })
+        Ok(Stmt::Each { var, iter, body, span })
     }
 
     fn parse_while_block(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::While)?;
         let cond = self.parse_expr()?;
         self.optional_newlines();
@@ -189,27 +189,30 @@ impl Parser {
         }
         self.expect(TokenKind::Tilde)?;
         self.expect(TokenKind::End)?;
-        Ok(Stmt::While { cond, body, span: Some(span) })
+        Ok(Stmt::While { cond, body, span })
     }
 
     fn parse_assign(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::Dollar)?;
         let name = self.parse_ident_string()?;
         self.expect(TokenKind::Assign)?;
         let expr = self.parse_expr()?;
-        Ok(Stmt::Assign { name, expr, span: Some(span) })
+        Ok(Stmt::Assign { name, expr, span })
     }
 
     fn parse_return_stmt(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::Caret)?;
+        if self.current().kind == TokenKind::Newline || self.current().kind == TokenKind::Eof {
+            return Ok(Stmt::Return { value: None, span });
+        }
         let value = self.parse_expr()?;
-        Ok(Stmt::Return { value, span: Some(span) })
+        Ok(Stmt::Return { value: Some(value), span })
     }
 
     fn parse_import_stmt(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::Import)?;
         let path = match self.current().kind.clone() {
             TokenKind::StringLit(s) => {
@@ -224,11 +227,11 @@ impl Parser {
                 })
             }
         };
-        Ok(Stmt::Import { module: path, span: Some(span) })
+        Ok(Stmt::Import { module: path, span })
     }
 
     fn parse_action_stmt(&mut self) -> Result<Stmt, ParseError> {
-        let span = self.current().span.clone();
+        let span = Some(self.current().span.clone());
         self.expect(TokenKind::Bang)?;
         let action = match self.current().kind.clone() {
             TokenKind::Ident(name) => {
@@ -249,13 +252,15 @@ impl Parser {
                     other => return Err(self.error_custom(format!("Unknown action '!{}'", other))),
                 }
             }
-            other => return Err(ParseError {
-                kind: ParseErrorKind::UnexpectedToken(other),
-                span: self.current().span.clone(),
-                message: "Expected action name".into(),
-            }),
+            other => {
+                return Err(ParseError {
+                    kind: ParseErrorKind::UnexpectedToken(other),
+                    span: self.current().span.clone(),
+                    message: "Expected action name".into(),
+                })
+            }
         };
-        Ok(Stmt::Action { action, span: Some(span) })
+        Ok(Stmt::Action { action, span })
     }
 
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
@@ -269,29 +274,47 @@ impl Parser {
             if prec < min_prec {
                 break;
             }
+            let op_span = Some(self.current().span.clone());
             self.advance(); // consume op
             let next_min_prec = if right_assoc { prec } else { prec + 1 };
             let right = self.parse_binary_expr(next_min_prec)?;
-            left = Expr::Binary {
-                op,
-                left: Box::new(left),
-                right: Box::new(right),
-            };
+            left = Expr::new(
+                ExprKind::Binary {
+                    op,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                },
+                op_span,
+            );
         }
         Ok(left)
     }
 
     fn parse_unary_expr(&mut self) -> Result<Expr, ParseError> {
-        match self.current().kind {
+        match self.current().kind.clone() {
             TokenKind::Bang => {
+                let span = Some(self.current().span.clone());
                 self.advance();
                 let expr = self.parse_unary_expr()?;
-                Ok(Expr::Unary { op: UnaryOp::Not, expr: Box::new(expr) })
+                Ok(Expr::new(
+                    ExprKind::Unary {
+                        op: UnaryOp::Not,
+                        expr: Box::new(expr),
+                    },
+                    span,
+                ))
             }
             TokenKind::Minus => {
+                let span = Some(self.current().span.clone());
                 self.advance();
                 let expr = self.parse_unary_expr()?;
-                Ok(Expr::Unary { op: UnaryOp::Neg, expr: Box::new(expr) })
+                Ok(Expr::new(
+                    ExprKind::Unary {
+                        op: UnaryOp::Neg,
+                        expr: Box::new(expr),
+                    },
+                    span,
+                ))
             }
             _ => self.parse_postfix(),
         }
@@ -300,8 +323,9 @@ impl Parser {
     fn parse_postfix(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.parse_primary()?;
         loop {
-            match self.current().kind {
+            match self.current().kind.clone() {
                 TokenKind::LParen => {
+                    let span = Some(self.current().span.clone());
                     self.advance(); // consume (
                     let mut args = Vec::new();
                     if self.current().kind != TokenKind::RParen {
@@ -316,27 +340,38 @@ impl Parser {
                         }
                     }
                     self.expect(TokenKind::RParen)?;
-                    expr = Expr::Call {
-                        callee: Box::new(expr),
-                        args,
-                    };
+                    expr = Expr::new(
+                        ExprKind::Call {
+                            callee: Box::new(expr),
+                            args,
+                        },
+                        span,
+                    );
                 }
                 TokenKind::LBracket => {
+                    let span = Some(self.current().span.clone());
                     self.advance();
                     let idx = self.parse_expr()?;
                     self.expect(TokenKind::RBracket)?;
-                    expr = Expr::Index {
-                        target: Box::new(expr),
-                        index: Box::new(idx),
-                    };
+                    expr = Expr::new(
+                        ExprKind::Index {
+                            target: Box::new(expr),
+                            index: Box::new(idx),
+                        },
+                        span,
+                    );
                 }
                 TokenKind::Dot => {
+                    let span = Some(self.current().span.clone());
                     self.advance();
                     let field = self.parse_ident_string()?;
-                    expr = Expr::Field {
-                        target: Box::new(expr),
-                        field,
-                    };
+                    expr = Expr::new(
+                        ExprKind::Field {
+                            target: Box::new(expr),
+                            field,
+                        },
+                        span,
+                    );
                 }
                 _ => break,
             }
@@ -348,26 +383,30 @@ impl Parser {
         let tok = self.current().clone();
         match tok.kind {
             TokenKind::Dollar => {
+                let span = Some(tok.span.clone());
                 self.advance();
                 let name = self.parse_ident_string()?;
-                Ok(Expr::Var(name))
+                Ok(Expr::new(ExprKind::Var(name), span))
             }
             TokenKind::Number(n) => {
+                let span = Some(tok.span.clone());
                 self.advance();
-                Ok(Expr::Number(n))
+                Ok(Expr::new(ExprKind::Number(n), span))
             }
             TokenKind::StringLit(s) => {
+                let span = Some(tok.span.clone());
                 self.advance();
-                Ok(Expr::Text(s))
+                Ok(Expr::new(ExprKind::Text(s), span))
             }
             TokenKind::Ident(name) => {
+                let span = Some(tok.span.clone());
                 self.advance();
                 if name == "true" {
-                    Ok(Expr::Bool(true))
+                    Ok(Expr::new(ExprKind::Bool(true), span))
                 } else if name == "false" {
-                    Ok(Expr::Bool(false))
+                    Ok(Expr::new(ExprKind::Bool(false), span))
                 } else {
-                    Ok(Expr::Var(name))
+                    Ok(Expr::new(ExprKind::Var(name), span))
                 }
             }
             TokenKind::LParen => {
@@ -377,7 +416,7 @@ impl Parser {
                 Ok(expr)
             }
             TokenKind::LBracket => {
-                // list literal
+                let span = Some(tok.span.clone());
                 self.advance();
                 let mut items = Vec::new();
                 if self.current().kind != TokenKind::RBracket {
@@ -392,10 +431,10 @@ impl Parser {
                     }
                 }
                 self.expect(TokenKind::RBracket)?;
-                Ok(Expr::List(items))
+                Ok(Expr::new(ExprKind::List(items), span))
             }
             TokenKind::LBrace => {
-                // map literal with ident keys
+                let span = Some(tok.span.clone());
                 self.advance();
                 let mut entries = Vec::new();
                 if self.current().kind != TokenKind::RBrace {
@@ -412,7 +451,7 @@ impl Parser {
                     }
                 }
                 self.expect(TokenKind::RBrace)?;
-                Ok(Expr::Map(entries))
+                Ok(Expr::new(ExprKind::Map(entries), span))
             }
             _ => Err(self.error_custom("Expected expression")),
         }

@@ -1,13 +1,14 @@
 use crate::parser::parser::Parser;
+use crate::parser::error::format_parse_error;
 use crate::runtime::error::RuntimeError;
 use crate::runtime::eval_script;
 use crate::runtime::events::RuntimeEvent;
 use crate::lexer::lex;
 use crate::ast::Stmt;
 
-pub fn parse_script_wrapper(src: &str) -> Result<Vec<Stmt>, String> {
-    let tokens = lex(src).map_err(|e| format!("Lex error at {}:{}: {}", e.span.line, e.span.column, e.message))?;
-    let ast = Parser::from_tokens(&tokens).map_err(|e| format!("Parse error: {:?}", e.message))?;
+pub fn parse_script_wrapper(src: &str, filename: &str) -> Result<Vec<Stmt>, String> {
+    let tokens = lex(src).map_err(|e| format!("Lex error at {}:{}:{}: {}", filename, e.span.line, e.span.column, e.message))?;
+    let ast = Parser::from_tokens(&tokens).map_err(|e| format_parse_error(src, &e, filename))?;
     Ok(ast)
 }
 

@@ -1,9 +1,9 @@
 use std::cmp::Reverse;
-use std::collections::{BTreeSet, BinaryHeap, VecDeque};
+use std::collections::{BTreeSet, BinaryHeap, HashMap, VecDeque};
 
 use crate::runtime::env::Env;
 use crate::runtime::error::RuntimeError;
-use crate::runtime::value::Value;
+use crate::runtime::value::{NauxObj, Value};
 
 pub fn register_collections(env: &mut Env) {
     env.set_builtin("set_new", set_new);
@@ -32,66 +32,59 @@ pub fn register_collections(env: &mut Env) {
 }
 
 fn set_new(_args: Vec<Value>) -> Result<Value, RuntimeError> {
-    Ok(Value::Set(BTreeSet::new()))
+    Ok(Value::make_set(BTreeSet::new()))
 }
 
 fn set_add(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(RuntimeError::new("set_add(set, value)", None));
     }
-    let mut s = match args[0].clone() {
-        Value::Set(s) => s,
-        _ => return Err(RuntimeError::new("set_add: first arg must be set", None)),
-    };
-    s.insert(args[1].clone());
-    Ok(Value::Set(s))
+    if let Value::RcObj(rc) = &args[0] {
+        if let NauxObj::Set(s) = rc.as_ref() {
+            s.borrow_mut().insert(args[1].clone());
+            return Ok(Value::RcObj(rc.clone()));
+        }
+    }
+    Err(RuntimeError::new("set_add: first arg must be set", None))
 }
 
 fn set_contains(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(RuntimeError::new("set_contains(set, value)", None));
     }
-    let s = match &args[0] {
-        Value::Set(s) => s,
-        _ => return Err(RuntimeError::new("set_contains: first arg must be set", None)),
-    };
-    Ok(Value::Bool(s.contains(&args[1])))
+    if let Value::RcObj(rc) = &args[0] {
+        if let NauxObj::Set(s) = rc.as_ref() {
+            return Ok(Value::Bool(s.borrow().contains(&args[1])));
+        }
+    }
+    Err(RuntimeError::new("set_contains: first arg must be set", None))
 }
 
 fn queue_new(_args: Vec<Value>) -> Result<Value, RuntimeError> {
-    Ok(Value::List(Vec::new())) // using List as queue storage (VecDeque not stored in Value)
+    Ok(Value::make_list(Vec::new())) // using List as queue storage (VecDeque not stored in Value)
 }
 
 fn queue_push(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(RuntimeError::new("queue_push(queue, value)", None));
     }
-    let mut q = match args[0].clone() {
-        Value::List(v) => VecDeque::from(v),
-        _ => return Err(RuntimeError::new("queue_push: first arg must be list/queue", None)),
-    };
+    let mut q = VecDeque::from(expect_list(&args[0], "queue_push: first arg must be list/queue")?);
     q.push_back(args[1].clone());
-    Ok(Value::List(q.into_iter().collect()))
+    Ok(Value::make_list(q.into_iter().collect()))
 }
 
 fn queue_pop(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(RuntimeError::new("queue_pop(queue)", None));
     }
-    let mut q = match args[0].clone() {
-        Value::List(v) => VecDeque::from(v),
-        _ => return Err(RuntimeError::new("queue_pop: first arg must be list/queue", None)),
-    };
+    let mut q = VecDeque::from(expect_list(&args[0], "queue_pop: first arg must be list/queue")?);
     let val = q.pop_front().unwrap_or(Value::Null);
-    Ok(Value::List(q.into_iter().collect::<Vec<_>>()))
-        .map(|updated_queue| Value::List(vec![val, Value::List(match updated_queue {
-            Value::List(v) => v,
-            _ => vec![],
-        })]))
+    let updated = Value::make_list(q.into_iter().collect::<Vec<_>>());
+    Ok(Value::make_list(vec![val, updated]))
 }
 
 fn pq_new(_args: Vec<Value>) -> Result<Value, RuntimeError> {
-    Ok(Value::PriorityQueue(Vec::new()))
+    Ok(Value::make_pq(Vec::new()))
 }
 
 fn pq_push(args: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -100,7 +93,7 @@ fn pq_push(args: Vec<Value>) -> Result<Value, RuntimeError> {
     }
     let mut heap = to_min_heap(args[0].clone())?;
     heap.push(Reverse(args[1].clone()));
-    Ok(Value::PriorityQueue(from_min_heap(heap)))
+    Ok(Value::make_pq(from_min_heap(heap)))
 }
 
 fn pq_pop_min(args: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -109,122 +102,87 @@ fn pq_pop_min(args: Vec<Value>) -> Result<Value, RuntimeError> {
     }
     let mut heap = to_min_heap(args[0].clone())?;
     let val = heap.pop().map(|r| r.0).unwrap_or(Value::Null);
-    Ok(Value::PriorityQueue(from_min_heap(heap)))
-        .map(|updated| Value::List(vec![val, updated]))
+    let updated = Value::make_pq(from_min_heap(heap));
+    Ok(Value::make_list(vec![val, updated]))
 }
 
 fn stack_new(_args: Vec<Value>) -> Result<Value, RuntimeError> {
-    Ok(Value::List(Vec::new()))
+    Ok(Value::make_list(Vec::new()))
 }
 
 fn stack_push(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(RuntimeError::new("stack_push(stack, value)", None));
     }
-    let mut v = match args[0].clone() {
-        Value::List(v) => v,
-        _ => return Err(RuntimeError::new("stack_push: first arg must be list/stack", None)),
-    };
+    let mut v = expect_list(&args[0], "stack_push: first arg must be list/stack")?;
     v.push(args[1].clone());
-    Ok(Value::List(v))
+    Ok(Value::make_list(v))
 }
 
 fn stack_pop(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(RuntimeError::new("stack_pop(stack)", None));
     }
-    let mut v = match args[0].clone() {
-        Value::List(v) => v,
-        _ => return Err(RuntimeError::new("stack_pop: first arg must be list/stack", None)),
-    };
+    let mut v = expect_list(&args[0], "stack_pop: first arg must be list/stack")?;
     let top = v.pop().unwrap_or(Value::Null);
-    Ok(Value::List(vec![top, Value::List(v)]))
+    Ok(Value::make_list(vec![top, Value::make_list(v)]))
 }
 
 fn dsu_new(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(RuntimeError::new("dsu_new(n)", None));
     }
-    let n = match args[0] {
-        Value::Number(n) => n as usize,
-        _ => return Err(RuntimeError::new("dsu_new: n must be number", None)),
-    };
+    let n = args[0].as_i64().ok_or_else(|| RuntimeError::new("dsu_new: n must be number", None))? as usize;
     let mut parent = Vec::with_capacity(n);
     let mut rank = Vec::with_capacity(n);
     for i in 0..n {
-        parent.push(Value::Number(i as f64));
-        rank.push(Value::Number(0.0));
+        parent.push(Value::SmallInt(i as i64));
+        rank.push(Value::SmallInt(0));
     }
     let mut map = std::collections::HashMap::new();
-    map.insert("p".into(), Value::List(parent));
-    map.insert("r".into(), Value::List(rank));
-    Ok(Value::Map(map))
+    map.insert("p".into(), Value::make_list(parent));
+    map.insert("r".into(), Value::make_list(rank));
+    Ok(Value::make_map(map))
 }
 
 fn dsu_find(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 2 {
         return Err(RuntimeError::new("dsu_find(dsu, x)", None));
     }
-    let mut dsu = match args[0].clone() {
-        Value::Map(m) => m,
-        _ => return Err(RuntimeError::new("dsu_find: first arg must be map", None)),
-    };
-    let x = match args[1] {
-        Value::Number(n) => n as usize,
-        _ => return Err(RuntimeError::new("dsu_find: x must be number", None)),
-    };
-    let mut parent = match dsu.get("p") {
-        Some(Value::List(v)) => v.clone(),
-        _ => return Err(RuntimeError::new("dsu_find: missing parent list", None)),
-    };
-    let _rank = match dsu.get("r") {
-        Some(Value::List(v)) => v.clone(),
-        _ => return Err(RuntimeError::new("dsu_find: missing rank list", None)),
-    };
+    let mut dsu = expect_map(&args[0], "dsu_find: first arg must be map")?;
+    let x = args[1].as_i64().ok_or_else(|| RuntimeError::new("dsu_find: x must be number", None))? as usize;
+    let mut parent = expect_list(dsu.get("p").unwrap_or(&Value::Null), "dsu_find: missing parent list")?;
+    let _rank = expect_list(dsu.get("r").unwrap_or(&Value::Null), "dsu_find: missing rank list")?;
     let root = find_internal(x, &mut parent);
-    dsu.insert("p".into(), Value::List(parent));
-    Ok(Value::List(vec![Value::Number(root as f64), Value::Map(dsu)]))
+    dsu.insert("p".into(), Value::make_list(parent));
+    Ok(Value::make_list(vec![Value::SmallInt(root as i64), Value::make_map(dsu)]))
 }
 
 fn dsu_union(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
         return Err(RuntimeError::new("dsu_union(dsu, a, b)", None));
     }
-    let mut dsu = match args[0].clone() {
-        Value::Map(m) => m,
-        _ => return Err(RuntimeError::new("dsu_union: first arg must be map", None)),
-    };
-    let a = match args[1] {
-        Value::Number(n) => n as usize,
-        _ => return Err(RuntimeError::new("dsu_union: a must be number", None)),
-    };
-    let b = match args[2] {
-        Value::Number(n) => n as usize,
-        _ => return Err(RuntimeError::new("dsu_union: b must be number", None)),
-    };
-    let mut parent = match dsu.get("p") {
-        Some(Value::List(v)) => v.clone(),
-        _ => return Err(RuntimeError::new("dsu_union: missing parent list", None)),
-    };
-    let mut rank = match dsu.get("r") {
-        Some(Value::List(v)) => v.clone(),
-        _ => return Err(RuntimeError::new("dsu_union: missing rank list", None)),
-    };
+    let mut dsu = expect_map(&args[0], "dsu_union: first arg must be map")?;
+    let a = args[1].as_i64().ok_or_else(|| RuntimeError::new("dsu_union: a must be number", None))? as usize;
+    let b = args[2].as_i64().ok_or_else(|| RuntimeError::new("dsu_union: b must be number", None))? as usize;
+    let mut parent = expect_list(dsu.get("p").unwrap_or(&Value::Null), "dsu_union: missing parent list")?;
+    let mut rank = expect_list(dsu.get("r").unwrap_or(&Value::Null), "dsu_union: missing rank list")?;
     union_internal(a, b, &mut parent, &mut rank);
-    dsu.insert("p".into(), Value::List(parent));
-    dsu.insert("r".into(), Value::List(rank));
-    Ok(Value::Map(dsu))
+    dsu.insert("p".into(), Value::make_list(parent));
+    dsu.insert("r".into(), Value::make_list(rank));
+    Ok(Value::make_map(dsu))
 }
 
 fn find_internal(x: usize, parent: &mut Vec<Value>) -> usize {
     let px = parent.get(x).and_then(|v| match v {
-        Value::Number(n) => Some(*n as usize),
+        Value::SmallInt(n) => Some(*n as usize),
+        Value::Float(n) => Some(*n as usize),
         _ => None,
     }).unwrap_or(x);
     if px != x {
         let root = find_internal(px, parent);
         if let Some(p) = parent.get_mut(x) {
-            *p = Value::Number(root as f64);
+            *p = Value::SmallInt(root as i64);
         }
         root
     } else {
@@ -238,23 +196,23 @@ fn union_internal(a: usize, b: usize, parent: &mut Vec<Value>, rank: &mut Vec<Va
     if ra == rb {
         return;
     }
-    let ra_rank = rank.get(ra).and_then(|v| match v { Value::Number(n) => Some(*n as i64), _ => None }).unwrap_or(0);
-    let rb_rank = rank.get(rb).and_then(|v| match v { Value::Number(n) => Some(*n as i64), _ => None }).unwrap_or(0);
+    let ra_rank = rank.get(ra).and_then(|v| v.as_i64()).unwrap_or(0);
+    let rb_rank = rank.get(rb).and_then(|v| v.as_i64()).unwrap_or(0);
     if ra_rank < rb_rank {
         if let Some(p) = parent.get_mut(ra) {
-            *p = Value::Number(rb as f64);
+            *p = Value::SmallInt(rb as i64);
         }
     } else if ra_rank > rb_rank {
         if let Some(p) = parent.get_mut(rb) {
-            *p = Value::Number(ra as f64);
+            *p = Value::SmallInt(ra as i64);
         }
     } else {
         if let Some(p) = parent.get_mut(rb) {
-            *p = Value::Number(ra as f64);
+            *p = Value::SmallInt(ra as i64);
         }
         if let Some(r) = rank.get_mut(ra) {
-            if let Value::Number(n) = r {
-                *n += 1.0;
+            if let Value::SmallInt(n) = r {
+                *n += 1;
             }
         }
     }
@@ -264,16 +222,13 @@ fn segtree_new(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 1 {
         return Err(RuntimeError::new("segtree_new(list)", None));
     }
-    let arr = match &args[0] {
-        Value::List(v) => v.clone(),
-        _ => return Err(RuntimeError::new("segtree_new: expected list", None)),
-    };
+    let arr = expect_list(&args[0], "segtree_new: expected list")?;
     let n = arr.len();
     let mut size = 1;
     while size < n {
         size <<= 1;
     }
-    let mut tree = vec![Value::Number(0.0); 2 * size];
+    let mut tree = vec![Value::Float(0.0); 2 * size];
     for i in 0..n {
         tree[size + i] = arr[i].clone();
     }
@@ -281,31 +236,25 @@ fn segtree_new(args: Vec<Value>) -> Result<Value, RuntimeError> {
         tree[i] = add_values(&tree[i << 1], &tree[(i << 1) | 1]);
     }
     let mut map = std::collections::HashMap::new();
-    map.insert("tree".into(), Value::List(tree));
-    map.insert("size".into(), Value::Number(size as f64));
-    Ok(Value::Map(map))
+    map.insert("tree".into(), Value::make_list(tree));
+    map.insert("size".into(), Value::SmallInt(size as i64));
+    Ok(Value::make_map(map))
 }
 
 fn segtree_query(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
         return Err(RuntimeError::new("segtree_query(st, l, r)", None));
     }
-    let st = match &args[0] {
-        Value::Map(m) => m,
-        _ => return Err(RuntimeError::new("segtree_query: st must be map", None)),
-    };
-    let tree = match st.get("tree") {
-        Some(Value::List(v)) => v.clone(),
-        _ => return Err(RuntimeError::new("segtree_query: missing tree", None)),
-    };
-    let size = match st.get("size") {
-        Some(Value::Number(n)) => *n as usize,
-        _ => return Err(RuntimeError::new("segtree_query: missing size", None)),
-    };
-    let mut l = match args[1] { Value::Number(n) => n as i64, _ => return Err(RuntimeError::new("l must be num", None)) } + size as i64;
-    let mut r = match args[2] { Value::Number(n) => n as i64, _ => return Err(RuntimeError::new("r must be num", None)) } + size as i64;
-    let mut res_left = Value::Number(0.0);
-    let mut res_right = Value::Number(0.0);
+    let st = expect_map(&args[0], "segtree_query: st must be map")?;
+    let tree = expect_list(st.get("tree").unwrap_or(&Value::Null), "segtree_query: missing tree")?;
+    let size = st
+        .get("size")
+        .and_then(|v| v.as_i64())
+        .ok_or_else(|| RuntimeError::new("segtree_query: missing size", None))? as usize;
+    let mut l = args[1].as_i64().ok_or_else(|| RuntimeError::new("l must be num", None))? + size as i64;
+    let mut r = args[2].as_i64().ok_or_else(|| RuntimeError::new("r must be num", None))? + size as i64;
+    let mut res_left = Value::Float(0.0);
+    let mut res_right = Value::Float(0.0);
     while l < r {
         if l & 1 == 1 {
             res_left = add_values(&res_left, &tree[l as usize]);
@@ -325,22 +274,13 @@ fn segtree_update(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if args.len() != 3 {
         return Err(RuntimeError::new("segtree_update(st, idx, val)", None));
     }
-    let mut st = match args[0].clone() {
-        Value::Map(m) => m,
-        _ => return Err(RuntimeError::new("segtree_update: st must be map", None)),
-    };
-    let mut tree = match st.get("tree") {
-        Some(Value::List(v)) => v.clone(),
-        _ => return Err(RuntimeError::new("segtree_update: missing tree", None)),
-    };
-    let size = match st.get("size") {
-        Some(Value::Number(n)) => *n as usize,
-        _ => return Err(RuntimeError::new("segtree_update: missing size", None)),
-    };
-    let mut pos = match args[1] {
-        Value::Number(n) => n as usize,
-        _ => return Err(RuntimeError::new("idx must be number", None)),
-    } + size;
+    let mut st = expect_map(&args[0], "segtree_update: st must be map")?;
+    let mut tree = expect_list(st.get("tree").unwrap_or(&Value::Null), "segtree_update: missing tree")?;
+    let size = st
+        .get("size")
+        .and_then(|v| v.as_i64())
+        .ok_or_else(|| RuntimeError::new("segtree_update: missing size", None))? as usize;
+    let mut pos = args[1].as_i64().ok_or_else(|| RuntimeError::new("idx must be number", None))? as usize + size;
     if let Some(p) = tree.get_mut(pos) {
         *p = args[2].clone();
     }
@@ -351,28 +291,49 @@ fn segtree_update(args: Vec<Value>) -> Result<Value, RuntimeError> {
         tree[pos] = add_values(&left, &right);
         pos >>= 1;
     }
-    st.insert("tree".into(), Value::List(tree));
-    Ok(Value::Map(st))
+    st.insert("tree".into(), Value::make_list(tree));
+    Ok(Value::make_map(st))
+}
+
+fn expect_list(val: &Value, msg: &str) -> Result<Vec<Value>, RuntimeError> {
+    if let Value::RcObj(rc) = val {
+        if let NauxObj::List(list) = rc.as_ref() {
+            return Ok(list.borrow().clone());
+        }
+    }
+    Err(RuntimeError::new(msg, None))
+}
+
+fn expect_map(val: &Value, msg: &str) -> Result<HashMap<String, Value>, RuntimeError> {
+    if let Value::RcObj(rc) = val {
+        if let NauxObj::Map(map) = rc.as_ref() {
+            return Ok(map.borrow().clone());
+        }
+    }
+    Err(RuntimeError::new(msg, None))
 }
 
 fn add_values(a: &Value, b: &Value) -> Value {
     match (a, b) {
-        (Value::Number(x), Value::Number(y)) => Value::Number(x + y),
-        _ => Value::Number(0.0),
+        (Value::SmallInt(x), Value::SmallInt(y)) => Value::SmallInt(x + y),
+        (Value::SmallInt(x), Value::Float(y)) => Value::Float(*x as f64 + y),
+        (Value::Float(x), Value::SmallInt(y)) => Value::Float(x + *y as f64),
+        (Value::Float(x), Value::Float(y)) => Value::Float(x + y),
+        _ => Value::Float(0.0),
     }
 }
 
 fn to_min_heap(v: Value) -> Result<BinaryHeap<Reverse<Value>>, RuntimeError> {
-    match v {
-        Value::PriorityQueue(data) => {
+    if let Value::RcObj(rc) = v {
+        if let NauxObj::PriorityQueue(data) = rc.as_ref() {
             let mut heap = BinaryHeap::new();
-            for item in data {
-                heap.push(Reverse(item));
+            for item in data.borrow().iter() {
+                heap.push(Reverse(item.clone()));
             }
-            Ok(heap)
+            return Ok(heap);
         }
-        _ => Err(RuntimeError::new("priority queue expected", None)),
     }
+    Err(RuntimeError::new("priority queue expected", None))
 }
 
 fn from_min_heap(mut heap: BinaryHeap<Reverse<Value>>) -> Vec<Value> {

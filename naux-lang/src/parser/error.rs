@@ -6,6 +6,7 @@ pub enum ParseErrorKind {
     UnexpectedToken(TokenKind),
     ExpectedToken(&'static str),
     UnexpectedEof,
+    BlockMismatch(&'static str),
 }
 
 #[derive(Debug, Clone)]

@@ -5,6 +5,7 @@ pub mod string;
 pub mod graph;
 pub mod collections;
 pub mod algo;
+pub mod test;
 
 use crate::runtime::env::Env;
 
@@ -13,6 +14,7 @@ pub fn register_all(env: &mut Env) {
     collections::register_collections(env);
     math::register_math(env);
     algo::register_algo(env);
+    test::register_tests(env);
     // list::register_list(env);
     // string::register_string(env);
 }

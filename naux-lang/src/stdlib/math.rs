@@ -15,7 +15,8 @@ pub fn register_math(env: &mut Env) {
 
 fn to_i64(v: &Value) -> Result<i64, RuntimeError> {
     match v {
-        Value::Number(n) => Ok(*n as i64),
+        Value::SmallInt(n) => Ok(*n),
+        Value::Float(n) => Ok(*n as i64),
         _ => Err(RuntimeError::new("expected number", None)),
     }
 }
@@ -31,7 +32,7 @@ fn gcd(args: Vec<Value>) -> Result<Value, RuntimeError> {
         b = a % b;
         a = t;
     }
-    Ok(Value::Number(a as f64))
+    Ok(Value::SmallInt(a))
 }
 
 fn lcm(args: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -41,13 +42,13 @@ fn lcm(args: Vec<Value>) -> Result<Value, RuntimeError> {
     let a = to_i64(&args[0])?;
     let b = to_i64(&args[1])?;
     if a == 0 || b == 0 {
-        return Ok(Value::Number(0.0));
+        return Ok(Value::SmallInt(0));
     }
-    let g = gcd(vec![Value::Number(a as f64), Value::Number(b as f64)])?;
-    if let Value::Number(gv) = g {
-        Ok(Value::Number(((a / gv as i64) * b).abs() as f64))
+    let g = gcd(vec![Value::SmallInt(a), Value::SmallInt(b)])?;
+    if let Value::SmallInt(gv) = g {
+        Ok(Value::SmallInt(((a / gv) * b).abs()))
     } else {
-        Ok(Value::Number(0.0))
+        Ok(Value::SmallInt(0))
     }
 }
 
@@ -70,7 +71,7 @@ fn pow_mod(args: Vec<Value>) -> Result<Value, RuntimeError> {
         base = (base * base) % m;
         exp >>= 1;
     }
-    Ok(Value::Number(res as f64))
+    Ok(Value::SmallInt(res))
 }
 
 fn is_prime(args: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -103,7 +104,7 @@ fn sieve(args: Vec<Value>) -> Result<Value, RuntimeError> {
     }
     let n = to_i64(&args[0])?;
     if n < 2 {
-        return Ok(Value::List(vec![]));
+        return Ok(Value::make_list(vec![]));
     }
     let mut is_prime = vec![true; (n + 1) as usize];
     is_prime[0] = false;
@@ -122,8 +123,8 @@ fn sieve(args: Vec<Value>) -> Result<Value, RuntimeError> {
     let mut primes = Vec::new();
     for i in 2..=n {
         if is_prime[i as usize] {
-            primes.push(Value::Number(i as f64));
+            primes.push(Value::SmallInt(i));
         }
     }
-    Ok(Value::List(primes))
+    Ok(Value::make_list(primes))
 }

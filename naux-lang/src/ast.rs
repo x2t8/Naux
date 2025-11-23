@@ -1,15 +1,19 @@
-// TODO: AST definitions
-// AST definitions for NAUX Core
+#![allow(dead_code)]
 
 #[derive(Debug, Clone)]
 pub struct Span {
     pub line: usize,
     pub column: usize,
-    // TODO: extend with file/offset for richer error reporting
 }
 
 #[derive(Debug, Clone)]
-pub enum Expr {
+pub struct Expr {
+    pub kind: ExprKind,
+    pub span: Option<Span>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ExprKind {
     Number(f64),
     Bool(bool),
     Text(String),
@@ -37,7 +41,6 @@ pub enum Expr {
         target: Box<Expr>,
         field: String,
     },
-    // TODO: future Call, function literals
 }
 
 #[derive(Debug, Clone)]
@@ -63,6 +66,7 @@ pub enum UnaryOp {
     Not,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Rite {
@@ -111,16 +115,16 @@ pub enum Stmt {
         span: Option<Span>,
     },
     Return {
-        value: Expr,
+        value: Option<Expr>,
         span: Option<Span>,
     },
     Import {
         module: String,
         span: Option<Span>,
     },
-    // TODO: function defs when needed
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum ActionKind {
     Say {
@@ -145,4 +149,10 @@ pub enum ActionKind {
     Log {
         value: Expr,
     },
+}
+
+impl Expr {
+    pub fn new(kind: ExprKind, span: Option<Span>) -> Self {
+        Self { kind, span }
+    }
 }

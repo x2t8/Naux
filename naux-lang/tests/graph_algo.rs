@@ -42,13 +42,19 @@ fn dijkstra_path() {
     $_ = graph_add_edge($g, "C", "T", 10)
     $path = graph_dijkstra($g, "S", "T")
 "#;
-    assert_eq!(
-        run_and_get(src, "path"),
-        Value::List(vec![
-            Value::Text("S".into()),
-            Value::Text("A".into()),
-            Value::Text("B".into()),
-            Value::Text("T".into()),
-        ])
-    );
+    let expected: std::collections::HashMap<String, Value> = [
+        (
+            "path".into(),
+            Value::List(vec![
+                Value::Text("S".into()),
+                Value::Text("A".into()),
+                Value::Text("B".into()),
+                Value::Text("T".into()),
+            ]),
+        ),
+        ("distance".into(), Value::Number(4.0)),
+    ]
+    .into_iter()
+    .collect();
+    assert_eq!(run_and_get(src, "path"), Value::Map(expected));
 }

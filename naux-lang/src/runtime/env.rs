@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use crate::runtime::value::Value;
+use crate::runtime::value::{NauxObj, Value};
 use crate::runtime::error::RuntimeError;
+use crate::ast::Stmt;
 
 pub type BuiltinFn = fn(Vec<Value>) -> Result<Value, RuntimeError>;
 
@@ -23,6 +24,14 @@ pub struct Env {
     stack: Vec<Scope>,
     builtins: HashMap<String, BuiltinFn>,
     unsafe_stack: Vec<bool>,
+    functions: HashMap<String, FnDef>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FnDef {
+    pub params: Vec<String>,
+    pub body: Vec<Stmt>,
+    pub span: Option<crate::ast::Span>,
 }
 
 impl Env {
@@ -31,6 +40,7 @@ impl Env {
             stack: vec![Scope::new()],
             builtins: HashMap::new(),
             unsafe_stack: vec![false],
+            functions: HashMap::new(),
         };
         register_builtins(&mut env);
         env
@@ -91,6 +101,14 @@ impl Env {
     pub fn is_unsafe(&self) -> bool {
         *self.unsafe_stack.last().unwrap_or(&false)
     }
+
+    pub fn define_fn(&mut self, name: &str, params: Vec<String>, body: Vec<Stmt>, span: Option<crate::ast::Span>) {
+        self.functions.insert(name.to_string(), FnDef { params, body, span });
+    }
+
+    pub fn get_fn(&self, name: &str) -> Option<FnDef> {
+        self.functions.get(name).cloned()
+    }
 }
 
 fn register_builtins(env: &mut Env) {
@@ -102,17 +120,20 @@ fn register_builtins(env: &mut Env) {
 fn builtin_len(args: Vec<Value>) -> Result<Value, RuntimeError> {
     let arg = args.get(0).cloned().unwrap_or(Value::Null);
     let len = match arg {
-        Value::List(v) => v.len(),
-        Value::Text(s) => s.chars().count(),
-        Value::Map(m) => m.len(),
+        Value::RcObj(rc) => match rc.as_ref() {
+            NauxObj::List(v) => v.borrow().len(),
+            NauxObj::Text(s) => s.chars().count(),
+            NauxObj::Map(m) => m.borrow().len(),
+            _ => 0,
+        },
         _ => 0,
     };
-    Ok(Value::Number(len as f64))
+    Ok(Value::SmallInt(len as i64))
 }
 
 fn builtin_to_text(args: Vec<Value>) -> Result<Value, RuntimeError> {
     let arg = args.get(0).cloned().unwrap_or(Value::Null);
-    Ok(Value::Text(format!("{:?}", arg)))
+    Ok(Value::make_text(format!("{:?}", arg)))
 }
 
 fn builtin_index(args: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -122,11 +143,18 @@ fn builtin_index(args: Vec<Value>) -> Result<Value, RuntimeError> {
     let target = args[0].clone();
     let key = args[1].clone();
     match (target, key) {
-        (Value::List(v), Value::Number(n)) => {
-            let i = n as usize;
-            Ok(v.get(i).cloned().unwrap_or(Value::Null))
-        }
-        (Value::Map(m), Value::Text(s)) => Ok(m.get(&s).cloned().unwrap_or(Value::Null)),
+        (Value::RcObj(rc), Value::SmallInt(n)) => match rc.as_ref() {
+            NauxObj::List(v) => Ok(v.borrow().get(n as usize).cloned().unwrap_or(Value::Null)),
+            _ => Err(RuntimeError::new("invalid __index operands", None)),
+        },
+        (Value::RcObj(rc), Value::Float(n)) => match rc.as_ref() {
+            NauxObj::List(v) => Ok(v.borrow().get(n as usize).cloned().unwrap_or(Value::Null)),
+            _ => Err(RuntimeError::new("invalid __index operands", None)),
+        },
+        (Value::RcObj(rc), Value::RcObj(key_rc)) => match (rc.as_ref(), key_rc.as_ref()) {
+            (NauxObj::Map(m), NauxObj::Text(s)) => Ok(m.borrow().get(s).cloned().unwrap_or(Value::Null)),
+            _ => Err(RuntimeError::new("invalid __index operands", None)),
+        },
         _ => Err(RuntimeError::new("invalid __index operands", None)),
     }
 }

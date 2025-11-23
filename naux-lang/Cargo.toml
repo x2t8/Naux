@@ -6,6 +6,13 @@ edition = "2021"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 colored = "2"
+dynasmrt = { version = "1.2", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
 
 [workspace]
 members = ["."]
+
+[features]
+llvm = []
+jit = ["dynasmrt"]

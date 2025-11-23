@@ -8,3 +8,4 @@ pub mod renderer;
 pub mod stdlib;
 pub mod vm;
 pub mod cli;
+pub mod llvm;

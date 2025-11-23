@@ -1,30 +1,89 @@
 use crate::parser::error::ParseError;
-use crate::runtime::error::RuntimeError;
+use crate::renderer::css::BASE_STYLE;
+use crate::runtime::error::{Frame, RuntimeError};
 use crate::runtime::events::RuntimeEvent;
 
 pub fn render_html(events: &[RuntimeEvent], errors: &[RuntimeError]) -> String {
     let mut out = String::new();
-    out.push_str("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>NAUX</title><style>body{background:#0a0a0f;color:#f8f8ff;font-family:'Inter',system-ui,sans-serif;padding:24px;} .say{color:#9efcff;} .ask{color:#ffd166;font-weight:600;} .oracle{color:#8ef1b8;font-weight:700;} .log{color:#888;} .error{color:#ff5c8a;font-weight:700;} pre{background:#111122;padding:8px;border-radius:8px;}</style></head><body>\n");
+    out.push_str("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>NAUX</title><style>");
+    out.push_str(BASE_STYLE);
+    out.push_str("</style></head><body><section class=\"log\">\n");
+
     for e in errors {
         let msg = format!("Runtime error: {}", e.message);
-        out.push_str(&format!("<div class=\"error\">{}</div>\n", html_escape(&msg)));
+        let trace = render_trace(e);
+        out.push_str(&format!(
+            "<div class=\"card\"><h3>RuntimeError</h3><div class=\"error\">{}</div>{}</div>\n",
+            html_escape(&msg),
+            trace
+        ));
     }
+
+    let mut open_card = false;
     for ev in events {
         match ev {
-            RuntimeEvent::Say(msg) => out.push_str(&format!("<p class=\"say\">{}</p>\n", html_escape(msg))),
+            RuntimeEvent::Say(msg) => {
+                ensure_card(&mut out, &mut open_card, "SAY");
+                out.push_str(&format!("<p class=\"say\">{}</p>\n", html_escape(msg)));
+            }
             RuntimeEvent::Ask { prompt, answer } => {
+                ensure_card(&mut out, &mut open_card, "ORACLE");
                 out.push_str(&format!("<p class=\"ask\">? {}</p>\n", html_escape(prompt)));
                 out.push_str(&format!("<p class=\"oracle\">= {}</p>\n", html_escape(answer)));
             }
-            RuntimeEvent::Fetch { target } => out.push_str(&format!("<p class=\"log\">fetch: {}</p>\n", html_escape(target))),
-            RuntimeEvent::Ui { kind, .. } => out.push_str(&format!("<p class=\"log\">ui: {}</p>\n", html_escape(kind))),
-            RuntimeEvent::Text(txt) => out.push_str(&format!("<p>{}</p>\n", html_escape(txt))),
-            RuntimeEvent::Button(lbl) => out.push_str(&format!("<button>{}</button>\n", html_escape(lbl))),
-            RuntimeEvent::Log(msg) => out.push_str(&format!("<p class=\"log\">log: {}</p>\n", html_escape(msg))),
+            RuntimeEvent::Fetch { target } => {
+                ensure_card(&mut out, &mut open_card, "FETCH");
+                out.push_str(&format!("<p class=\"fetch\">~ fetch {}</p>\n", html_escape(target)));
+            }
+            RuntimeEvent::Ui { kind, .. } => {
+                ensure_card(&mut out, &mut open_card, "UI");
+                out.push_str(&format!("<p class=\"ui\">ui: {}</p>\n", html_escape(kind)));
+            }
+            RuntimeEvent::Text(txt) => {
+                ensure_card(&mut out, &mut open_card, "TEXT");
+                out.push_str(&format!("<p class=\"text\">{}</p>\n", html_escape(txt)));
+            }
+            RuntimeEvent::Button(lbl) => {
+                ensure_card(&mut out, &mut open_card, "BUTTON");
+                out.push_str(&format!("<button class=\"button\">{}</button>\n", html_escape(lbl)));
+            }
+            RuntimeEvent::Log(msg) => {
+                ensure_card(&mut out, &mut open_card, "LOG");
+                out.push_str(&format!("<p class=\"log\">{}</p>\n", html_escape(msg)));
+            }
         }
     }
-    out.push_str("</body></html>");
+    if open_card {
+        out.push_str("</div>\n");
+    }
+    out.push_str("</section></body></html>");
     out
+}
+
+fn ensure_card(out: &mut String, open_card: &mut bool, title: &str) {
+    if !*open_card {
+        out.push_str(&format!("<div class=\"card\"><h3>{}</h3>\n", html_escape(title)));
+        *open_card = true;
+    }
+}
+
+fn render_trace(err: &RuntimeError) -> String {
+    if err.trace.is_empty() {
+        return String::new();
+    }
+    let mut items = String::new();
+    for frame in err.trace.iter().rev() {
+        items.push_str(&render_frame(frame));
+    }
+    format!("<ul class=\"log\">{}</ul>", items)
+}
+
+fn render_frame(frame: &Frame) -> String {
+    if let Some(sp) = &frame.span {
+        format!("<li>{} (line {}, col {})</li>", html_escape(&frame.name), sp.line, sp.column)
+    } else {
+        format!("<li>{}</li>", html_escape(&frame.name))
+    }
 }
 
 pub fn render_parser_error(src: &str, err: &ParseError, path: &str) -> String {
@@ -41,7 +100,8 @@ pub fn render_lex_error(src: &str, err: &crate::token::LexError, path: &str) -> 
 
 pub fn render_error_page(kind: &str, msg: &str, src: &str, span: Option<crate::ast::Span>, path: &str) -> String {
     let (line, col, snippet) = if let Some(sp) = span {
-        let (line, col) = byte_to_line_col(src, sp);
+        let line = sp.line;
+        let col = sp.column;
         let snip = src.lines().nth(line.saturating_sub(1)).unwrap_or("").to_string();
         (line, col, snip)
     } else {
@@ -53,24 +113,27 @@ pub fn render_error_page(kind: &str, msg: &str, src: &str, span: Option<crate::a
 <head>
 <meta charset="utf-8" />
 <title>NAUX — {kind}</title>
-<style>
-body {{ font-family: monospace; background:#111; color:#eee; padding:20px; }}
-pre {{ background:#222; padding:10px; }}
-.error {{ color:#ff5c8a; font-weight:700; }}
-</style>
+<style>{css}</style>
 </head>
 <body>
-<h1>{kind}</h1>
-<p class="error"><strong>{msg}</strong></p>
-<p>{path}:{line}:{col}</p>
-<pre>{snippet}</pre>
+<section class="log">
+  <div class="card">
+    <h3>{kind}</h3>
+    <div class="error">{msg}</div>
+    <div class="log">{path}:{line}:{col}</div>
+    <pre class="snippet">{snippet}</pre>
+  </div>
+</section>
 </body>
 </html>
-"#)
-}
-
-fn byte_to_line_col(_src: &str, span: crate::ast::Span) -> (usize, usize) {
-    (span.line, span.column)
+"#,
+    css = BASE_STYLE,
+    kind = html_escape(kind),
+    msg = html_escape(msg),
+    path = html_escape(path),
+    line = line,
+    col = col,
+    snippet = html_escape(&snippet))
 }
 
 fn html_escape(s: &str) -> String {

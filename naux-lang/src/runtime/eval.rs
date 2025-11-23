@@ -1,260 +1,325 @@
 use std::collections::HashMap;
-
-use crate::ast::{ActionKind, BinaryOp, Expr, Stmt, UnaryOp};
-use crate::oracle::query_oracle;
-use crate::runtime::env::Env;
-use crate::runtime::error::RuntimeError;
-use crate::runtime::events::RuntimeEvent;
-use crate::runtime::value::{Function, Value};
-use crate::{lexer::lex, parser::parser::Parser};
 use std::fs;
-use std::rc::Rc;
+
+use crate::ast::{ActionKind, BinaryOp, Expr, ExprKind, Stmt, UnaryOp};
+use crate::lexer::lex;
+use crate::oracle::query_oracle;
+use crate::parser::error::format_parse_error;
+use crate::parser::parser::Parser;
+use crate::runtime::env::{Env, FnDef};
+use crate::runtime::error::{Frame, RuntimeError};
+use crate::runtime::events::RuntimeEvent;
+use crate::runtime::value::{NauxObj, Value};
+use crate::stdlib::register_all;
 
 pub fn eval_script(stmts: &[Stmt]) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
     let mut env = Env::new();
-    crate::stdlib::register_all(&mut env);
+    register_all(&mut env);
     let mut events = Vec::new();
     let mut errors = Vec::new();
+    let mut call_stack: Vec<Frame> = Vec::new();
     for stmt in stmts {
-        if eval_stmt(stmt, &mut env, &mut events, &mut errors).is_some() {
-            break;
+        if eval_stmt(stmt, &mut env, &mut events, &mut errors, &mut call_stack).is_some() {
+            // ignore top-level returns
         }
     }
     (env, events, errors)
 }
 
-fn eval_block(block: &[Stmt], env: &mut Env, events: &mut Vec<RuntimeEvent>, errors: &mut Vec<RuntimeError>) -> Option<Value> {
+fn eval_block(
+    block: &[Stmt],
+    env: &mut Env,
+    events: &mut Vec<RuntimeEvent>,
+    errors: &mut Vec<RuntimeError>,
+    call_stack: &mut Vec<Frame>,
+) -> Option<Value> {
     for stmt in block {
-        if let Some(ret) = eval_stmt(stmt, env, events, errors) {
-            return Some(ret);
+        if let Some(rv) = eval_stmt(stmt, env, events, errors, call_stack) {
+            return Some(rv);
         }
     }
     None
 }
 
-fn eval_stmt(stmt: &Stmt, env: &mut Env, events: &mut Vec<RuntimeEvent>, errors: &mut Vec<RuntimeError>) -> Option<Value> {
+fn eval_stmt(
+    stmt: &Stmt,
+    env: &mut Env,
+    events: &mut Vec<RuntimeEvent>,
+    errors: &mut Vec<RuntimeError>,
+    call_stack: &mut Vec<Frame>,
+) -> Option<Value> {
     match stmt {
-        Stmt::Rite { body, .. } => {
+        Stmt::Rite { body, span } => {
             env.push_scope();
-            let ret = eval_block(body, env, events, errors);
+            call_stack.push(Frame { name: "rite".into(), span: span.clone() });
+            let rv = eval_block(body, env, events, errors, call_stack);
+            call_stack.pop();
             env.pop_scope();
-            ret
+            rv
         }
         Stmt::Unsafe { body, .. } => {
-            env.push_scope();
             env.push_unsafe(true);
-            let ret = eval_block(body, env, events, errors);
+            let rv = eval_block(body, env, events, errors, call_stack);
             env.pop_unsafe();
-            env.pop_scope();
-            ret
+            rv
         }
-        Stmt::FnDef { name, params, body, .. } => {
-            let func = Function { params: params.clone(), body: body.clone() };
-            env.set(name, Value::Function(Rc::new(func)));
+        Stmt::FnDef { name, params, body, span } => {
+            env.define_fn(name, params.clone(), body.clone(), span.clone());
             None
         }
         Stmt::Assign { name, expr, .. } => {
-            let val = eval_expr(expr, env, events, errors);
+            let val = eval_expr(expr, env, events, errors, call_stack);
             env.set(name, val);
+            events.push(RuntimeEvent::Log(format!("set {}", name)));
             None
         }
         Stmt::If { cond, then_block, else_block, .. } => {
-            let c = eval_expr(cond, env, events, errors);
+            let c = eval_expr(cond, env, events, errors, call_stack);
             if c.truthy() {
-                eval_block(then_block, env, events, errors)
+                eval_block(then_block, env, events, errors, call_stack)
             } else {
-                eval_block(else_block, env, events, errors)
+                eval_block(else_block, env, events, errors, call_stack)
             }
         }
         Stmt::Loop { count, body, .. } => {
-            let n = eval_expr(count, env, events, errors);
-            let times = match n {
-                Value::Number(x) if x > 0.0 => x as i64,
-                _ => 0,
-            };
+            let n = eval_expr(count, env, events, errors, call_stack);
+            let times = n.as_f64().filter(|x| *x > 0.0).unwrap_or(0.0) as i64;
             for _ in 0..times {
-                if let Some(ret) = eval_block(body, env, events, errors) {
-                    return Some(ret);
+                if let Some(rv) = eval_block(body, env, events, errors, call_stack) {
+                    return Some(rv);
                 }
             }
             None
         }
-        Stmt::Each { var, iter, body, .. } => {
-            let it = eval_expr(iter, env, events, errors);
-            if let Value::List(items) = it {
-                for v in items {
-                    env.push_scope();
-                    env.set(var, v);
-                    if let Some(ret) = eval_block(body, env, events, errors) {
+        Stmt::Each { var, iter, body, span } => {
+            let it = eval_expr(iter, env, events, errors, call_stack);
+            if let Value::RcObj(rc) = it {
+                if let NauxObj::List(items) = rc.as_ref() {
+                    for v in items.borrow().iter() {
+                        env.push_scope();
+                        env.set(var, v.clone());
+                        if let Some(rv) = eval_block(body, env, events, errors, call_stack) {
+                            env.pop_scope();
+                            return Some(rv);
+                        }
                         env.pop_scope();
-                        return Some(ret);
                     }
-                    env.pop_scope();
+                    return None;
                 }
             }
+            push_error(errors, "Each expects a list to iterate", span.clone(), call_stack);
             None
         }
         Stmt::While { cond, body, .. } => {
             loop {
-                let c = eval_expr(cond, env, events, errors);
+                let c = eval_expr(cond, env, events, errors, call_stack);
                 if !c.truthy() {
                     break;
                 }
-                if let Some(ret) = eval_block(body, env, events, errors) {
-                    return Some(ret);
+                if let Some(rv) = eval_block(body, env, events, errors, call_stack) {
+                    return Some(rv);
                 }
             }
             None
         }
         Stmt::Action { action, .. } => {
-            dispatch_action(action, env, events, errors);
+            dispatch_action(action, env, events, errors, call_stack);
             None
         }
-        Stmt::Return { value, .. } => Some(eval_expr(value, env, events, errors)),
-        Stmt::Import { module, .. } => handle_import(module, env, events, errors),
+        Stmt::Return { value, .. } => {
+            let v = value
+                .as_ref()
+                .map(|e| eval_expr(e, env, events, errors, call_stack))
+                .unwrap_or(Value::Null);
+            Some(v)
+        }
+        Stmt::Import { module, span } => {
+            eval_import(module, env, events, errors, call_stack, span.clone());
+            None
+        }
     }
 }
 
-fn dispatch_action(action: &ActionKind, env: &mut Env, events: &mut Vec<RuntimeEvent>, errors: &mut Vec<RuntimeError>) {
-    match action {
-        ActionKind::Say { value } => {
-            let v = eval_expr(value, env, events, errors);
-            events.push(RuntimeEvent::Say(format!("{:?}", v)));
-        }
-        ActionKind::Ui { kind, props } => {
-            let mut evaluated = Vec::new();
-            for (k, v) in props {
-                evaluated.push((k.clone(), eval_expr(v, env, events, errors)));
+fn eval_expr(
+    expr: &Expr,
+    env: &mut Env,
+    events: &mut Vec<RuntimeEvent>,
+    errors: &mut Vec<RuntimeError>,
+    call_stack: &mut Vec<Frame>,
+) -> Value {
+    match &expr.kind {
+        ExprKind::Number(n) => {
+            if n.fract().abs() < f64::EPSILON {
+                Value::SmallInt(*n as i64)
+            } else {
+                Value::Float(*n)
             }
-            events.push(RuntimeEvent::Ui {
-                kind: kind.clone(),
-                props: evaluated,
-            });
         }
-        ActionKind::Text { value } => {
-            let v = eval_expr(value, env, events, errors);
-            events.push(RuntimeEvent::Text(format!("{:?}", v)));
-        }
-        ActionKind::Button { value } => {
-            let v = eval_expr(value, env, events, errors);
-            events.push(RuntimeEvent::Button(format!("{:?}", v)));
-        }
-        ActionKind::Fetch { target } => {
-            let v = eval_expr(target, env, events, errors);
-            events.push(RuntimeEvent::Fetch {
-                target: format!("{:?}", v),
-            });
-        }
-        ActionKind::Ask { prompt } => {
-            let v = eval_expr(prompt, env, events, errors);
-            events.push(RuntimeEvent::Ask {
-                prompt: format!("{:?}", v),
-                answer: query_oracle(&format!("{:?}", v)),
-            });
-        }
-        ActionKind::Log { value } => {
-            let v = eval_expr(value, env, events, errors);
-            events.push(RuntimeEvent::Log(format!("{:?}", v)));
-        }
-    }
-}
-
-fn eval_expr(expr: &Expr, env: &mut Env, events: &mut Vec<RuntimeEvent>, errors: &mut Vec<RuntimeError>) -> Value {
-    match expr {
-        Expr::Number(n) => Value::Number(*n),
-        Expr::Bool(b) => Value::Bool(*b),
-        Expr::Text(s) => Value::Text(s.clone()),
-        Expr::List(items) => Value::List(items.iter().map(|e| eval_expr(e, env, events, errors)).collect()),
-        Expr::Map(entries) => {
-            let mut map = HashMap::new();
+        ExprKind::Bool(b) => Value::Bool(*b),
+        ExprKind::Text(s) => Value::make_text(s.clone()),
+        ExprKind::List(items) => Value::make_list(items.iter().map(|e| eval_expr(e, env, events, errors, call_stack)).collect()),
+        ExprKind::Map(entries) => {
+            let mut m = HashMap::new();
             for (k, v) in entries {
-                map.insert(k.clone(), eval_expr(v, env, events, errors));
+                m.insert(k.clone(), eval_expr(v, env, events, errors, call_stack));
             }
-            Value::Map(map)
+            Value::make_map(m)
         }
-        Expr::Var(name) => {
-            match env.get(name) {
-                Some(v) => v,
-                None => {
-                    errors.push(RuntimeError::new(format!("Variable not found: {}", name), None));
-                    Value::Null
-                }
+        ExprKind::Var(name) => match env.get(name) {
+            Some(v) => v,
+            None => {
+                push_error(errors, format!("Variable not found: {}", name), expr.span.clone(), call_stack);
+                Value::Null
             }
-        }
-        Expr::Binary { op, left, right } => {
-            let l = eval_expr(left, env, events, errors);
-            let r = eval_expr(right, env, events, errors);
-            eval_binary(op, l, r)
-        }
-        Expr::Unary { op, expr } => {
-            let v = eval_expr(expr, env, events, errors);
-            match op {
-                UnaryOp::Neg => match v {
-                    Value::Number(n) => Value::Number(-n),
-                    _ => Value::Null,
-                },
-                UnaryOp::Not => Value::Bool(!v.truthy()),
-            }
-        }
-        Expr::Index { target, index } => {
-            let t = eval_expr(target, env, events, errors);
-            let idx = eval_expr(index, env, events, errors);
-            match (t, idx) {
-                (Value::List(list), Value::Number(n)) => {
-                    let i = n as usize;
-                    match list.get(i) {
-                        Some(v) => v.clone(),
-                        None => {
-                            if !env.is_unsafe() {
-                                errors.push(RuntimeError::new("Index out of bounds", None));
-                            }
-                            Value::Null
-                        }
+        },
+        ExprKind::Call { callee, args } => {
+            let name_opt = if let ExprKind::Var(n) = &callee.kind { Some(n.clone()) } else { None };
+            let evaled_args: Vec<Value> = args.iter().map(|a| eval_expr(a, env, events, errors, call_stack)).collect();
+            if let Some(name) = name_opt {
+                if let Some(fn_def) = env.get_fn(&name) {
+                    call_stack.push(Frame { name: name.clone(), span: expr.span.clone() });
+                    env.push_scope();
+                    for (i, param) in fn_def.params.iter().enumerate() {
+                        let v = evaled_args.get(i).cloned().unwrap_or(Value::Null);
+                        env.set(param, v);
                     }
-                }
-                (Value::Map(map), Value::Text(key)) => map.get(&key).cloned().unwrap_or(Value::Null),
-                _ => {
-                    if !env.is_unsafe() {
-                        errors.push(RuntimeError::new("Invalid index operation", None));
-                    }
-                    Value::Null
-                }
-            }
-        }
-        Expr::Field { target, field } => {
-            let t = eval_expr(target, env, events, errors);
-            match t {
-                Value::Map(map) => map.get(field).cloned().unwrap_or(Value::Null),
-                _ => {
-                    errors.push(RuntimeError::new("Field access on non-map", None));
-                    Value::Null
-                }
-            }
-        }
-        Expr::Call { callee, args } => {
-            let evaluated_args: Vec<Value> = args.iter().map(|a| eval_expr(a, env, events, errors)).collect();
-            // only support calling builtin by name for now
-            if let Expr::Var(name) = &**callee {
-                if let Some(res) = env.call_builtin(name, evaluated_args.clone()) {
-                    return match res {
+                    let rv = eval_block(&fn_def.body, env, events, errors, call_stack).unwrap_or(Value::Null);
+                    env.pop_scope();
+                    call_stack.pop();
+                    rv
+                } else if let Some(res) = env.call_builtin(&name, evaled_args.clone()) {
+                    match res {
                         Ok(v) => v,
-                        Err(e) => {
+                        Err(mut e) => {
+                            e.trace = call_stack.clone();
                             errors.push(e);
                             Value::Null
                         }
-                    };
-                } else if let Some(Value::Function(f)) = env.get(name) {
-                    return call_user_function(f, evaluated_args, env, events, errors);
+                    }
                 } else {
-                    errors.push(RuntimeError::new(format!("Unknown function: {}", name), None));
-                    return Value::Null;
+                    push_error(errors, format!("Function not found: {}", name), expr.span.clone(), call_stack);
+                    Value::Null
+                }
+            } else {
+                push_error(errors, "Invalid call target", expr.span.clone(), call_stack);
+                Value::Null
+            }
+        }
+        ExprKind::Binary { op, left, right } => {
+            let l = eval_expr(left, env, events, errors, call_stack);
+            let r = eval_expr(right, env, events, errors, call_stack);
+            match op {
+                BinaryOp::Add => match (&l, &r) {
+                    (Value::RcObj(a), Value::RcObj(b)) => match (a.as_ref(), b.as_ref()) {
+                        (NauxObj::Text(la), NauxObj::Text(lb)) => Value::make_text(format!("{}{}", la, lb)),
+                        _ => Value::add(&l, &r),
+                    },
+                    _ => Value::add(&l, &r),
+                },
+                BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => {
+                    let a = l.as_f64();
+                    let b = r.as_f64();
+                    match (a, b) {
+                        (_, Some(0.0)) if matches!(op, BinaryOp::Div) => {
+                            push_error(errors, "Division by zero", expr.span.clone(), call_stack);
+                            Value::Null
+                        }
+                        (Some(x), Some(y)) => match op {
+                            BinaryOp::Sub => Value::Float(x - y),
+                            BinaryOp::Mul => Value::Float(x * y),
+                            BinaryOp::Div => Value::Float(x / y),
+                            BinaryOp::Mod => Value::Float(x % y),
+                            _ => Value::Null,
+                        },
+                        _ => {
+                            push_error(errors, "Type error in binary expression", expr.span.clone(), call_stack);
+                            Value::Null
+                        }
+                    }
+                }
+                BinaryOp::Eq | BinaryOp::Ne => {
+                    let eq = l == r;
+                    Value::Bool(if matches!(op, BinaryOp::Eq) { eq } else { !eq })
+                }
+                BinaryOp::Gt | BinaryOp::Ge | BinaryOp::Lt | BinaryOp::Le => {
+                    let a = l.as_f64();
+                    let b = r.as_f64();
+                    match (a, b) {
+                        (Some(x), Some(y)) => {
+                            let res = match op {
+                                BinaryOp::Gt => x > y,
+                                BinaryOp::Ge => x >= y,
+                                BinaryOp::Lt => x < y,
+                                BinaryOp::Le => x <= y,
+                                _ => false,
+                            };
+                            Value::Bool(res)
+                        }
+                        _ => {
+                            push_error(errors, "Type error in binary expression", expr.span.clone(), call_stack);
+                            Value::Null
+                        }
+                    }
+                }
+                BinaryOp::And | BinaryOp::Or => match (l.truthy(), r.truthy()) {
+                    (la, ra) => Value::Bool(if matches!(op, BinaryOp::And) { la && ra } else { la || ra }),
+                },
+            }
+        }
+        ExprKind::Unary { op, expr: inner } => {
+            let v = eval_expr(inner, env, events, errors, call_stack);
+            match (op, v) {
+                (UnaryOp::Neg, Value::SmallInt(n)) => Value::SmallInt(-n),
+                (UnaryOp::Neg, Value::Float(n)) => Value::Float(-n),
+                (UnaryOp::Not, val) => Value::Bool(!val.truthy()),
+                _ => {
+                    push_error(errors, "Type error in unary expression", expr.span.clone(), call_stack);
+                    Value::Null
                 }
             }
-            let callee_val = eval_expr(callee, env, events, errors);
-            match callee_val {
-                Value::Function(f) => call_user_function(f, evaluated_args, env, events, errors),
+        }
+        ExprKind::Index { target, index } => {
+            let t = eval_expr(target, env, events, errors, call_stack);
+            let idxv = eval_expr(index, env, events, errors, call_stack);
+            match (t, idxv) {
+                (Value::RcObj(rc), Value::RcObj(krc)) => match (rc.as_ref(), krc.as_ref()) {
+                    (NauxObj::Map(map), NauxObj::Text(key)) => map.borrow().get(key).cloned().unwrap_or(Value::Null),
+                    _ => {
+                        push_error(errors, "Invalid index operation", expr.span.clone(), call_stack);
+                        Value::Null
+                    }
+                },
+                (Value::RcObj(rc), idx_val) => {
+                    let idx_opt = match idx_val {
+                        Value::SmallInt(n) => Some(n as usize),
+                        Value::Float(n) => Some(n as usize),
+                        _ => None,
+                    };
+                    if let (Some(idx), NauxObj::List(list)) = (idx_opt, rc.as_ref()) {
+                        list.borrow().get(idx).cloned().unwrap_or(Value::Null)
+                    } else {
+                        push_error(errors, "Invalid index operation", expr.span.clone(), call_stack);
+                        Value::Null
+                    }
+                }
                 _ => {
-                    errors.push(RuntimeError::new("Invalid callee in call", None));
+                    push_error(errors, "Invalid index operation", expr.span.clone(), call_stack);
+                    Value::Null
+                }
+            }
+        }
+        ExprKind::Field { target, field } => {
+            let t = eval_expr(target, env, events, errors, call_stack);
+            match t {
+                Value::RcObj(rc) => match rc.as_ref() {
+                    NauxObj::Map(m) => m.borrow_mut().remove(field).unwrap_or(Value::Null),
+                    _ => {
+                        push_error(errors, "Invalid field access", expr.span.clone(), call_stack);
+                        Value::Null
+                    }
+                },
+                _ => {
+                    push_error(errors, "Invalid field access", expr.span.clone(), call_stack);
                     Value::Null
                 }
             }
@@ -262,89 +327,93 @@ fn eval_expr(expr: &Expr, env: &mut Env, events: &mut Vec<RuntimeEvent>, errors:
     }
 }
 
-fn eval_binary(op: &BinaryOp, l: Value, r: Value) -> Value {
-    match op {
-        BinaryOp::Add => match (l, r) {
-            (Value::Number(a), Value::Number(b)) => Value::Number(a + b),
-            (Value::Text(a), Value::Text(b)) => Value::Text(format!("{}{}", a, b)),
-            (a, b) => Value::Text(format!("{:?}{:?}", a, b)),
-        },
-        BinaryOp::Sub => match (l, r) {
-            (Value::Number(a), Value::Number(b)) => Value::Number(a - b),
-            _ => Value::Null,
-        },
-        BinaryOp::Mul => match (l, r) {
-            (Value::Number(a), Value::Number(b)) => Value::Number(a * b),
-            _ => Value::Null,
-        },
-        BinaryOp::Div => match (l, r) {
-            (Value::Number(a), Value::Number(b)) => Value::Number(a / b),
-            _ => Value::Null,
-        },
-        BinaryOp::Mod => match (l, r) {
-            (Value::Number(a), Value::Number(b)) => Value::Number(a % b),
-            _ => Value::Null,
-        },
-        BinaryOp::Eq => Value::Bool(l == r),
-        BinaryOp::Ne => Value::Bool(l != r),
-        BinaryOp::Gt => match (l, r) {
-            (Value::Number(a), Value::Number(b)) => Value::Bool(a > b),
-            _ => Value::Null,
-        },
-        BinaryOp::Ge => match (l, r) {
-            (Value::Number(a), Value::Number(b)) => Value::Bool(a >= b),
-            _ => Value::Null,
-        },
-        BinaryOp::Lt => match (l, r) {
-            (Value::Number(a), Value::Number(b)) => Value::Bool(a < b),
-            _ => Value::Null,
-        },
-        BinaryOp::Le => match (l, r) {
-            (Value::Number(a), Value::Number(b)) => Value::Bool(a <= b),
-            _ => Value::Null,
-        },
-        BinaryOp::And => Value::Bool(l.truthy() && r.truthy()),
-        BinaryOp::Or => Value::Bool(l.truthy() || r.truthy()),
-    }
-}
-
-fn call_user_function(func: Rc<Function>, args: Vec<Value>, env: &mut Env, events: &mut Vec<RuntimeEvent>, errors: &mut Vec<RuntimeError>) -> Value {
-    env.push_scope();
-    for (i, param) in func.params.iter().enumerate() {
-        let val = args.get(i).cloned().unwrap_or(Value::Null);
-        env.set(param, val);
-    }
-    let ret = eval_block(&func.body, env, events, errors).unwrap_or(Value::Null);
-    env.pop_scope();
-    ret
-}
-
-fn handle_import(module: &str, env: &mut Env, events: &mut Vec<RuntimeEvent>, errors: &mut Vec<RuntimeError>) -> Option<Value> {
-    match fs::read_to_string(module) {
-        Ok(src) => match lex(&src) {
-            Ok(tokens) => match Parser::from_tokens(&tokens) {
-                Ok(stmts) => {
-                    for stmt in stmts {
-                        if let Some(ret) = eval_stmt(&stmt, env, events, errors) {
-                            // imports should not return a value; ignore but stop if return found
-                            return Some(ret);
-                        }
-                    }
-                    None
-                }
-                Err(e) => {
-                    errors.push(RuntimeError::new(format!("Import parse error in {}: {}", module, e.message), Some(e.span)));
-                    None
-                }
-            },
-            Err(e) => {
-                errors.push(RuntimeError::new(format!("Import lex error in {}: {}", module, e.message), Some(e.span)));
-                None
-            }
-        },
-        Err(e) => {
-            errors.push(RuntimeError::new(format!("Failed to import {}: {}", module, e), None));
-            None
+fn dispatch_action(action: &ActionKind, env: &mut Env, events: &mut Vec<RuntimeEvent>, errors: &mut Vec<RuntimeError>, call_stack: &mut Vec<Frame>) {
+    match action {
+        ActionKind::Say { value } => {
+            let v = eval_expr(value, env, events, errors, call_stack);
+            events.push(RuntimeEvent::Say(format_value(&v)));
+        }
+        ActionKind::Ask { prompt } => {
+            let p = eval_expr(prompt, env, events, errors, call_stack);
+            let p_str = format_value(&p);
+            events.push(RuntimeEvent::Ask { prompt: p_str.clone(), answer: String::new() });
+            let ans = query_oracle(&p_str);
+            events.push(RuntimeEvent::Ask { prompt: p_str, answer: ans.clone() });
+        }
+        ActionKind::Fetch { target } => {
+            let t = eval_expr(target, env, events, errors, call_stack);
+            events.push(RuntimeEvent::Fetch { target: format_value(&t) });
+        }
+        ActionKind::Ui { kind, .. } => {
+            events.push(RuntimeEvent::Ui { kind: kind.clone(), props: Vec::new() });
+        }
+        ActionKind::Text { value } => {
+            let v = eval_expr(value, env, events, errors, call_stack);
+            events.push(RuntimeEvent::Text(format_value(&v)));
+        }
+        ActionKind::Button { value } => {
+            let v = eval_expr(value, env, events, errors, call_stack);
+            events.push(RuntimeEvent::Button(format_value(&v)));
+        }
+        ActionKind::Log { value } => {
+            let v = eval_expr(value, env, events, errors, call_stack);
+            events.push(RuntimeEvent::Log(format_value(&v)));
         }
     }
+}
+
+fn eval_import(module: &str, env: &mut Env, events: &mut Vec<RuntimeEvent>, errors: &mut Vec<RuntimeError>, call_stack: &mut Vec<Frame>, span: Option<crate::ast::Span>) {
+    match fs::read_to_string(module) {
+        Ok(src) => {
+            let tokens = match lex(&src) {
+                Ok(t) => t,
+                Err(e) => {
+                    errors.push(RuntimeError::with_trace(format!("Lex error in import {}: {}", module, e.message), Some(e.span), call_stack.clone()));
+                    return;
+                }
+            };
+            let mut parser = Parser::new(tokens);
+            match parser.parse_script() {
+                Ok(ast) => {
+                    for stmt in ast {
+                        match stmt {
+                            Stmt::FnDef { name, params, body, span } => env.define_fn(&name, params, body, span),
+                            Stmt::Assign { name, expr, .. } => {
+                                let v = eval_expr(&expr, env, events, errors, call_stack);
+                                env.set(&name, v);
+                            }
+                            Stmt::Rite { .. } => {
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                Err(e) => {
+                    let msg = format_parse_error(&src, &e, module);
+                    errors.push(RuntimeError::with_trace(msg, e.span.into(), call_stack.clone()));
+                }
+            }
+        }
+        Err(err) => {
+            let msg = format!("Failed to import {}: {}", module, err);
+            errors.push(RuntimeError::with_trace(msg, span, call_stack.clone()));
+        }
+    }
+}
+
+fn format_value(v: &Value) -> String {
+    match v {
+        Value::RcObj(rc) => match rc.as_ref() {
+            NauxObj::Text(s) => s.clone(),
+            _ => format!("{:?}", v),
+        },
+        Value::SmallInt(n) => n.to_string(),
+        Value::Float(n) => n.to_string(),
+        Value::Bool(b) => b.to_string(),
+        other => format!("{:?}", other),
+    }
+}
+
+fn push_error(errors: &mut Vec<RuntimeError>, msg: impl Into<String>, span: Option<crate::ast::Span>, call_stack: &Vec<Frame>) {
+    errors.push(RuntimeError::with_trace(msg, span, call_stack.clone()));
 }

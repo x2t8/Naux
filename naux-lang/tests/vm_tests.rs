@@ -20,6 +20,8 @@ fn vm_matches_interpreter_on_sum() {
     let (env, _events, errs) = eval_script(&ast);
     assert!(errs.is_empty());
     let interp = env.get("s").unwrap_or(Value::Null);
-    let vm = run_vm(&ast).expect("vm run");
-    assert_eq!(interp, vm);
+    let (vm_events, vm_val) = run_vm(&ast).expect("vm run");
+    // Ensure no unexpected runtime events were emitted in this pure snippet.
+    assert!(vm_events.is_empty());
+    assert_eq!(interp, vm_val);
 }
