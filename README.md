@@ -131,3 +131,5 @@ examples/algo_lis.nx
 examples/algo_knapsack.nx
 
 examples/bench.rs
+
+Đã đưa vào canvas cho m rồi ✦
