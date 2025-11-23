@@ -70,11 +70,32 @@ Bytecode instr set defined (Push/Load/Store, arith/logic, Jump/JumpIfFalse, Call
 
 ## CLI
 ```
-naux run examples/hello.nx --mode=cli --engine interp  # interpreter
-naux run examples/graph_bfs.nx --mode=cli --engine vm   # VM (tính toán nhanh)
-naux init myproj
-naux run --example bench                                # benchmark interp vs VM
+naux run                           # chạy main.nx bằng engine mặc định (vm + cli)
+naux run examples/graph_bfs.nx     # chỉ định file, có thể thêm --mode=html --engine=jit
+naux build                         # đọc naux.toml, chạy lại script và xuất build/main.(txt|html)
+naux fmt                           # format toàn bộ main.nx, src/**/*.nx, tests/**/*.nx
+naux fmt --check                   # chỉ kiểm tra không sửa
+naux test                          # chạy tests/**/*_test.nx qua VM và báo PASS/FAIL
+naux dev run path/to/file.nx --engine jit --mode html
+naux dev ir path/to/file.nx        # in IR giữa (IR + bytecode)
+naux dev disasm path/to/file.nx    # in bytecode khung disasm
+naux dev bench path/to/file.nx --engine vm --iters 100
 ```
+
+`naux build` dùng `naux.toml` (ví dụ):
+```toml
+[project]
+name = "myapp"
+version = "0.1.0"
+
+[build]
+entry = "main.nx"
+mode = "cli"    # hoặc html
+engine = "vm"   # hoặc jit
+output = "build"
+```
+
+`naux fmt` dùng AST để in lại đoạn mã theo indent 4 spaces, dấu `~` đầu dòng và chia cách toán tử.
 
 ## Examples
 - `examples/graph_bfs.nx`
