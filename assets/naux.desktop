@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Naux
+Comment=Naux Language IDE
+Exec=naux ide %f
+Icon=application-x-naux
+MimeType=application/x-naux;
+Terminal=true
+Categories=Development;

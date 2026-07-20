@@ -1,0 +1,57 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Naux",
+  "scopeName": "source.naux",
+  "patterns": [
+    {"include": "#comments"},
+    {"include": "#strings"},
+    {"include": "#numbers"},
+    {"include": "#keywords"},
+    {"include": "#builtins"},
+    {"include": "#variables"}
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.naux",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.naux",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {"name": "constant.character.escape.naux", "match": "\\\\."}
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {"name": "constant.numeric.naux", "match": "\\b-?(?:\\d+)(?:\\.\\d+)?\\b"}
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {"name": "keyword.control.naux", "match": "\\b(fn|if|else|loop|each|while|end|rite|unsafe|import)\\b"},
+        {"name": "constant.language.naux", "match": "\\b(true|false|null)\\b"}
+      ]
+    },
+    "builtins": {
+      "patterns": [
+        {"name": "support.function.naux", "match": "\\b(len|to_text|queue_push|queue_pop|segtree_new|segtree_query|segtree_update|graph_new|graph_add_edge|graph_bfs|graph_dijkstra|lis_length|knapsack_01)\\b"}
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {"name": "variable.other.naux", "match": "\\$[A-Za-z_][A-Za-z0-9_]*"},
+        {"name": "keyword.operator.naux", "match": "~|\^|!"}
+      ]
+    }
+  }
+}

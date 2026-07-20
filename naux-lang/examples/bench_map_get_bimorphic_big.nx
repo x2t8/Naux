@@ -1,0 +1,30 @@
+~ fn loop_get($m, $k, $n)
+    $sum = 0
+    $i = 0
+    ~ while $i < $n
+        $v = __index($m, $k)
+        $sum = $sum + $v
+        $v = __index($m, $k)
+        $sum = $sum + $v
+        $i = $i + 1
+    ~ end
+    ^ $sum
+~ end
+
+~ rite
+    $n = 200000
+    $reps = 4
+    $m1 = {long_key_value_123: 1}
+    $m2 = {long_key_value_123: 2}
+    $k = "long_key_value_123"
+
+    $sum = 0
+    $r = 0
+    ~ while $r < $reps
+        $sum = $sum + loop_get($m1, $k, $n)
+        $sum = $sum + loop_get($m2, $k, $n)
+        $r = $r + 1
+    ~ end
+
+    ^ $sum
+~ end

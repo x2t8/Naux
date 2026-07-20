@@ -1,0 +1,32 @@
+{
+  "map_heavy_read": {
+    "required": [
+      "map_const_slot_stable",
+      "map_stable_add_local"
+    ],
+    "optional": [],
+    "forbidden": []
+  },
+  "map_guard_entry_heavy": {
+    "required": [
+      "map_const_slot_stable",
+      "map_stable_add_local"
+    ],
+    "optional": [],
+    "forbidden": []
+  },
+  "map_get_cmp_branch": {
+    "required": [],
+    "optional": [
+      "map_stable_cmp_branch"
+    ],
+    "forbidden": []
+  },
+  "map_get_mul_acc": {
+    "required": [],
+    "optional": [
+      "map_stable_mul_acc"
+    ],
+    "forbidden": []
+  }
+}

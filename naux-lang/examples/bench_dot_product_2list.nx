@@ -1,0 +1,23 @@
+~ rite
+    $n = 100000
+    $reps = 50
+    $arr_a = list_range($n)
+    $arr_b = list_range($n)
+
+    $r = 0
+    $total = 0
+    ~ while $r < $reps
+        $i = 0
+        $sum = 0
+        ~ while $i < len($arr_a)
+            $va = __index($arr_a, $i)
+            $vb = __index($arr_b, $i)
+            $sum = $sum + $va * $vb
+            $i = $i + 1
+        ~ end
+        $total = $total + $sum
+        $r = $r + 1
+    ~ end
+
+    ^ $total
+~ end

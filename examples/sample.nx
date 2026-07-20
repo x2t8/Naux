@@ -1,0 +1,10 @@
+~ rite
+    $name = "Naux"
+    !say "Hello " + $name
+
+    ~ loop 3
+        !say "Loop..."
+    ~ end
+
+    !say "Done."
+~ end

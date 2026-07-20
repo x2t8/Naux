@@ -1,0 +1,16 @@
+[package]
+name = "perf-gates"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "slope_gate"
+path = "src/bin/slope_gate.rs"
+
+[dependencies]
+clap = { version = "4.5.32", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tempfile = "3.13"
+regex = "1.11"
+meval = "0.2"

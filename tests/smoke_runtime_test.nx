@@ -1,0 +1,7 @@
+~ rite
+    $sum = 0
+    ~ loop 3
+        $sum = $sum + 1
+    ~ end
+    !say $sum
+~ end

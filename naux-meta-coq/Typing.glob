@@ -1,0 +1,156 @@
+DIGEST 5b1e4e7e54e6f28cda0284a57db2f339
+FNauxCore.Typing
+R70:73 Coq.Lists.List <> <> lib
+R75:79 Coq.Arith.Arith <> <> lib
+R89:101 Coq.Lists.List ListNotations <> mod
+R134:139 NauxCore.Syntax <> <> lib
+def 154:160 <> context
+R165:168 Coq.Init.Datatypes <> list ind
+R170:171 NauxCore.Syntax <> ty ind
+def 186:195 <> ctx_lookup
+R202:204 Coq.Init.Datatypes <> nat ind
+binder 198:198 <> x:1
+R216:222 NauxCore.Typing <> context def
+binder 208:212 <> Gamma:2
+R227:232 Coq.Init.Datatypes <> option ind
+R234:235 NauxCore.Syntax <> ty ind
+R242:250 Coq.Lists.List <> nth_error def
+R258:258 NauxCore.Typing <> x:1 var
+R252:256 NauxCore.Typing <> Gamma:2 var
+ind 272:279 <> has_type
+constr 318:322 <> T_Var
+constr 411:415 <> T_Abs
+constr 527:531 <> T_App
+constr 661:665 <> T_Let
+constr 790:793 <> T_If
+constr 937:941 <> T_Nat
+constr 997:1002 <> T_Bool
+R290:293 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R283:289 NauxCore.Typing <> context def
+R298:301 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R294:297 NauxCore.Syntax <> term ind
+R304:307 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R302:303 NauxCore.Syntax <> ty ind
+binder 333:337 <> Gamma:5
+binder 339:339 <> x:6
+binder 341:341 <> T:7
+R375:382 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R366:368 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R348:357 NauxCore.Typing <> ctx_lookup def
+R359:359 NauxCore.Typing <> x:6 var
+R361:365 NauxCore.Typing <> Gamma:5 var
+R369:372 Coq.Init.Datatypes <> Some constr
+R374:374 NauxCore.Typing <> T:7 var
+R383:390 NauxCore.Typing <> has_type:3 ind
+R407:407 NauxCore.Typing <> T:7 var
+R399:402 NauxCore.Syntax <> TVar constr
+R404:404 NauxCore.Typing <> x:6 var
+R392:396 NauxCore.Typing <> Gamma:5 var
+binder 426:430 <> Gamma:8
+binder 432:432 <> A:9
+binder 434:437 <> body:10
+binder 439:439 <> B:11
+R474:481 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R446:453 NauxCore.Typing <> has_type:3 ind
+R473:473 NauxCore.Typing <> B:11 var
+R468:471 NauxCore.Typing <> body:10 var
+R457:460 Coq.Init.Datatypes <> ::list_scope:x_'::'_x not
+R456:456 NauxCore.Typing <> A:9 var
+R461:465 NauxCore.Typing <> Gamma:8 var
+R482:489 NauxCore.Typing <> has_type:3 ind
+R512:518 NauxCore.Syntax <> TyArrow constr
+R520:520 NauxCore.Typing <> A:9 var
+R522:522 NauxCore.Typing <> B:11 var
+R498:501 NauxCore.Syntax <> TAbs constr
+R503:503 NauxCore.Typing <> A:9 var
+R505:508 NauxCore.Typing <> body:10 var
+R491:495 NauxCore.Typing <> Gamma:8 var
+binder 542:546 <> Gamma:12
+binder 548:549 <> t1:13
+binder 551:552 <> t2:14
+binder 554:554 <> A:15
+binder 556:556 <> B:16
+R594:601 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R563:570 NauxCore.Typing <> has_type:3 ind
+R582:588 NauxCore.Syntax <> TyArrow constr
+R590:590 NauxCore.Typing <> A:15 var
+R592:592 NauxCore.Typing <> B:16 var
+R578:579 NauxCore.Typing <> t1:13 var
+R572:576 NauxCore.Typing <> Gamma:12 var
+R621:628 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R602:609 NauxCore.Typing <> has_type:3 ind
+R620:620 NauxCore.Typing <> A:15 var
+R617:618 NauxCore.Typing <> t2:14 var
+R611:615 NauxCore.Typing <> Gamma:12 var
+R629:636 NauxCore.Typing <> has_type:3 ind
+R657:657 NauxCore.Typing <> B:16 var
+R645:648 NauxCore.Syntax <> TApp constr
+R650:651 NauxCore.Typing <> t1:13 var
+R653:654 NauxCore.Typing <> t2:14 var
+R638:642 NauxCore.Typing <> Gamma:12 var
+binder 676:680 <> Gamma:17
+binder 682:683 <> t1:18
+binder 685:686 <> t2:19
+binder 688:688 <> A:20
+binder 690:690 <> B:21
+R716:723 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R697:704 NauxCore.Typing <> has_type:3 ind
+R715:715 NauxCore.Typing <> A:20 var
+R712:713 NauxCore.Typing <> t1:18 var
+R706:710 NauxCore.Typing <> Gamma:17 var
+R750:757 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R724:731 NauxCore.Typing <> has_type:3 ind
+R749:749 NauxCore.Typing <> B:21 var
+R746:747 NauxCore.Typing <> t2:19 var
+R735:738 Coq.Init.Datatypes <> ::list_scope:x_'::'_x not
+R734:734 NauxCore.Typing <> A:20 var
+R739:743 NauxCore.Typing <> Gamma:17 var
+R758:765 NauxCore.Typing <> has_type:3 ind
+R786:786 NauxCore.Typing <> B:21 var
+R774:777 NauxCore.Syntax <> TLet constr
+R779:780 NauxCore.Typing <> t1:18 var
+R782:783 NauxCore.Typing <> t2:19 var
+R767:771 NauxCore.Typing <> Gamma:17 var
+binder 804:808 <> Gamma:22
+binder 810:810 <> c:23
+binder 812:812 <> t:24
+binder 814:814 <> e:25
+binder 816:816 <> T:26
+R846:853 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R823:830 NauxCore.Typing <> has_type:3 ind
+R840:845 NauxCore.Syntax <> TyBool constr
+R838:838 NauxCore.Typing <> c:23 var
+R832:836 NauxCore.Typing <> Gamma:22 var
+R872:879 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R854:861 NauxCore.Typing <> has_type:3 ind
+R871:871 NauxCore.Typing <> T:26 var
+R869:869 NauxCore.Typing <> t:24 var
+R863:867 NauxCore.Typing <> Gamma:22 var
+R898:905 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R880:887 NauxCore.Typing <> has_type:3 ind
+R897:897 NauxCore.Typing <> T:26 var
+R895:895 NauxCore.Typing <> e:25 var
+R889:893 NauxCore.Typing <> Gamma:22 var
+R906:913 NauxCore.Typing <> has_type:3 ind
+R933:933 NauxCore.Typing <> T:26 var
+R922:924 NauxCore.Syntax <> TIf constr
+R926:926 NauxCore.Typing <> c:23 var
+R928:928 NauxCore.Typing <> t:24 var
+R930:930 NauxCore.Typing <> e:25 var
+R915:919 NauxCore.Typing <> Gamma:22 var
+binder 952:956 <> Gamma:27
+binder 958:958 <> n:28
+R965:972 NauxCore.Typing <> has_type:3 ind
+R989:993 NauxCore.Syntax <> TyNat constr
+R981:984 NauxCore.Syntax <> TNat constr
+R986:986 NauxCore.Typing <> n:28 var
+R974:978 NauxCore.Typing <> Gamma:27 var
+binder 1013:1017 <> Gamma:29
+binder 1019:1019 <> b:30
+R1026:1033 NauxCore.Typing <> has_type:3 ind
+R1051:1056 NauxCore.Syntax <> TyBool constr
+R1042:1046 NauxCore.Syntax <> TBool constr
+R1048:1048 NauxCore.Typing <> b:30 var
+R1035:1039 NauxCore.Typing <> Gamma:29 var
+scheme 272:279 <> has_type_ind
+scheme 272:279 <> has_type_sind

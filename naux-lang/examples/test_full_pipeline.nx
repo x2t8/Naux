@@ -1,0 +1,32 @@
+// Naux test: full pipeline — refinement + region + effects
+// This tests ALL 3 new analysis passes
+
+$base = 10
+$limit = 100
+
+// Division safety — refinement should prove $base != 0
+$ratio = $limit / $base
+
+// Range arithmetic
+$half = $limit / 2
+
+// Path-sensitive refinement
+? $base > 0
+    $safe_div = $limit / $base
+?
+
+// Function scoping — region inference
+~~ double($n)
+    $result = $n * 2
+    << $result
+~~
+
+// IO effects
+!say "Ratio: " + $ratio
+!say "Half: " + $half
+
+// Loop with region
+loop 5
+    $temp = $base * 2
+    !say $temp
+end

@@ -1,0 +1,37 @@
+{
+  "name": "naux-lang",
+  "displayName": "Naux Language",
+  "description": "Language support and file icon for Naux (.nx)",
+  "version": "0.0.1",
+  "publisher": "naux",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": ["Programming Languages"],
+  "activationEvents": ["onLanguage:naux"],
+  "main": "",
+  "contributes": {
+    "languages": [
+      {
+        "id": "naux",
+        "aliases": ["Naux", "naux"],
+        "extensions": [".nx"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "naux",
+        "scopeName": "source.naux",
+        "path": "./syntaxes/naux.tmLanguage.json"
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "naux-icon-theme",
+        "label": "Naux Icons",
+        "path": "./icons/naux-icon-theme.json"
+      }
+    ]
+  }
+}

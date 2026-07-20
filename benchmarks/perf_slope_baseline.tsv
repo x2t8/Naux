@@ -1,0 +1,7 @@
+# scenario a_ns_per_elem b_ns r2
+dot_runtime_only 0.104776 19083.958 0.9999
+dot_trace_only 0.100182 35.396 1.0000
+map_heavy_read 3.488755 51332.825 1.0000
+map_guard_entry_heavy 3.693594 117672408.313 0.9919
+map_get_mul_acc 6.076365 58990.053 1.0000
+map_get_cmp_branch 7.088107 47471.952 1.0000

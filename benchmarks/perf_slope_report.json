@@ -1,0 +1,214 @@
+{
+  "meta": {
+    "cpu_core": 0,
+    "engine": "jit",
+    "baseline": "/run/media/txuandev/New Volume/David Xu\u00e2n Tools/Kali/LangNaux/benchmarks/perf_slope_baseline.tsv",
+    "min_r2": 0.995,
+    "max_a_regression_pct": 5.0,
+    "max_b_regression_pct": 10.0,
+    "min_baseline_b_ns_for_gate": 100000.0,
+    "require_baseline": true
+  },
+  "scenarios": [
+    {
+      "name": "dot_runtime_only",
+      "mode": "runtime",
+      "points": [
+        {
+          "n": 4096,
+          "time_ns": 41773.0,
+          "elements": 204800.0,
+          "ns_per_elem": 0.2039697265625
+        },
+        {
+          "n": 8192,
+          "time_ns": 69113.0,
+          "elements": 409600.0,
+          "ns_per_elem": 0.16873291015625
+        },
+        {
+          "n": 16384,
+          "time_ns": 67478.0,
+          "elements": 819200.0,
+          "ns_per_elem": 0.08237060546875
+        },
+        {
+          "n": 32768,
+          "time_ns": 115846.0,
+          "elements": 1638400.0,
+          "ns_per_elem": 0.070706787109375
+        },
+        {
+          "n": 65536,
+          "time_ns": 229194.0,
+          "elements": 3276800.0,
+          "ns_per_elem": 0.0699444580078125
+        }
+      ],
+      "a_ns_per_elem": 0.05902290590347782,
+      "b_ns": 29735.875,
+      "r2": 0.9778508239445289,
+      "baseline": {
+        "a_ns_per_elem": 0.063523,
+        "b_ns": 12559.583,
+        "r2": 0.9999
+      },
+      "a_regression_pct": -7.084196427313218,
+      "b_regression_pct": 136.75845766535403,
+      "gate": "FAIL (R2 drop 0.9779 vs baseline 0.9999)"
+    },
+    {
+      "name": "dot_trace_only",
+      "mode": "trace",
+      "points": [
+        {
+          "n": 1024,
+          "time_ns": 82.0,
+          "elements": 1008.0,
+          "ns_per_elem": 0.08134920634920635
+        },
+        {
+          "n": 2048,
+          "time_ns": 141.0,
+          "elements": 2032.0,
+          "ns_per_elem": 0.06938976377952756
+        },
+        {
+          "n": 4096,
+          "time_ns": 257.0,
+          "elements": 4080.0,
+          "ns_per_elem": 0.06299019607843137
+        },
+        {
+          "n": 8192,
+          "time_ns": 534.0,
+          "elements": 8176.0,
+          "ns_per_elem": 0.06531311154598826
+        },
+        {
+          "n": 16384,
+          "time_ns": 1042.0,
+          "elements": 16368.0,
+          "ns_per_elem": 0.06366080156402737
+        },
+        {
+          "n": 32768,
+          "time_ns": 2123.0,
+          "elements": 32752.0,
+          "ns_per_elem": 0.06482046897899366
+        },
+        {
+          "n": 65536,
+          "time_ns": 4091.0,
+          "elements": 65520.0,
+          "ns_per_elem": 0.06243894993894994
+        }
+      ],
+      "a_ns_per_elem": 0.06250486115824962,
+      "b_ns": 21.1954800773824,
+      "r2": 0.9996852836232195,
+      "baseline": {
+        "a_ns_per_elem": 0.061423,
+        "b_ns": 21.557,
+        "r2": 1.0
+      },
+      "a_regression_pct": 1.7613290758341635,
+      "b_regression_pct": -1.6770419010882758,
+      "gate": "PASS"
+    },
+    {
+      "name": "map_heavy_read",
+      "mode": "runtime",
+      "points": [
+        {
+          "n": 1000,
+          "time_ns": 56783.0,
+          "elements": 8000.0,
+          "ns_per_elem": 7.097875
+        },
+        {
+          "n": 4000,
+          "time_ns": 136744.0,
+          "elements": 32000.0,
+          "ns_per_elem": 4.27325
+        },
+        {
+          "n": 16000,
+          "time_ns": 440238.0,
+          "elements": 128000.0,
+          "ns_per_elem": 3.439359375
+        },
+        {
+          "n": 64000,
+          "time_ns": 1665987.0,
+          "elements": 512000.0,
+          "ns_per_elem": 3.253880859375
+        },
+        {
+          "n": 256000,
+          "time_ns": 6514557.0,
+          "elements": 2048000.0,
+          "ns_per_elem": 3.18093603515625
+        }
+      ],
+      "a_ns_per_elem": 3.164233198924731,
+      "b_ns": 36456.166666666744,
+      "r2": 0.9999959327363502,
+      "baseline": {
+        "a_ns_per_elem": 4.565634,
+        "b_ns": 62564.833,
+        "r2": 1.0
+      },
+      "a_regression_pct": -30.69454978378181,
+      "b_regression_pct": -41.73057783648724,
+      "gate": "PASS"
+    },
+    {
+      "name": "map_guard_entry_heavy",
+      "mode": "runtime",
+      "points": [
+        {
+          "n": 16,
+          "time_ns": 82641240.0,
+          "elements": 320000.0,
+          "ns_per_elem": 258.253875
+        },
+        {
+          "n": 64,
+          "time_ns": 81225879.0,
+          "elements": 1280000.0,
+          "ns_per_elem": 63.45771796875
+        },
+        {
+          "n": 256,
+          "time_ns": 95465295.0,
+          "elements": 5120000.0,
+          "ns_per_elem": 18.6455654296875
+        },
+        {
+          "n": 1024,
+          "time_ns": 144385742.0,
+          "elements": 20480000.0,
+          "ns_per_elem": 7.05008505859375
+        },
+        {
+          "n": 2048,
+          "time_ns": 212499753.0,
+          "elements": 40960000.0,
+          "ns_per_elem": 5.187982250976562
+        }
+      ],
+      "a_ns_per_elem": 3.2442190027463353,
+      "b_ns": 79018388.35456195,
+      "r2": 0.9990473562256406,
+      "baseline": {
+        "a_ns_per_elem": 4.765233,
+        "b_ns": 104518394.456,
+        "r2": 0.998
+      },
+      "a_regression_pct": -31.918984806276313,
+      "b_regression_pct": -24.397625158864262,
+      "gate": "PASS"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+~ rite main
+    $a = [1, 2, 3]
+    $b = [4, 5, 6]
+
+    $conv = fft_convolve($a, $b)
+
+    !say "FFT convolution demo"
+    !say "input a: [1, 2, 3]"
+    !say "input b: [4, 5, 6]"
+    !say "expected: [4, 13, 28, 27, 18]"
+    !say "computed:"
+    !say $conv
+~ end

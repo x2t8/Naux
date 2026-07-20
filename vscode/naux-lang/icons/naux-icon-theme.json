@@ -1,0 +1,13 @@
+{
+  "iconDefinitions": {
+    "naux": {
+      "iconPath": "./NauxLang.png"
+    }
+  },
+  "fileExtensions": {
+    "nx": "naux"
+  },
+  "languageIds": {
+    "naux": "naux"
+  }
+}

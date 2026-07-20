@@ -1,0 +1,33 @@
+~ rite
+    $n = 200000
+    $reps = 4
+    $m1 = {long_key_value_123: 0}
+    $m2 = {long_key_value_123: 0}
+    $k = "long_key_value_123"
+    $m = $m1
+
+    $r = 0
+    ~ while $r < $reps
+        $phase = 0
+        ~ while $phase < 2
+            ~ if $phase == 0
+                $m = $m1
+            ~ else
+                $m = $m2
+            ~ end
+            $i = 0
+            ~ while $i < $n
+                $tmp = $i + 1
+                $__ = __setindex($m, $k, $tmp)
+                $tmp = $tmp + 1
+                $__ = __setindex($m, $k, $tmp)
+                $__ = __setindex($m, $k, $i)
+                $i = $i + 1
+            ~ end
+            $phase = $phase + 1
+        ~ end
+        $r = $r + 1
+    ~ end
+
+    ^ $n
+~ end

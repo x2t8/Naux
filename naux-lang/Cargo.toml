@@ -1,0 +1,16 @@
+[package]
+name = "naux"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "naux"
+path = "src/lib.rs"
+
+[[bin]]
+name = "naux"
+path = "src/main.rs"
+
+[dependencies]
+egg = "0.10"

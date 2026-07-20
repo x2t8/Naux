@@ -1,0 +1,4 @@
+# scenario compute_median_ns
+dot_runtime_n512 23814
+dot_runtime_n1024 24592
+dot_runtime_n2048 29369

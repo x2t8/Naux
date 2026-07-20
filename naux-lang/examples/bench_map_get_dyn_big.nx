@@ -1,0 +1,22 @@
+~ rite
+    $n = 200000
+    $reps = 5
+    $m = {long_key_value_123: 1}
+    $k = "long_key_value_123"
+
+    $sum = 0
+    $r = 0
+    ~ while $r < $reps
+        $i = 0
+        ~ while $i < $n
+            $v = __index($m, $k)
+            $sum = $sum + $v
+            $v = __index($m, $k)
+            $sum = $sum + $v
+            $i = $i + 1
+        ~ end
+        $r = $r + 1
+    ~ end
+
+    ^ $sum
+~ end

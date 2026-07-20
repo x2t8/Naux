@@ -1,0 +1,77 @@
+DIGEST 2bf1e8db45381a03ee68569292af1a00
+FNauxCore.Syntax
+R168:171 Coq.Lists.List <> <> lib
+R173:177 Coq.Arith.Arith <> <> lib
+R179:182 Coq.Bool.Bool <> <> lib
+R192:204 Coq.Lists.List ListNotations <> mod
+ind 218:219 <> ty
+constr 233:237 <> TyNat
+constr 241:246 <> TyBool
+constr 250:256 <> TyArrow
+R265:266 NauxCore.Syntax <> ty:1 ind
+binder 259:259 <> A:3
+binder 261:261 <> B:4
+scheme 218:219 <> ty_rect
+scheme 218:219 <> ty_ind
+scheme 218:219 <> ty_rec
+scheme 218:219 <> ty_sind
+ind 281:284 <> term
+constr 298:301 <> TVar
+constr 315:318 <> TAbs
+constr 345:348 <> TApp
+constr 367:370 <> TLet
+constr 389:392 <> TNat
+constr 406:410 <> TBool
+constr 425:427 <> TIf
+R308:310 Coq.Init.Datatypes <> nat ind
+binder 304:304 <> x:7
+R325:326 NauxCore.Syntax <> ty ind
+binder 321:321 <> A:8
+R337:340 NauxCore.Syntax <> term:5 ind
+binder 330:333 <> body:9
+R359:362 NauxCore.Syntax <> term:5 ind
+binder 351:352 <> t1:10
+binder 354:355 <> t2:11
+R381:384 NauxCore.Syntax <> term:5 ind
+binder 373:374 <> t1:12
+binder 376:377 <> t2:13
+R399:401 Coq.Init.Datatypes <> nat ind
+binder 395:395 <> n:14
+R417:420 Coq.Init.Datatypes <> bool ind
+binder 413:413 <> b:15
+R438:441 NauxCore.Syntax <> term:5 ind
+binder 430:430 <> c:16
+binder 432:432 <> t:17
+binder 434:434 <> e:18
+scheme 281:284 <> term_rect
+scheme 281:284 <> term_ind
+scheme 281:284 <> term_rec
+scheme 281:284 <> term_sind
+ind 456:460 <> value
+constr 482:485 <> VAbs
+constr 526:529 <> VNat
+constr 560:564 <> VBool
+R468:471 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R464:467 NauxCore.Syntax <> term ind
+binder 496:496 <> A:21
+binder 498:501 <> body:22
+R504:508 NauxCore.Syntax <> value:19 ind
+R511:514 NauxCore.Syntax <> TAbs constr
+R516:516 NauxCore.Syntax <> A:21 var
+R518:521 NauxCore.Syntax <> body:22 var
+binder 540:540 <> n:23
+R543:547 NauxCore.Syntax <> value:19 ind
+R550:553 NauxCore.Syntax <> TNat constr
+R555:555 NauxCore.Syntax <> n:23 var
+binder 575:575 <> b:24
+R578:582 NauxCore.Syntax <> value:19 ind
+R585:589 NauxCore.Syntax <> TBool constr
+R591:591 NauxCore.Syntax <> b:24 var
+scheme 456:460 <> value_ind
+scheme 456:460 <> value_sind
+def 607:611 <> ttrue
+R616:620 NauxCore.Syntax <> TBool constr
+R622:625 Coq.Init.Datatypes <> true constr
+def 639:644 <> tfalse
+R649:653 NauxCore.Syntax <> TBool constr
+R655:659 Coq.Init.Datatypes <> false constr

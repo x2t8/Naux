@@ -1,0 +1,21 @@
+~ rite
+    $n = 200000
+    $reps = 5
+    $m = {a: 0}
+
+    $r = 0
+    ~ while $r < $reps
+        $i = 0
+        ~ while $i < $n
+            $tmp = $i + 1
+            $__ = __setindex($m, "a", $tmp)
+            $tmp = $tmp + 1
+            $__ = __setindex($m, "a", $tmp)
+            $__ = __setindex($m, "a", $i)
+            $i = $i + 1
+        ~ end
+        $r = $r + 1
+    ~ end
+
+    ^ $n
+~ end

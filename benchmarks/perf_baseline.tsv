@@ -1,0 +1,4 @@
+# benchmark trace_code_avg_bytes
+sum_dense 429.0
+list_update 666.0
+dot_product 502.0

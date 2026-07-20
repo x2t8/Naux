@@ -1,0 +1,10 @@
+~ rite main
+    $n = 123456
+    $factors = pollard_rho($n)
+
+    !say "Pollard Rho factorization"
+    !say "input: 123456"
+    !say "expected factors (sorted): [2, 2, 2, 2, 2, 2, 3, 643]"
+    !say "computed factors:"
+    !say $factors
+~ end

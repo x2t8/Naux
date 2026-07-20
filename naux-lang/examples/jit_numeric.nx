@@ -1,0 +1,10 @@
+~ rite
+    $n = 100000
+    $i = 0
+    $sum = 0
+    ~ loop $n
+        $sum = $sum + ($i * 3 + 1)
+        $i = $i + 1
+    ~ end
+    !say "sum = " + $sum
+~ end

@@ -1,0 +1,4 @@
+~ rite
+    !ask "healthcheck"
+    !fetch "https://example.com"
+~ end

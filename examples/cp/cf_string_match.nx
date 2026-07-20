@@ -1,0 +1,17 @@
+~ rite main
+    $text = "ababcababa"
+    $pattern = "aba"
+
+    $matches = kmp_search($text, $pattern)
+    $z = z_function($text)
+
+    !say "String match demo (KMP + Z)"
+    !say "text: ababcababa"
+    !say "pattern: aba"
+    !say "expected matches: [0, 5]"
+    !say "kmp_search result:"
+    !say $matches
+
+    !say "z-function of text (first few values):"
+    !say $z
+~ end

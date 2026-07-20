@@ -1,0 +1,38 @@
+~ fn lis($arr)
+    $dp = []
+    $n = len($arr)
+    $i = 0
+    ~ loop $n
+        $dp = queue_push($dp, 1)
+    ~ end
+    $i = 0
+    ~ loop $n
+        $j = 0
+        ~ loop $n
+            $cond = $j < $i && $arr[$j] < $arr[$i]
+            ~ if $cond
+                $cand = $dp[$j] + 1
+                ~ if $cand > $dp[$i]
+                    $dp[$i] = $cand
+                ~ end
+            ~ end
+            $j = $j + 1
+        ~ end
+        $i = $i + 1
+    ~ end
+    $best = 0
+    $k = 0
+    ~ loop $n
+        ~ if $dp[$k] > $best
+            $best = $dp[$k]
+        ~ end
+        $k = $k + 1
+    ~ end
+    ^ $best
+~ end
+
+~ rite
+    $arr = [10, 9, 2, 5, 3, 7, 101, 18]
+    $len = lis($arr)
+    !say "LIS length = " + $len
+~ end

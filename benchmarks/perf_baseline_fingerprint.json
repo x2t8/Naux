@@ -1,0 +1,7 @@
+{
+  "cpu_model": "11th Gen Intel(R) Core(TM) i5-11400H @ 2.70GHz",
+  "cpu_core": "2",
+  "governor": "performance",
+  "turbo_source": "intel_pstate/no_turbo",
+  "turbo_value": "1"
+}

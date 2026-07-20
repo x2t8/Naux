@@ -1,0 +1,6 @@
+-Q . NauxCore
+Syntax.v
+Typing.v
+Smallstep.v
+Soundness.v
+DataAlgo.v

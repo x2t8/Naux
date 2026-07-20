@@ -1,0 +1,30 @@
+~ fn loop_set($m, $k, $n)
+    $i = 0
+    ~ while $i < $n
+        $tmp = $i + 1
+        $__ = __setindex($m, $k, $tmp)
+        $tmp = $tmp + 1
+        $__ = __setindex($m, $k, $tmp)
+        $__ = __setindex($m, $k, $i)
+        $i = $i + 1
+    ~ end
+    ^ $n
+~ end
+
+~ rite
+    $n = 200000
+    $reps = 4
+    $m1 = {long_key_value_123: 0}
+    $m2 = {long_key_value_123: 0}
+    $k = "long_key_value_123"
+
+    $sum = 0
+    $r = 0
+    ~ while $r < $reps
+        $sum = $sum + loop_set($m1, $k, $n)
+        $sum = $sum + loop_set($m2, $k, $n)
+        $r = $r + 1
+    ~ end
+
+    ^ $sum
+~ end

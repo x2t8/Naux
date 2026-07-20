@@ -1,0 +1,11 @@
+~ rite main
+    $input = [10, 9, 2, 5, 3, 7, 101, 18]
+    $expected = 4
+
+    $ans = lis_length($input)
+
+    !say "LIS input: [10, 9, 2, 5, 3, 7, 101, 18]"
+    !say "expected: 4"
+    !say "computed:"
+    !say $ans
+~ end

@@ -1,0 +1,40 @@
+DIGEST f0b0d3012dd1d97329f4382dfd606560
+FNauxCore.Soundness
+R24:27 Coq.Lists.List <> <> lib
+R29:33 Coq.Arith.Arith <> <> lib
+R35:38 Coq.Bool.Bool <> <> lib
+R40:42 Coq.micromega.Lia <> <> lib
+R52:64 Coq.Lists.List ListNotations <> mod
+R97:102 NauxCore.Syntax <> <> lib
+R104:109 NauxCore.Typing <> <> lib
+R111:119 NauxCore.Smallstep <> <> lib
+prf 357:369 <> weakening_one
+binder 380:384 <> Gamma:1
+binder 386:386 <> t:2
+binder 388:388 <> T:3
+binder 390:390 <> A:4
+R413:418 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R395:402 NauxCore.Typing <> has_type ind
+R404:408 NauxCore.Soundness <> Gamma:1 var
+R410:410 NauxCore.Soundness <> t:2 var
+R412:412 NauxCore.Soundness <> T:3 var
+R419:426 NauxCore.Typing <> has_type ind
+R430:433 Coq.Init.Datatypes <> ::list_scope:x_'::'_x not
+R429:429 NauxCore.Soundness <> A:4 var
+R434:438 NauxCore.Soundness <> Gamma:1 var
+R442:446 NauxCore.Smallstep <> shift def
+R452:452 NauxCore.Soundness <> t:2 var
+R455:455 NauxCore.Soundness <> T:3 var
+R525:532 NauxCore.Typing <> has_type ind
+R525:532 NauxCore.Typing <> has_type ind
+R525:532 NauxCore.Typing <> has_type ind
+R525:532 NauxCore.Typing <> has_type ind
+R525:532 NauxCore.Typing <> has_type ind
+R525:532 NauxCore.Typing <> has_type ind
+R525:532 NauxCore.Typing <> has_type ind
+R525:532 NauxCore.Typing <> has_type ind
+R573:582 NauxCore.Typing <> ctx_lookup def
+R604:606 Coq.Init.Peano <> ::nat_scope:x_'+'_x not
+R616:616 Coq.Init.Datatypes <> S constr
+R604:606 Coq.Init.Peano <> ::nat_scope:x_'+'_x not
+R616:616 Coq.Init.Datatypes <> S constr

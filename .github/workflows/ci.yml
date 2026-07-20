@@ -1,0 +1,187 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: fmt
+        run: cargo fmt --all -- --check
+      - name: clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: test
+        run: cargo test --workspace --all-features
+
+  sanity-parity:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: VM/JIT sanity parity
+        run: bash ./scripts/sanity_matrix.sh
+
+  perf-fixed-cost:
+    needs: [ci, sanity-parity]
+    runs-on: [self-hosted, linux, x64, perf]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run runtime + fixed-cost gates
+        shell: 'bash --noprofile --norc -eo pipefail "{0}"'
+        env:
+          CPU_CORE: 2
+          ITERS: 8
+          WARMUP_MS: 100
+          REPS: 50
+          ENGINE: jit
+          MIN_SPEEDUP: 0
+          MIN_SPEEDUP_SUM_DENSE: 1.2
+          MIN_SPEEDUP_LIST_UPDATE: 1.2
+          MIN_SPEEDUP_DOT_PRODUCT: 1.0
+          HARD_LIMIT_MATH_BYTES: 512
+          HARD_LIMIT_DEFAULT_BYTES: 0
+          SOFT_REGRESSION_PCT: 10
+          SOFT_REGRESSION_FAIL: 0
+          REQUIRE_ZERO_RUNTIME_CALLS_MATH: 1
+          REQUIRE_PATCH_COMMITS_BIMORPHIC: 0
+          REQUIRE_MAX_REVERT_STREAK_BIMORPHIC: 0
+          MAX_REVERT_STREAK_BIMORPHIC: 3
+          REQUIRE_TEMP_ALLOC_METRICS: 0
+          TEMP_ALLOC_BENCH_FILE: naux-lang/examples/bench_list_temp_alloc.nx
+          MIN_TEMP_LIST_ELIDED: 1000
+          MIN_TEMP_MAP_ELIDED: 0
+          MAX_TEMP_LIST_MATERIALIZED: 10
+          MAX_TEMP_MAP_MATERIALIZED: 0
+          MAX_TEMP_LIST_MATERIALIZED_RATIO_PCT: 5
+          MAX_TEMP_MAP_MATERIALIZED_RATIO_PCT: 5
+          REQUIRE_TEMP_MAP_ALLOC_METRICS: 0
+          TEMP_MAP_ALLOC_BENCH_FILE: naux-lang/examples/bench_map_temp_alloc.nx
+          MIN_TEMP_MAP_BENCH_ELIDED: 1000
+          MAX_TEMP_MAP_BENCH_MATERIALIZED: 10
+          MAX_TEMP_MAP_BENCH_MATERIALIZED_RATIO_PCT: 5
+          PERF_BASELINE_TSV: benchmarks/perf_baseline.tsv
+          FIXED_COST_LOW_N_ITERS: 220
+          FIXED_COST_LOW_N_WARMUP_MS: 320
+          FIXED_COST_LOW_N_ABS_NS: 3000
+          FIXED_COST_GATE_MAX_ATTEMPTS: 3
+          FIXED_COST_INSTABILITY_OVERAGE_PCT: 5
+          FIXED_COST_INSTABILITY_OVERAGE_NS: 2500
+          ENABLE_CLIPPY_GATE: 0
+          ENABLE_SPEEDUP_GATE: 1
+          ENABLE_SLOPE_GATE: 0
+          ENABLE_DEOPT_REPORT: 0
+          ENABLE_DEOPT_WARN_GATE: 0
+          ENABLE_TREND_REPORT: 0
+          ENABLE_STABILITY_WINDOW_GATE: 0
+          ENABLE_ROADMAP_STATUS_UPDATE: 0
+          PERF_ENV_ENFORCE: 1
+          PERF_REQUIRE_TASKSET: 1
+          PERF_EXPECT_GOVERNOR: performance
+          PERF_EXPECT_INTEL_NO_TURBO: 1
+          PERF_EXPECT_AMD_BOOST: 0
+        run: bash ./scripts/perf_contract_ci.sh
+      - name: Upload fixed-cost reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-fixed-cost-report
+          path: |
+            target/perf/perf_report.md
+            target/perf/perf_report.json
+            target/perf/fixed_cost_report.json
+            target/perf/fixed_cost_report.md
+            target/perf/*.log
+
+  perf-slope:
+    needs: [ci, sanity-parity]
+    runs-on: [self-hosted, linux, x64, perf]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Settle machine state
+        shell: 'bash --noprofile --norc -eo pipefail "{0}"'
+        run: sleep 10
+      - name: Run isolated slope gate
+        shell: 'bash --noprofile --norc -eo pipefail "{0}"'
+        env:
+          CPU_CORE: 2
+          ITERS: 8
+          WARMUP_MS: 100
+          REPS: 50
+          ENGINE: jit
+          MIN_SPEEDUP: 0
+          MIN_SPEEDUP_SUM_DENSE: 1.2
+          MIN_SPEEDUP_LIST_UPDATE: 1.2
+          MIN_SPEEDUP_DOT_PRODUCT: 1.0
+          HARD_LIMIT_MATH_BYTES: 512
+          HARD_LIMIT_DEFAULT_BYTES: 0
+          SOFT_REGRESSION_PCT: 10
+          SOFT_REGRESSION_FAIL: 0
+          REQUIRE_ZERO_RUNTIME_CALLS_MATH: 1
+          REQUIRE_PATCH_COMMITS_BIMORPHIC: 0
+          REQUIRE_MAX_REVERT_STREAK_BIMORPHIC: 0
+          MAX_REVERT_STREAK_BIMORPHIC: 3
+          REQUIRE_TEMP_ALLOC_METRICS: 0
+          TEMP_ALLOC_BENCH_FILE: naux-lang/examples/bench_list_temp_alloc.nx
+          MIN_TEMP_LIST_ELIDED: 1000
+          MIN_TEMP_MAP_ELIDED: 0
+          MAX_TEMP_LIST_MATERIALIZED: 10
+          MAX_TEMP_MAP_MATERIALIZED: 0
+          MAX_TEMP_LIST_MATERIALIZED_RATIO_PCT: 5
+          MAX_TEMP_MAP_MATERIALIZED_RATIO_PCT: 5
+          REQUIRE_TEMP_MAP_ALLOC_METRICS: 0
+          TEMP_MAP_ALLOC_BENCH_FILE: naux-lang/examples/bench_map_temp_alloc.nx
+          MIN_TEMP_MAP_BENCH_ELIDED: 1000
+          MAX_TEMP_MAP_BENCH_MATERIALIZED: 10
+          MAX_TEMP_MAP_BENCH_MATERIALIZED_RATIO_PCT: 5
+          PERF_BASELINE_TSV: benchmarks/perf_baseline.tsv
+          SLOPE_GATE_PRIMARY: python
+          SLOPE_GATE_PRIMARY_FALLBACK_PY: 1
+          ENABLE_SLOPE_GATE_RUST_SHADOW: 1
+          SLOPE_GATE_RUST_COMPARE: 1
+          SLOPE_RETRYABLE_FINAL_ENFORCE: 0
+          SLOPE_NONBLOCKING_SCENARIOS: map_get_mul_acc,map_get_cmp_branch
+          SLOPE_DEFAULT_ITERS: 80
+          SLOPE_DEFAULT_WARMUP_MS: 250
+          SLOPE_DOT_RUNTIME_ITERS: 140
+          SLOPE_DOT_RUNTIME_WARMUP_MS: 350
+          SLOPE_DOT_TRACE_ITERS: 180
+          SLOPE_DOT_TRACE_WARMUP_MS: 350
+          SLOPE_MAP_RUNTIME_ITERS: 80
+          SLOPE_MAP_RUNTIME_WARMUP_MS: 250
+          SLOPE_MAP_GUARD_ENTRY_ITERS: 120
+          SLOPE_MAP_GUARD_ENTRY_WARMUP_MS: 300
+          SLOPE_MAP_GET_MUL_ACC_ITERS: 100
+          SLOPE_MAP_GET_MUL_ACC_WARMUP_MS: 300
+          SLOPE_MAP_GET_CMP_BRANCH_ITERS: 120
+          SLOPE_MAP_GET_CMP_BRANCH_WARMUP_MS: 320
+          ENABLE_CLIPPY_GATE: 0
+          ENABLE_SPEEDUP_GATE: 0
+          ENABLE_FIXED_COST_GATE: 0
+          ENABLE_DEOPT_REPORT: 0
+          ENABLE_DEOPT_WARN_GATE: 0
+          ENABLE_TREND_REPORT: 0
+          ENABLE_STABILITY_WINDOW_GATE: 0
+          ENABLE_ROADMAP_STATUS_UPDATE: 0
+          PERF_ENV_ENFORCE: 1
+          PERF_REQUIRE_TASKSET: 1
+          PERF_EXPECT_GOVERNOR: performance
+          PERF_EXPECT_INTEL_NO_TURBO: 1
+          PERF_EXPECT_AMD_BOOST: 0
+        run: bash ./scripts/perf_contract_ci.sh
+      - name: Upload slope reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-slope-report
+          path: |
+            target/perf/slope_report*.json
+            target/perf/slope_report*.md
+            target/perf/slope_report*.txt
+            target/perf/perf_report.json
+            target/perf/perf_report.md
