@@ -674,10 +674,8 @@ fn build_cfg_blocks(
                     leaders.push(ip + 1);
                 }
             }
-            IRInstr::Return => {
-                if ip + 1 < code.len() {
-                    leaders.push(ip + 1);
-                }
+            IRInstr::Return if ip + 1 < code.len() => {
+                leaders.push(ip + 1);
             }
             _ => {}
         }
@@ -2790,10 +2788,8 @@ impl SsaPass for DeadInstElimPass {
                         worklist.push(v);
                     }
                 }
-                Terminator::Branch { cond, .. } => {
-                    if live.insert(cond) {
-                        worklist.push(cond);
-                    }
+                Terminator::Branch { cond, .. } if live.insert(cond) => {
+                    worklist.push(cond);
                 }
                 _ => {}
             }

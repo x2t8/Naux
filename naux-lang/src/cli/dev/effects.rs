@@ -57,6 +57,10 @@ pub fn effects_core(path: &Path) -> Result<(), String> {
     }
     println!();
 
-    println!("[RESULT] signature={}, {} effect operations", result.signature, result.unhandled.len());
+    println!(
+        "[RESULT] signature={}, {} effect operations",
+        result.signature,
+        result.unhandled.len()
+    );
     Ok(())
 }

@@ -278,9 +278,8 @@ impl Ord for Value {
             return Ordering::Equal;
         }
 
-        match (self.as_f64(), other.as_f64()) {
-            (Some(a), Some(b)) => return a.total_cmp(&b),
-            _ => {}
+        if let (Some(a), Some(b)) = (self.as_f64(), other.as_f64()) {
+            return a.total_cmp(&b);
         }
 
         let lhs_rank = value_type_rank(self);

@@ -30,9 +30,9 @@ MAX_TEMP_LIST_MATERIALIZED="${MAX_TEMP_LIST_MATERIALIZED:-0}"
 MAX_TEMP_MAP_MATERIALIZED="${MAX_TEMP_MAP_MATERIALIZED:-0}"
 MAX_TEMP_LIST_MATERIALIZED_RATIO_PCT="${MAX_TEMP_LIST_MATERIALIZED_RATIO_PCT:-10}"
 MAX_TEMP_MAP_MATERIALIZED_RATIO_PCT="${MAX_TEMP_MAP_MATERIALIZED_RATIO_PCT:-10}"
-REQUIRE_TEMP_MAP_ALLOC_METRICS="${REQUIRE_TEMP_MAP_ALLOC_METRICS:-0}"
+REQUIRE_TEMP_MAP_ALLOC_METRICS="${REQUIRE_TEMP_MAP_ALLOC_METRICS:-1}"
 TEMP_MAP_ALLOC_BENCH_FILE="${TEMP_MAP_ALLOC_BENCH_FILE:-naux-lang/examples/bench_map_temp_alloc.nx}"
-MIN_TEMP_MAP_BENCH_ELIDED="${MIN_TEMP_MAP_BENCH_ELIDED:-0}"
+MIN_TEMP_MAP_BENCH_ELIDED="${MIN_TEMP_MAP_BENCH_ELIDED:-1}"
 MAX_TEMP_MAP_BENCH_MATERIALIZED="${MAX_TEMP_MAP_BENCH_MATERIALIZED:-0}"
 MAX_TEMP_MAP_BENCH_MATERIALIZED_RATIO_PCT="${MAX_TEMP_MAP_BENCH_MATERIALIZED_RATIO_PCT:-10}"
 ENABLE_SLOPE_GATE="${ENABLE_SLOPE_GATE:-1}"
@@ -42,10 +42,11 @@ SLOPE_GATE_PRIMARY_FALLBACK_PY="${SLOPE_GATE_PRIMARY_FALLBACK_PY:-1}"
 ENABLE_SLOPE_GATE_RUST_SHADOW="${ENABLE_SLOPE_GATE_RUST_SHADOW:-1}"
 SLOPE_GATE_RUST_BIN="${SLOPE_GATE_RUST_BIN:-$ROOT_DIR/target/release/slope_gate}"
 SLOPE_GATE_RUST_COMPARE="${SLOPE_GATE_RUST_COMPARE:-1}"
+SLOPE_SHADOW_COMPARE_SCRIPT="${SLOPE_SHADOW_COMPARE_SCRIPT:-$ROOT_DIR/scripts/perf_slope_shadow_compare.py}"
 SLOPE_BASELINE_TSV="${SLOPE_BASELINE_TSV:-$ROOT_DIR/benchmarks/perf_slope_baseline.tsv}"
 FUSION_EXPECTATIONS_FILE="${FUSION_EXPECTATIONS_FILE:-$ROOT_DIR/scripts/fusion_expectations.json}"
 FUSION_EXPECTATION_SCENARIOS="${FUSION_EXPECTATION_SCENARIOS:-map_heavy_read,map_guard_entry_heavy,map_get_mul_acc,map_get_cmp_branch}"
-SLOPE_NONBLOCKING_SCENARIOS="${SLOPE_NONBLOCKING_SCENARIOS:-map_get_mul_acc,map_get_cmp_branch}"
+SLOPE_NONBLOCKING_SCENARIOS="${SLOPE_NONBLOCKING_SCENARIOS:-map_get_mul_acc}"
 SLOPE_MIN_R2="${SLOPE_MIN_R2:-0.995}"
 SLOPE_MAX_A_REGRESSION_PCT="${SLOPE_MAX_A_REGRESSION_PCT:-5}"
 SLOPE_MAX_B_REGRESSION_PCT="${SLOPE_MAX_B_REGRESSION_PCT:-10}"
@@ -137,12 +138,15 @@ STABILITY_WINDOW_MAX_RETRYABLE_PCT="${STABILITY_WINDOW_MAX_RETRYABLE_PCT:-5}"
 STABILITY_WINDOW_MAX_HARD_COUNT="${STABILITY_WINDOW_MAX_HARD_COUNT:-0}"
 STABILITY_WINDOW_REQUIRED_RULES="${STABILITY_WINDOW_REQUIRED_RULES:-map_stable_mul_acc}"
 STABILITY_WINDOW_MIN_RULE_HIT_PCT="${STABILITY_WINDOW_MIN_RULE_HIT_PCT:-90}"
+STABILITY_WINDOW_REQUIRE_SHADOW_MATCH="${STABILITY_WINDOW_REQUIRE_SHADOW_MATCH:-1}"
+STABILITY_WINDOW_MIN_SHADOW_MATCH_PCT="${STABILITY_WINDOW_MIN_SHADOW_MATCH_PCT:-100}"
 STABILITY_WINDOW_FAIL_ON_INSUFFICIENT_RUNS="${STABILITY_WINDOW_FAIL_ON_INSUFFICIENT_RUNS:-0}"
 STABILITY_WINDOW_ENFORCE="${STABILITY_WINDOW_ENFORCE:-0}"
 ENABLE_PERF_STATUS_UPDATE="${ENABLE_PERF_STATUS_UPDATE:-1}"
 PERF_STATUS_SCRIPT="${PERF_STATUS_SCRIPT:-$ROOT_DIR/scripts/update_perf_status.py}"
-PERF_STATUS_FILE="${PERF_STATUS_FILE:-$ROOT_DIR/PERF_STATUS.md}"
+PERF_STATUS_FILE="${PERF_STATUS_FILE:-$OUT_DIR/perf_status.md}"
 PERF_ENV_ENFORCE="${PERF_ENV_ENFORCE:-0}"
+PERF_CONTROLLED_BRANCH="${PERF_CONTROLLED_BRANCH:-0}"
 PERF_EXPECT_GOVERNOR="${PERF_EXPECT_GOVERNOR:-performance}"
 PERF_EXPECT_INTEL_NO_TURBO="${PERF_EXPECT_INTEL_NO_TURBO:-1}"
 PERF_EXPECT_AMD_BOOST="${PERF_EXPECT_AMD_BOOST:-0}"
@@ -153,7 +157,7 @@ PERF_BASELINE_FINGERPRINT_ENFORCE="${PERF_BASELINE_FINGERPRINT_ENFORCE:-0}"
 PERF_BASELINE_FINGERPRINT_WRITE_CURRENT="${PERF_BASELINE_FINGERPRINT_WRITE_CURRENT:-0}"
 SLOPE_PRE_COOLDOWN_MS="${SLOPE_PRE_COOLDOWN_MS:-1000}"
 
-mkdir -p "$OUT_DIR"
+mkdir -p "$OUT_DIR" "$OUT_DIR/bin"
 # Ensure per-run artifacts are fresh; avoid stale carry-over into snapshot/trend.
 rm -f \
     "$OUT_DIR/slope_report.json" \
@@ -164,12 +168,20 @@ rm -f \
     "$OUT_DIR/slope_report_py_shadow.json" \
     "$OUT_DIR/slope_report_py_shadow.md" \
     "$OUT_DIR/slope_report_py_shadow_compare.txt" \
+    "$OUT_DIR/slope_report_shadow_compare.json" \
+    "$OUT_DIR/slope_report_shadow_compare.txt" \
     "$OUT_DIR/fixed_cost_report.json" \
     "$OUT_DIR/fixed_cost_report.md" \
     "$OUT_DIR/deopt_report.json" \
     "$OUT_DIR/deopt_report.md" \
     "$OUT_DIR/deopt_warn_report.json" \
     "$OUT_DIR/deopt_warn_report.md" \
+    "$OUT_DIR/sum_dense.naux.profile.json" \
+    "$OUT_DIR/list_update.naux.profile.json" \
+    "$OUT_DIR/dot_product.naux.profile.json" \
+    "$OUT_DIR/patch_commits_check.json" \
+    "$OUT_DIR/temp_alloc_check.json" \
+    "$OUT_DIR/temp_map_alloc_check.json" \
     "$OUT_DIR/stability_window_report.json" \
     "$OUT_DIR/stability_window_report.md" \
     "$OUT_DIR/trend_report.json" \
@@ -243,9 +255,9 @@ C_SRCS=(
     "benchmarks/c/bench_dot_product.c"
 )
 C_BINS=(
-    "benchmarks/c/bench_sum_dense"
-    "benchmarks/c/bench_list_update"
-    "benchmarks/c/bench_dot_product"
+    "bench_sum_dense"
+    "bench_list_update"
+    "bench_dot_product"
 )
 
 echo "[perf] Build release with native CPU"
@@ -273,7 +285,7 @@ fi
 if [[ "$ENABLE_SPEEDUP_GATE" == "1" ]]; then
     echo "[perf] Build C baselines"
     for i in "${!C_SRCS[@]}"; do
-        cc -O3 -march=native -o "$ROOT_DIR/${C_BINS[$i]}" "$ROOT_DIR/${C_SRCS[$i]}"
+        cc -O3 -march=native -o "$OUT_DIR/bin/${C_BINS[$i]}" "$ROOT_DIR/${C_SRCS[$i]}" -lm
     done
 fi
 
@@ -481,6 +493,9 @@ if gov_val="$(read_sysfs_trimmed "$gov_path" 2>/dev/null)"; then
     fi
 else
     append_env_note "missing $gov_path"
+    if [[ -n "$PERF_EXPECT_GOVERNOR" ]]; then
+        PERF_ENV_MISMATCH=1
+    fi
 fi
 
 intel_no_turbo_path="/sys/devices/system/cpu/intel_pstate/no_turbo"
@@ -501,12 +516,18 @@ elif amd_val="$(read_sysfs_trimmed "$amd_boost_path" 2>/dev/null)"; then
     fi
 else
     append_env_note "missing turbo control sysfs (intel_pstate/no_turbo or cpufreq/boost)"
+    if [[ -n "$PERF_EXPECT_INTEL_NO_TURBO" || -n "$PERF_EXPECT_AMD_BOOST" ]]; then
+        PERF_ENV_MISMATCH=1
+    fi
 fi
 
 if cpu_model_val="$(read_cpu_model 2>/dev/null)"; then
     PERF_ENV_CPU_MODEL="$cpu_model_val"
 else
     append_env_note "cpu model unavailable"
+    if [[ "$PERF_ENV_ENFORCE" == "1" ]]; then
+        PERF_ENV_MISMATCH=1
+    fi
 fi
 
 if [[ "$PERF_ENV_MISMATCH" == "1" ]]; then
@@ -949,54 +970,24 @@ if [[ "$ENABLE_SLOPE_GATE" == "1" ]]; then
         fi
 
         if [[ "$SLOPE_GATE_RUST_COMPARE" == "1" && -n "$shadow_json" && -f "$OUT_DIR/slope_report.json" && -f "$shadow_json" ]]; then
+            shadow_compare_json="$OUT_DIR/slope_report_shadow_compare.json"
+            shadow_compare_txt="$OUT_DIR/slope_report_shadow_compare.txt"
             set +e
-            python3 - "$OUT_DIR/slope_report.json" "$shadow_json" > "$shadow_cmp_txt" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-primary = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-shadow = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-
-primary_retry = primary.get("retry_class")
-shadow_retry = shadow.get("retry_class")
-
-def gate_map(doc):
-    out = {}
-    for sc in doc.get("scenarios", []):
-        name = sc.get("name")
-        gate = sc.get("gate")
-        if isinstance(name, str):
-            out[name] = gate
-    return out
-
-primary_map = gate_map(primary)
-shadow_map = gate_map(shadow)
-all_names = sorted(set(primary_map) | set(shadow_map))
-mismatches = []
-for name in all_names:
-    if primary_map.get(name) != shadow_map.get(name):
-        mismatches.append(f"scenario gate mismatch: {name}: primary={primary_map.get(name)!r} shadow={shadow_map.get(name)!r}")
-
-if primary_retry != shadow_retry:
-    mismatches.append(f"retry_class mismatch: primary={primary_retry!r} shadow={shadow_retry!r}")
-
-if mismatches:
-    print("[slope-shadow] MISMATCH")
-    for line in mismatches:
-        print(line)
-    raise SystemExit(1)
-
-print("[slope-shadow] match")
-print(f"retry_class={primary_retry}")
-for name in all_names:
-    print(f"{name}: {primary_map.get(name)}")
-PY
+            python3 "$SLOPE_SHADOW_COMPARE_SCRIPT" \
+                --primary-json "$OUT_DIR/slope_report.json" \
+                --shadow-json "$shadow_json" \
+                --primary-impl "$primary_choice" \
+                --shadow-impl "$shadow_name" \
+                --out-json "$shadow_compare_json" \
+                --out-text "$shadow_compare_txt"
             slope_cmp_rc=$?
             set -e
+            if [[ -f "$shadow_compare_txt" ]]; then
+                cp "$shadow_compare_txt" "$shadow_cmp_txt"
+            fi
             if [[ "$slope_cmp_rc" -ne 0 ]]; then
                 echo "[perf] WARN: slope shadow compare mismatch (observe-only)"
-                cat "$shadow_cmp_txt" || true
+                cat "$shadow_compare_txt" || true
             fi
         fi
     fi
@@ -1013,7 +1004,7 @@ if [[ "$ENABLE_SPEEDUP_GATE" == "1" ]]; then
         naux_profile_json="$(${PIN[@]} env NAUX_TRACE_PROFILE=1 "$ROOT_DIR/target/release/naux" dev benchrt "$naux_file" --engine="$ENGINE" --iters="$ITERS" --warmup-ms="$WARMUP_MS" --json)"
         echo "$naux_profile_json" > "$OUT_DIR/${name}.naux.profile.json"
 
-        c_out="$(${PIN[@]} "$ROOT_DIR/${C_BINS[$i]}" 100000 "$ITERS" "$WARMUP_MS" "$REPS")"
+        c_out="$(${PIN[@]} "$OUT_DIR/bin/${C_BINS[$i]}" 100000 "$ITERS" "$WARMUP_MS" "$REPS")"
         echo "$c_out" > "$OUT_DIR/${name}.c.log"
 
         naux_median="$(parse_metric "median" "$naux_out")"
@@ -1347,6 +1338,24 @@ PERF_ENV_CPU_MODEL_JSON="$(json_escape "${PERF_ENV_CPU_MODEL:-}")"
 PERF_BASELINE_FINGERPRINT_FILE_JSON="$(json_escape "${PERF_BASELINE_FINGERPRINT_FILE:-}")"
 PERF_BASELINE_FINGERPRINT_STATUS_JSON="$(json_escape "${PERF_BASELINE_FINGERPRINT_STATUS:-}")"
 PERF_BASELINE_FINGERPRINT_NOTES_JSON="$(json_escape "${PERF_BASELINE_FINGERPRINT_NOTES:-}")"
+PERF_GIT_SHA="$(git rev-parse HEAD 2>/dev/null || true)"
+PERF_GIT_BRANCH="${GITHUB_REF_NAME:-}"
+if [[ -z "$PERF_GIT_BRANCH" ]]; then
+    PERF_GIT_BRANCH="$(git branch --show-current 2>/dev/null || true)"
+fi
+PERF_GIT_DIRTY=false
+if [[ -n "$(git status --porcelain 2>/dev/null || true)" ]]; then
+    PERF_GIT_DIRTY=true
+fi
+PERF_GIT_SHA_JSON="$(json_escape "$PERF_GIT_SHA")"
+PERF_GIT_BRANCH_JSON="$(json_escape "$PERF_GIT_BRANCH")"
+PERF_CI_RUN_ID_JSON="$(json_escape "${GITHUB_RUN_ID:-}")"
+PERF_CI_RUN_ATTEMPT_JSON="$(json_escape "${GITHUB_RUN_ATTEMPT:-}")"
+SLOPE_GATE_PRIMARY_ACTUAL="${primary_choice:-disabled}"
+SLOPE_GATE_PRIMARY_FALLBACK_USED=false
+if [[ "$ENABLE_SLOPE_GATE" == "1" && "$SLOPE_GATE_PRIMARY_ACTUAL" != "$SLOPE_GATE_PRIMARY" ]]; then
+    SLOPE_GATE_PRIMARY_FALLBACK_USED=true
+fi
 
 {
     echo "{"
@@ -1390,6 +1399,15 @@ PERF_BASELINE_FINGERPRINT_NOTES_JSON="$(json_escape "${PERF_BASELINE_FINGERPRINT
     echo "    \"perf_env_turbo_actual\": \"$PERF_ENV_TURBO_ACTUAL\","
     echo "    \"perf_env_cpu_model\": \"$PERF_ENV_CPU_MODEL_JSON\","
     echo "    \"perf_env_notes\": \"$PERF_ENV_NOTES_JSON\","
+    echo "    \"git_sha\": \"$PERF_GIT_SHA_JSON\","
+    echo "    \"git_branch\": \"$PERF_GIT_BRANCH_JSON\","
+    echo "    \"git_dirty\": $PERF_GIT_DIRTY,"
+    echo "    \"ci_run_id\": \"$PERF_CI_RUN_ID_JSON\","
+    echo "    \"ci_run_attempt\": \"$PERF_CI_RUN_ATTEMPT_JSON\","
+    echo "    \"controlled_branch\": $PERF_CONTROLLED_BRANCH,"
+    echo "    \"slope_gate_primary_requested\": \"$SLOPE_GATE_PRIMARY\","
+    echo "    \"slope_gate_primary_actual\": \"$SLOPE_GATE_PRIMARY_ACTUAL\","
+    echo "    \"slope_gate_primary_fallback_used\": $SLOPE_GATE_PRIMARY_FALLBACK_USED,"
     echo "    \"baseline_fingerprint_file\": \"$PERF_BASELINE_FINGERPRINT_FILE_JSON\","
     echo "    \"baseline_fingerprint_require\": $PERF_BASELINE_FINGERPRINT_REQUIRE,"
     echo "    \"baseline_fingerprint_enforce\": $PERF_BASELINE_FINGERPRINT_ENFORCE,"
@@ -1527,6 +1545,18 @@ if [[ "$ENABLE_TREND_REPORT" == "1" ]]; then
     if [[ -f "$OUT_DIR/slope_report_py_shadow_compare.txt" ]]; then
         cp "$OUT_DIR/slope_report_py_shadow_compare.txt" "$trend_run_dir/slope_report_py_shadow_compare.txt"
     fi
+    if [[ -f "$OUT_DIR/slope_report_shadow_compare.json" ]]; then
+        cp "$OUT_DIR/slope_report_shadow_compare.json" "$trend_run_dir/slope_report_shadow_compare.json"
+    fi
+    if [[ -f "$OUT_DIR/slope_report_shadow_compare.txt" ]]; then
+        cp "$OUT_DIR/slope_report_shadow_compare.txt" "$trend_run_dir/slope_report_shadow_compare.txt"
+    fi
+    if [[ -f "$OUT_DIR/perf_report.json" ]]; then
+        cp "$OUT_DIR/perf_report.json" "$trend_run_dir/perf_report.json"
+    fi
+    if [[ -f "$OUT_DIR/perf_report.md" ]]; then
+        cp "$OUT_DIR/perf_report.md" "$trend_run_dir/perf_report.md"
+    fi
     if [[ "$ENABLE_FIXED_COST_GATE" == "1" && -f "$OUT_DIR/fixed_cost_report.json" ]]; then
         cp "$OUT_DIR/fixed_cost_report.json" "$trend_run_dir/fixed_cost_report.json"
     fi
@@ -1576,9 +1606,13 @@ if [[ "$ENABLE_STABILITY_WINDOW_GATE" == "1" ]]; then
             --max-hard-count "$STABILITY_WINDOW_MAX_HARD_COUNT"
             --required-rules "$STABILITY_WINDOW_REQUIRED_RULES"
             --min-rule-hit-pct "$STABILITY_WINDOW_MIN_RULE_HIT_PCT"
+            --min-shadow-match-pct "$STABILITY_WINDOW_MIN_SHADOW_MATCH_PCT"
             --out-json "$OUT_DIR/stability_window_report.json"
             --out-md "$OUT_DIR/stability_window_report.md"
         )
+        if [[ "$STABILITY_WINDOW_REQUIRE_SHADOW_MATCH" == "1" ]]; then
+            stability_args+=(--require-shadow-match)
+        fi
         if [[ "$STABILITY_WINDOW_FAIL_ON_INSUFFICIENT_RUNS" == "1" ]]; then
             stability_args+=(--fail-on-insufficient-runs)
         fi

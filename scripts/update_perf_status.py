@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render PERF_STATUS.md from latest perf governance artifacts."""
+"""Render an operational perf status artifact from governance reports."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import argparse
 import datetime as dt
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from perf_status import (
     RETRY_CLASS_HARD,
@@ -20,13 +20,13 @@ from perf_status import (
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Update PERF_STATUS.md from perf artifacts")
+    p = argparse.ArgumentParser(description="Render operational perf status from artifacts")
     p.add_argument("--trend-json", default="target/perf/trend_report.json")
     p.add_argument("--stability-json", default="target/perf/stability_window_report.json")
     p.add_argument("--slope-json", default="target/perf/slope_report.json")
     p.add_argument("--fixed-cost-json", default="target/perf/fixed_cost_report.json")
     p.add_argument("--deopt-warn-json", default="target/perf/deopt_warn_report.json")
-    p.add_argument("--out", default="PERF_STATUS.md")
+    p.add_argument("--out", default="target/perf/perf_status.md")
     return p.parse_args()
 
 
@@ -101,83 +101,6 @@ def summarize_latest_metrics(
     return metrics
 
 
-def estimate_progress(
-    slope: Optional[Dict[str, Any]],
-    trend: Optional[Dict[str, Any]],
-    stability: Optional[Dict[str, Any]],
-    fixed_cost: Optional[Dict[str, Any]],
-    deopt_warn: Optional[Dict[str, Any]],
-) -> Tuple[int, int, int]:
-    # Estimated scores, bounded and driven by artifact states.
-    perf_core = 90
-    production_ready = 68
-    goal_progress = 65
-
-    if not slope:
-        perf_core = 84
-    else:
-        sc = scenario_map(slope)
-        fail_count = 0
-        for row in sc.values():
-            gate = str(row.get("gate", ""))
-            if not gate_pass(gate):
-                fail_count += 1
-        if fail_count > 0:
-            perf_core = max(84, perf_core - fail_count * 2)
-
-    if trend:
-        run_count = int((trend.get("meta") or {}).get("run_count", 0) or 0)
-        if run_count >= 7:
-            production_ready += 2
-            goal_progress += 1
-        counts = trend.get("retry_class_counts", {})
-        if isinstance(counts, dict):
-            hard = int(counts.get(RETRY_CLASS_HARD, 0) or 0)
-            retryable = int(counts.get(RETRY_CLASS_RETRYABLE, 0) or 0)
-            if hard == 0:
-                production_ready += 1
-            if retryable <= 1:
-                production_ready += 1
-    else:
-        production_ready -= 2
-
-    if stability:
-        gate = str(stability.get("gate", ""))
-        status = normalize_stability_status(stability.get("status", ""))
-        if gate == "PASS":
-            production_ready += 2
-        if status == STABILITY_STATUS_PASS:
-            production_ready += 1
-            goal_progress += 1
-    else:
-        production_ready -= 1
-
-    if fixed_cost:
-        low = fixed_cost.get("low_n", [])
-        cold = fixed_cost.get("cold_start", {})
-        low_ok = True
-        if isinstance(low, list):
-            for row in low:
-                g = str((row or {}).get("gate", ""))
-                if not gate_pass(g):
-                    low_ok = False
-                    break
-        cold_ok = gate_pass(str((cold or {}).get("gate", "")))
-        if low_ok and cold_ok:
-            production_ready += 1
-            goal_progress += 1
-
-    if deopt_warn:
-        gate = str(deopt_warn.get("gate", ""))
-        if gate == "PASS":
-            production_ready += 1
-
-    perf_core = max(80, min(92, perf_core))
-    production_ready = max(60, min(78, production_ready))
-    goal_progress = max(55, min(72, goal_progress))
-    return perf_core, production_ready, goal_progress
-
-
 def slope_failures(slope: Optional[Dict[str, Any]]) -> List[str]:
     out: List[str] = []
     if not slope:
@@ -205,13 +128,6 @@ def main() -> int:
     fixed_cost = load_json(fixed_path)
     deopt_warn = load_json(deopt_warn_path)
 
-    perf_core, production_ready, goal_progress = estimate_progress(
-        slope=slope,
-        trend=trend,
-        stability=stability,
-        fixed_cost=fixed_cost,
-        deopt_warn=deopt_warn,
-    )
     metrics = summarize_latest_metrics(trend=trend, slope=slope)
     failures = slope_failures(slope)
 
@@ -221,22 +137,23 @@ def main() -> int:
     retry_pass = int((retry_counts or {}).get(RETRY_CLASS_PASS, 0) or 0)
     retry_retryable = int((retry_counts or {}).get(RETRY_CLASS_RETRYABLE, 0) or 0)
     retry_hard = int((retry_counts or {}).get(RETRY_CLASS_HARD, 0) or 0)
+    shadow_counts = (trend or {}).get("shadow_compare_counts", {})
+    shadow_match = int((shadow_counts or {}).get("match", 0) or 0)
+    shadow_mismatch = int((shadow_counts or {}).get("mismatch", 0) or 0)
+    shadow_missing = int((shadow_counts or {}).get("missing", 0) or 0)
+    shadow_error = int((shadow_counts or {}).get("error", 0) or 0)
 
     stability_gate = str((stability or {}).get("gate", "MISSING"))
     stability_status = normalize_stability_status((stability or {}).get("status", "missing"), default="missing")
     stability_retryable_pct = (stability or {}).get("retryable_pct")
+    stability_shadow_match_pct = (stability or {}).get("shadow_match_pct")
+    stability_shadow_coverage_pct = (stability or {}).get("shadow_coverage_pct")
     rule_stats = (stability or {}).get("rule_stats", [])
 
     lines: List[str] = []
     lines.append("# Naux Perf Status")
     lines.append("")
     lines.append(f"- updated_utc: `{now}`")
-    lines.append("")
-    lines.append("## Overall Progress (Estimated)")
-    lines.append("")
-    lines.append(f"- performance_core: `{perf_core}%`")
-    lines.append(f"- production_readiness: `{production_ready}%`")
-    lines.append(f"- beat_c_cpp_goal_progress: `{goal_progress}%`")
     lines.append("")
     lines.append("## Governance Snapshot")
     lines.append("")
@@ -246,12 +163,27 @@ def main() -> int:
     lines.append(
         f"- retry_class_counts: `pass={retry_pass}, retryable={retry_retryable}, hard={retry_hard}`"
     )
+    lines.append(
+        "- shadow_compare_counts: "
+        f"`match={shadow_match}, mismatch={shadow_mismatch}, "
+        f"missing={shadow_missing}, error={shadow_error}`"
+    )
     lines.append(f"- stability_gate: `{stability_gate}`")
     lines.append(f"- stability_status: `{stability_status}`")
     lines.append(
         f"- stability_retryable_pct: `{fmt_float(stability_retryable_pct, 2)}%`"
         if stability_retryable_pct is not None
         else "- stability_retryable_pct: `-`"
+    )
+    lines.append(
+        f"- stability_shadow_match_pct: `{fmt_float(stability_shadow_match_pct, 2)}%`"
+        if stability_shadow_match_pct is not None
+        else "- stability_shadow_match_pct: `-`"
+    )
+    lines.append(
+        f"- stability_shadow_coverage_pct: `{fmt_float(stability_shadow_coverage_pct, 2)}%`"
+        if stability_shadow_coverage_pct is not None
+        else "- stability_shadow_coverage_pct: `-`"
     )
     lines.append("")
     lines.append("## Latest Perf Signals")
@@ -290,6 +222,15 @@ def main() -> int:
         lines.append("- None from slope gate (all scenarios PASS).")
     if stability and stability_gate != "PASS":
         lines.append(f"- Stability window gate is `{stability_gate}` (`{stability_status}`).")
+    if shadow_mismatch > 0 or shadow_error > 0:
+        lines.append(
+            "- Rust/Python slope policy parity is not clean: "
+            f"`mismatch={shadow_mismatch}, error={shadow_error}`."
+        )
+    if trend_run_count > 0 and shadow_missing > 0:
+        lines.append(
+            f"- Shadow comparison evidence is missing for `{shadow_missing}/{trend_run_count}` trend runs."
+        )
     if not trend:
         lines.append("- Missing trend_report.json (run trend aggregation).")
     if not fixed_cost:
@@ -300,7 +241,7 @@ def main() -> int:
     lines.append("## Next 7-Day Focus")
     lines.append("")
     lines.append("- Keep `retry_class=hard` at `0` across the moving window.")
-    lines.append("- Promote Rust slope gate on a controlled branch and compare drift vs Python shadow.")
+    lines.append("- Reach two consecutive 100% shadow-match windows, then promote Rust slope gate on a controlled branch.")
     lines.append("- Publish refreshed C/C++/Rust/Go/Zig baseline artifacts for claim credibility.")
     lines.append("- Expand branchy + allocation workloads under the same perf contract.")
     lines.append("")

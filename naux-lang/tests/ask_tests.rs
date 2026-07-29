@@ -1,5 +1,5 @@
-use naux::lexer::lex;
 use naux::ask::query_ask;
+use naux::lexer::lex;
 use naux::parser::parser::Parser;
 use naux::runtime::eval_script;
 use naux::runtime::events::RuntimeEvent;

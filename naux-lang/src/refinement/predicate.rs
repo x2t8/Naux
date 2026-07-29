@@ -206,23 +206,23 @@ impl Predicate {
             }
             Self::Gt(lhs, rhs) => {
                 matches!(lhs.as_ref(), Self::Var(RefinementVar::Value))
-                    && rhs.eval_i64().map_or(false, |v| v >= 0)
+                    && rhs.eval_i64().is_some_and(|v| v >= 0)
             }
             Self::Ge(lhs, rhs) => {
                 matches!(lhs.as_ref(), Self::Var(RefinementVar::Value))
-                    && rhs.eval_i64().map_or(false, |v| v > 0)
+                    && rhs.eval_i64().is_some_and(|v| v > 0)
             }
             Self::Lt(lhs, rhs) => {
                 matches!(lhs.as_ref(), Self::Var(RefinementVar::Value))
-                    && rhs.eval_i64().map_or(false, |v| v <= 0)
+                    && rhs.eval_i64().is_some_and(|v| v <= 0)
             }
             Self::Le(lhs, rhs) => {
                 matches!(lhs.as_ref(), Self::Var(RefinementVar::Value))
-                    && rhs.eval_i64().map_or(false, |v| v < 0)
+                    && rhs.eval_i64().is_some_and(|v| v < 0)
             }
             Self::Eq(lhs, rhs) => {
                 matches!(lhs.as_ref(), Self::Var(RefinementVar::Value))
-                    && rhs.eval_i64().map_or(false, |v| v != 0)
+                    && rhs.eval_i64().is_some_and(|v| v != 0)
             }
             Self::And(a, b) => a.implies_nonzero() || b.implies_nonzero(),
             _ => false,
@@ -245,7 +245,7 @@ impl Predicate {
             Self::And(a, b) => {
                 // Try to extract a combined range from the whole And first.
                 if let Some((lo, hi)) = self.extract_range() {
-                    if lo >= 0 && hi >= 0 && hi < i64::MAX {
+                    if lo >= 0 && (0..i64::MAX).contains(&hi) {
                         proof.range = Some((lo as u64, hi as u64));
                         if lo > 0 {
                             proof.nonzero = true;
@@ -279,7 +279,7 @@ impl Predicate {
                     proof.nonzero = true;
                 }
                 if let Some((lo, hi)) = self.extract_range() {
-                    if lo >= 0 && hi >= 0 && hi < i64::MAX {
+                    if lo >= 0 && (0..i64::MAX).contains(&hi) {
                         proof.range = Some((lo as u64, hi as u64));
                         if lo > 0 {
                             proof.nonzero = true;

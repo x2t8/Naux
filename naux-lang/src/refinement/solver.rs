@@ -157,9 +157,7 @@ impl Solver {
 
     fn discharge(&self, constraint: &Constraint) -> DischargeResult {
         match constraint {
-            Constraint::Subtype { sub, sup, context } => {
-                self.discharge_subtype(sub, sup, context)
-            }
+            Constraint::Subtype { sub, sup, context } => self.discharge_subtype(sub, sup, context),
             Constraint::WellFormed { refined, context } => {
                 self.discharge_well_formed(refined, context)
             }
@@ -178,12 +176,7 @@ impl Solver {
         }
     }
 
-    fn discharge_subtype(
-        &self,
-        sub: &Refined,
-        sup: &Refined,
-        context: &str,
-    ) -> DischargeResult {
+    fn discharge_subtype(&self, sub: &Refined, sup: &Refined, context: &str) -> DischargeResult {
         // Normalize Named → Value for interval/implication checks.
         let norm_sub_pred = sub.pred.substitute_named_with_value();
         let norm_sup_pred = sup.pred.substitute_named_with_value();
@@ -246,11 +239,7 @@ impl Solver {
         ))
     }
 
-    fn discharge_well_formed(
-        &self,
-        refined: &Refined,
-        context: &str,
-    ) -> DischargeResult {
+    fn discharge_well_formed(&self, refined: &Refined, context: &str) -> DischargeResult {
         // Check that the predicate is satisfiable (not ⊥).
         if refined.pred.is_bottom() {
             return DischargeResult::Undischarged(format!(
@@ -269,11 +258,7 @@ impl Solver {
         DischargeResult::Discharged(None)
     }
 
-    fn generate_proof_info(
-        &self,
-        sub: &Refined,
-        _sup: &Refined,
-    ) -> Option<(String, ProofSlot)> {
+    fn generate_proof_info(&self, sub: &Refined, _sup: &Refined) -> Option<(String, ProofSlot)> {
         // Extract the variable name from the original (Named) predicate.
         let name = extract_var_name(&sub.pred)?;
         // Normalize back to Value for numeric extraction (extract_numeric_facts
@@ -326,9 +311,7 @@ fn check_implication_const(lhs: &Predicate, rhs: &Predicate) -> Option<bool> {
 fn substitute_value(pred: &Predicate, value: i64) -> Predicate {
     match pred {
         Predicate::Var(RefinementVar::Value) => Predicate::Lit(value),
-        Predicate::Var(_) | Predicate::Lit(_) | Predicate::True | Predicate::False => {
-            pred.clone()
-        }
+        Predicate::Var(_) | Predicate::Lit(_) | Predicate::True | Predicate::False => pred.clone(),
         Predicate::Eq(a, b) => Predicate::Eq(
             Box::new(substitute_value(a, value)),
             Box::new(substitute_value(b, value)),

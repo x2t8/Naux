@@ -16,17 +16,17 @@
     "forbidden": []
   },
   "map_get_cmp_branch": {
-    "required": [],
-    "optional": [
+    "required": [
       "map_stable_cmp_branch"
     ],
+    "optional": [],
     "forbidden": []
   },
   "map_get_mul_acc": {
-    "required": [],
-    "optional": [
+    "required": [
       "map_stable_mul_acc"
     ],
+    "optional": [],
     "forbidden": []
   }
 }

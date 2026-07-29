@@ -77,25 +77,19 @@ mod tests {
 
     #[test]
     fn refinement_division_generates_constraint() {
-        let stmts = vec![assign(
-            "r",
-            binop(BinaryOp::Div, num(100.0), num(5.0)),
-        )];
+        let stmts = vec![assign("r", binop(BinaryOp::Div, num(100.0), num(5.0)))];
         let mut env = refinement::RefinementEnv::new();
         let mut cset = refinement::ConstraintSet::new();
         for s in &stmts {
             let _ = refinement::generate_stmt_constraints_pub(s, &mut env, &mut cset);
         }
         // Division should generate a nonzero constraint for divisor.
-        assert!(cset.len() >= 1, "division should produce constraint");
+        assert!(!cset.is_empty(), "division should produce constraint");
     }
 
     #[test]
     fn refinement_division_by_literal_nonzero_discharged() {
-        let stmts = vec![assign(
-            "r",
-            binop(BinaryOp::Div, num(100.0), num(5.0)),
-        )];
+        let stmts = vec![assign("r", binop(BinaryOp::Div, num(100.0), num(5.0)))];
         let mut env = refinement::RefinementEnv::new();
         let mut cset = refinement::ConstraintSet::new();
         for s in &stmts {
@@ -215,21 +209,17 @@ mod tests {
 
     #[test]
     fn effects_in_nested_scopes() {
-        let stmts = vec![
-            Stmt::FnDef {
-                name: "f".into(),
-                params: vec![],
-                body: vec![
-                    Stmt::Loop {
-                        count: num(5.0),
-                        body: vec![say(text("tick"))],
-                        span: None,
-                    },
-                ],
-                return_type: None,
+        let stmts = vec![Stmt::FnDef {
+            name: "f".into(),
+            params: vec![],
+            body: vec![Stmt::Loop {
+                count: num(5.0),
+                body: vec![say(text("tick"))],
                 span: None,
-            },
-        ];
+            }],
+            return_type: None,
+            span: None,
+        }];
         let result = effects::handle_effects(&stmts);
         assert_eq!(result.unhandled.len(), 1);
         assert!(result.signature.effects.contains(&"IO".to_string()));

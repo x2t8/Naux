@@ -1,4 +1,4 @@
-use naux::ast::{BinaryOp, ExprKind, Stmt};
+use naux::ast::{ActionKind, BinaryOp, ExprKind, Stmt};
 use naux::lexer::lex;
 use naux::parser::parser::Parser;
 
@@ -48,6 +48,49 @@ fn parses_fn_block() {
 }
 
 #[test]
+fn parses_t2b_scalar_function_annotations() {
+    let src = r#"
+~ fn select($flag: Bool, $left: F64, $count: I64) -> F64
+    ^ $left
+~ end
+"#;
+    let tokens = lex(src).unwrap();
+    let ast = Parser::from_tokens(&tokens).unwrap();
+    let Stmt::FnDef {
+        params,
+        return_type,
+        ..
+    } = &ast[0]
+    else {
+        panic!("Expected FnDef");
+    };
+
+    assert_eq!(
+        params
+            .iter()
+            .map(|param| (
+                param.name.as_str(),
+                param
+                    .annotation
+                    .as_ref()
+                    .map(|annotation| annotation.base.as_str())
+            ))
+            .collect::<Vec<_>>(),
+        vec![
+            ("flag", Some("Bool")),
+            ("left", Some("F64")),
+            ("count", Some("I64"))
+        ]
+    );
+    assert_eq!(
+        return_type
+            .as_ref()
+            .map(|annotation| annotation.base.as_str()),
+        Some("F64")
+    );
+}
+
+#[test]
 fn parses_index_assignment() {
     let src = r#"
 ~ rite
@@ -79,6 +122,28 @@ fn parses_index_assignment() {
     };
     assert_eq!(callee_name, "__setindex");
     assert_eq!(call.1.len(), 3);
+}
+
+#[test]
+fn parses_log_action_used_by_project_test_runner() {
+    let src = r#"
+~ rite
+    !log "[FAIL] assertion"
+~ end
+"#;
+    let tokens = lex(src).expect("lex");
+    let ast = Parser::from_tokens(&tokens).expect("parse");
+    assert!(matches!(
+        &ast[0],
+        Stmt::Rite { body, .. }
+            if matches!(
+                &body[0],
+                Stmt::Action {
+                    action: ActionKind::Log { .. },
+                    ..
+                }
+            )
+    ));
 }
 
 #[test]

@@ -459,7 +459,11 @@ fn builtin_syscall(args: Vec<Value>) -> Result<Value, RuntimeError> {
         call_args.push(value_to_c_long(arg)?);
     }
     let ret = invoke_raw_syscall(nr, &call_args)?;
-    Ok(Value::SmallInt(ret as i64))
+    #[cfg(all(not(windows), target_pointer_width = "64"))]
+    let ret_i64 = ret;
+    #[cfg(any(windows, target_pointer_width = "32"))]
+    let ret_i64 = i64::from(ret);
+    Ok(Value::SmallInt(ret_i64))
 }
 
 fn value_to_c_long(value: &Value) -> Result<c_long, RuntimeError> {

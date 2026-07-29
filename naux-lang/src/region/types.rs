@@ -47,6 +47,8 @@ impl std::fmt::Display for RegionVar {
 pub struct Region {
     pub id: RegionId,
     pub kind: RegionKind,
+    /// Lexical nesting depth. Global is depth zero.
+    pub depth: u32,
     /// Variables allocated in this region.
     pub allocations: Vec<String>,
     /// Parent region (for nesting).
@@ -87,7 +89,7 @@ pub struct RegionEnv {
     /// Stack of active regions (innermost last).
     region_stack: Vec<Region>,
     /// Map from variable name to the region it's allocated in.
-    var_to_region: HashMap<String, RegionId>,
+    var_to_region: HashMap<String, Vec<RegionId>>,
     /// All regions created during analysis.
     all_regions: Vec<Region>,
     /// Scope depth counter.
@@ -99,6 +101,7 @@ impl RegionEnv {
         let global = Region {
             id: fresh_region_id(),
             kind: RegionKind::Global,
+            depth: 0,
             allocations: Vec::new(),
             parent: None,
         };
@@ -118,6 +121,7 @@ impl RegionEnv {
         let region = Region {
             id: fresh_region_id(),
             kind,
+            depth: self.scope_depth,
             allocations: Vec::new(),
             parent: Some(parent_id),
         };
@@ -134,7 +138,17 @@ impl RegionEnv {
             let region = self.region_stack.pop()?;
             // Remove variable mappings for this region.
             for var in &region.allocations {
-                self.var_to_region.remove(var);
+                let remove_entry = if let Some(bindings) = self.var_to_region.get_mut(var) {
+                    if bindings.last() == Some(&region.id) {
+                        bindings.pop();
+                    }
+                    bindings.is_empty()
+                } else {
+                    false
+                };
+                if remove_entry {
+                    self.var_to_region.remove(var);
+                }
             }
             Some(region)
         } else {
@@ -145,29 +159,90 @@ impl RegionEnv {
     /// Allocate a variable in the current (innermost) region.
     pub fn allocate(&mut self, var: &str) {
         let region_id = self.current_region_id();
-        self.var_to_region.insert(var.to_string(), region_id);
+        let bindings = self.var_to_region.entry(var.to_string()).or_default();
+        if bindings.last() != Some(&region_id) {
+            bindings.push(region_id);
+        }
         if let Some(region) = self.region_stack.last_mut() {
-            region.allocations.push(var.to_string());
+            if !region
+                .allocations
+                .iter()
+                .any(|allocation| allocation == var)
+            {
+                region.allocations.push(var.to_string());
+            }
         }
         // Also update in all_regions.
         if let Some(region) = self.all_regions.iter_mut().find(|r| r.id == region_id) {
-            if !region.allocations.contains(&var.to_string()) {
+            if !region
+                .allocations
+                .iter()
+                .any(|allocation| allocation == var)
+            {
                 region.allocations.push(var.to_string());
             }
         }
     }
 
+    /// Move the active binding for `var` from a shorter-lived region to one
+    /// of its ancestors. This is used by conservative escape analysis when
+    /// Naux control flow does not introduce a lexical variable scope.
+    pub fn promote_binding(&mut self, var: &str, source: RegionId, target: RegionId) -> bool {
+        if !self.region_outlives(target, source) {
+            return false;
+        }
+        let Some(bindings) = self.var_to_region.get_mut(var) else {
+            return false;
+        };
+        if bindings.last() != Some(&source) {
+            return false;
+        }
+        if bindings.len() >= 2 && bindings[bindings.len() - 2] == target {
+            bindings.pop();
+        } else if let Some(active) = bindings.last_mut() {
+            *active = target;
+        }
+
+        for region in &mut self.region_stack {
+            if region.id == source {
+                region.allocations.retain(|allocation| allocation != var);
+            }
+            if region.id == target
+                && !region
+                    .allocations
+                    .iter()
+                    .any(|allocation| allocation == var)
+            {
+                region.allocations.push(var.to_string());
+            }
+        }
+        for region in &mut self.all_regions {
+            if region.id == source {
+                region.allocations.retain(|allocation| allocation != var);
+            }
+            if region.id == target
+                && !region
+                    .allocations
+                    .iter()
+                    .any(|allocation| allocation == var)
+            {
+                region.allocations.push(var.to_string());
+            }
+        }
+        true
+    }
+
     /// Which region is a variable in?
     pub fn lookup_region(&self, var: &str) -> Option<RegionId> {
-        self.var_to_region.get(var).copied()
+        self.var_to_region
+            .get(var)
+            .and_then(|bindings| bindings.last())
+            .copied()
     }
 
     /// Current (innermost) region ID.
     pub fn current_region_id(&self) -> RegionId {
-        self.region_stack
-            .last()
-            .map(|r| r.id)
-            .unwrap_or(0)
+        self.region_stack.last().map(|r| r.id).unwrap_or(0)
     }
 
     /// Current scope depth.
@@ -178,6 +253,38 @@ impl RegionEnv {
     /// Get all regions created during analysis.
     pub fn all_regions(&self) -> &[Region] {
         &self.all_regions
+    }
+
+    /// Look up a region by ID.
+    pub fn region(&self, id: RegionId) -> Option<&Region> {
+        self.all_regions.iter().find(|region| region.id == id)
+    }
+
+    /// Return true when `ancestor` is the same region as `descendant` or is
+    /// on its parent chain.
+    pub fn region_outlives(&self, ancestor: RegionId, descendant: RegionId) -> bool {
+        let mut cursor = Some(descendant);
+        while let Some(id) = cursor {
+            if id == ancestor {
+                return true;
+            }
+            cursor = self.region(id).and_then(|region| region.parent);
+        }
+        false
+    }
+
+    /// Find the nearest active region with `kind`.
+    pub fn nearest_active_region(&self, kind: RegionKind) -> Option<RegionId> {
+        self.region_stack
+            .iter()
+            .rev()
+            .find(|region| region.kind == kind)
+            .map(|region| region.id)
+    }
+
+    /// Parent of a known region.
+    pub fn parent_region(&self, id: RegionId) -> Option<RegionId> {
+        self.region(id).and_then(|region| region.parent)
     }
 
     /// Get the current region stack (for diagnostics).
@@ -280,5 +387,48 @@ mod tests {
         assert_eq!(format!("{}", RegionVar::Global), "ρ_global");
         assert_eq!(format!("{}", RegionVar::Stack(2)), "ρ_stack(2)");
         assert_eq!(format!("{}", RegionVar::Unresolved(7)), "?ρ7");
+    }
+
+    #[test]
+    fn shadowed_binding_is_restored_when_inner_region_exits() {
+        let mut env = RegionEnv::new();
+        env.allocate("value");
+        let outer = env.lookup_region("value").expect("outer binding");
+
+        let inner = env.push_region(RegionKind::Block);
+        env.allocate("value");
+        assert_eq!(env.lookup_region("value"), Some(inner));
+
+        env.pop_region();
+        assert_eq!(env.lookup_region("value"), Some(outer));
+    }
+
+    #[test]
+    fn outlives_requires_parent_ancestry_not_creation_order() {
+        let mut env = RegionEnv::new();
+        let global = env.current_region_id();
+        let left = env.push_region(RegionKind::Block);
+        env.pop_region();
+        let right = env.push_region(RegionKind::Block);
+
+        assert!(env.region_outlives(global, left));
+        assert!(env.region_outlives(global, right));
+        assert!(!env.region_outlives(left, right));
+        assert!(!env.region_outlives(right, left));
+    }
+
+    #[test]
+    fn promoted_binding_survives_source_pop_and_dies_with_target() {
+        let mut env = RegionEnv::new();
+        let function = env.push_region(RegionKind::Function);
+        let iteration = env.push_region(RegionKind::LoopIter);
+        env.allocate("result");
+
+        assert!(env.promote_binding("result", iteration, function));
+        assert_eq!(env.lookup_region("result"), Some(function));
+        env.pop_region();
+        assert_eq!(env.lookup_region("result"), Some(function));
+        env.pop_region();
+        assert_eq!(env.lookup_region("result"), None);
     }
 }

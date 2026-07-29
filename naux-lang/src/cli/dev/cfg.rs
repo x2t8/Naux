@@ -135,10 +135,8 @@ fn build_basic_blocks(code: &[bytecode::Instr]) -> Vec<BasicBlockView> {
                     leaders.insert(idx + 1);
                 }
             }
-            bytecode::Instr::Return => {
-                if idx + 1 < code.len() {
-                    leaders.insert(idx + 1);
-                }
+            bytecode::Instr::Return if idx + 1 < code.len() => {
+                leaders.insert(idx + 1);
             }
             _ => {}
         }

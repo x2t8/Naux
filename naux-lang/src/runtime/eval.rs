@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -31,12 +33,35 @@ pub fn eval_script(stmts: &[Stmt]) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>
     eval_script_with_base_dir(stmts, None)
 }
 
+/// Evaluate a Surface program with explicit pre-bound scalar inputs.
+///
+/// This is primarily the differential oracle boundary for typed Surface-to-
+/// Core elaboration. Bindings are installed without emitting assignment
+/// events; program statements retain their ordinary event behavior.
+pub fn eval_script_with_bindings(
+    stmts: &[Stmt],
+    bindings: &[(String, Value)],
+) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
+    eval_script_with_base_dir_and_bindings(stmts, None, bindings)
+}
+
 pub fn eval_script_with_base_dir(
     stmts: &[Stmt],
     base_dir: Option<&Path>,
 ) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
+    eval_script_with_base_dir_and_bindings(stmts, base_dir, &[])
+}
+
+fn eval_script_with_base_dir_and_bindings(
+    stmts: &[Stmt],
+    base_dir: Option<&Path>,
+    bindings: &[(String, Value)],
+) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
     let mut env = Env::new();
     register_all(&mut env);
+    for (name, value) in bindings {
+        env.set(name, value.clone());
+    }
     let mut events = Vec::new();
     let mut errors = Vec::new();
     let mut call_stack: Vec<Frame> = Vec::new();
@@ -174,7 +199,12 @@ fn eval_stmt(
             span,
             ..
         } => {
-            env.define_fn(name, params.iter().map(|p| p.name.clone()).collect(), body.clone(), span.clone());
+            env.define_fn(
+                name,
+                params.iter().map(|p| p.name.clone()).collect(),
+                body.clone(),
+                span.clone(),
+            );
             Control::None
         }
         Stmt::Assign { name, expr, .. } => {

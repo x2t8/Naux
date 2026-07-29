@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -25,48 +26,77 @@ func nowNs() int64 {
 	return time.Now().UnixNano()
 }
 
+func coefficientOfVariationPct(samples []int64) float64 {
+	if len(samples) < 2 {
+		return 0
+	}
+	mean := 0.0
+	for _, sample := range samples {
+		mean += float64(sample)
+	}
+	mean /= float64(len(samples))
+	if mean == 0 {
+		return 0
+	}
+	variance := 0.0
+	for _, sample := range samples {
+		delta := float64(sample) - mean
+		variance += delta * delta
+	}
+	variance /= float64(len(samples))
+	return math.Sqrt(variance) * 100 / mean
+}
+
 func main() {
 	n := parseArg(os.Args, 1, 100000)
 	iters := parseArg(os.Args, 2, 200)
 	warmupMs := parseArg(os.Args, 3, 100)
 	reps := parseArg(os.Args, 4, 50)
 
-	arr := make([]float64, n)
 	warmupEnd := time.Now().Add(time.Duration(warmupMs) * time.Millisecond)
 	for time.Now().Before(warmupEnd) {
-		s := 0.0
+		arr := make([]float64, n)
+		total := 0.0
 		for i := 0; i < n; i++ {
 			arr[i] = float64(i)
 		}
 		for r := 0; r < reps; r++ {
+			sum := 0.0
 			for i := 0; i < n; i++ {
 				v := arr[i]
-				s += v
+				sum += v
 				arr[i] = v + 1.0
 			}
+			total += sum
 		}
-		sinkListUpdate = s
+		sinkListUpdate = total
 	}
 
 	samples := make([]int64, iters)
+	checksum := 0.0
 	for it := 0; it < iters; it++ {
 		start := nowNs()
-		s := 0.0
+		arr := make([]float64, n)
+		total := 0.0
 		for i := 0; i < n; i++ {
 			arr[i] = float64(i)
 		}
 		for r := 0; r < reps; r++ {
+			sum := 0.0
 			for i := 0; i < n; i++ {
 				v := arr[i]
-				s += v
+				sum += v
 				arr[i] = v + 1.0
 			}
+			total += sum
 		}
-		sinkListUpdate = s
+		sinkListUpdate = total
+		checksum = total
 		end := nowNs()
 		samples[it] = end - start
 	}
 
+	cvPct := coefficientOfVariationPct(samples)
 	sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
 	median := samples[iters/2]
 	p95 := samples[(iters*95)/100]
@@ -74,6 +104,6 @@ func main() {
 	if median > 0 {
 		ops = 1e9 / float64(median)
 	}
-	fmt.Printf("[GO BENCH] list_update median=%d ns/op (%.0f ops/sec), p95=%d ns/op | iters=%d warmup=%dms reps=%d\n",
-		median, ops, p95, iters, warmupMs, reps)
+	fmt.Printf("[GO BENCH] list_update median=%d ns/op (%.0f ops/sec), p95=%d ns/op cv_pct=%.4f | iters=%d warmup=%dms reps=%d checksum=%.17g\n",
+		median, ops, p95, cvPct, iters, warmupMs, reps, checksum)
 }

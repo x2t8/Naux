@@ -18,15 +18,15 @@ fn collect_final_events(ctx: &Context) -> Vec<RuntimeEvent> {
 #[test]
 fn unicode_strings_preserved() {
     let src = r#"
-$name = "Arvid"
-!say "Halloallo" + $name
+$name = "Cốt truyện"
+!say "Xin chào " + $name
 "#;
     let program = parse(src).expect("parse");
     let mut ctx = Context::new();
     run_program(&program, Some("Main"), &mut ctx);
     let events = collect_final_events(&ctx);
     let rendered = renderer::render_html(&events);
-    assert!(rendered.contains("Cốt"));
+    assert!(rendered.contains("Xin chào Cốt truyện"));
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn sort_and_search_work() {
 }
 
 #[test]
-fn gcd_and_fib() {
+fn gcd_and_pow_mod() {
     let src = "$g = gcd(48, 18)\n$f = pow_mod(2, 10, 1000)\n";
     let program = parse(src).unwrap();
     let mut ctx = Context::new();

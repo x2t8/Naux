@@ -58,6 +58,11 @@ class RunSummary:
     low_n_total: Optional[int]
     cold_gate: Optional[str]
     perf_stat_available: Optional[bool]
+    slope_primary_impl: Optional[str]
+    slope_shadow_impl: Optional[str]
+    shadow_compare_status: str
+    perf_report_path: Optional[Path]
+    promotion_context: Dict[str, object]
 
 
 def parse_args() -> argparse.Namespace:
@@ -210,6 +215,78 @@ def _find_fixed_cost_peer(slope_path: Path, fixed_cost_filenames: List[str]) -> 
     return None
 
 
+def _parse_shadow_compare(slope_path: Path) -> Tuple[Optional[str], Optional[str], str]:
+    canonical = slope_path.parent / "slope_report_shadow_compare.json"
+    if canonical.exists():
+        try:
+            payload = _load_json(canonical)
+            primary = payload.get("primary", {})
+            shadow = payload.get("shadow", {})
+            status = str(payload.get("status", "error")).lower()
+            if status not in {"match", "mismatch"}:
+                status = "error"
+            return (
+                primary.get("implementation") if isinstance(primary, dict) else None,
+                shadow.get("implementation") if isinstance(shadow, dict) else None,
+                status,
+            )
+        except Exception:
+            return None, None, "error"
+
+    legacy = (
+        ("slope_report_rs_shadow_compare.txt", "python", "rust"),
+        ("slope_report_py_shadow_compare.txt", "rust", "python"),
+    )
+    for filename, primary_impl, shadow_impl in legacy:
+        path = slope_path.parent / filename
+        if not path.exists():
+            continue
+        try:
+            first_line = path.read_text(encoding="utf-8").splitlines()[0].strip()
+        except (OSError, IndexError, UnicodeError):
+            return primary_impl, shadow_impl, "error"
+        if first_line == "[slope-shadow] match":
+            return primary_impl, shadow_impl, "match"
+        if first_line == "[slope-shadow] MISMATCH":
+            return primary_impl, shadow_impl, "mismatch"
+        return primary_impl, shadow_impl, "error"
+
+    return None, None, "missing"
+
+
+def _parse_promotion_context(slope_path: Path) -> Tuple[Optional[Path], Dict[str, object]]:
+    perf_path = slope_path.parent / "perf_report.json"
+    if not perf_path.exists():
+        return None, {}
+    try:
+        payload = _load_json(perf_path)
+        meta = payload.get("meta", {})
+    except Exception:
+        return perf_path, {"parse_error": True}
+    if not isinstance(meta, dict):
+        return perf_path, {"parse_error": True}
+    keys = (
+        "perf_env_enforce",
+        "perf_require_taskset",
+        "perf_env_status",
+        "perf_env_governor_actual",
+        "perf_env_turbo_source",
+        "perf_env_turbo_actual",
+        "perf_env_cpu_model",
+        "git_sha",
+        "git_branch",
+        "git_dirty",
+        "ci_run_id",
+        "ci_run_attempt",
+        "controlled_branch",
+        "slope_gate_primary_requested",
+        "slope_gate_primary_actual",
+        "slope_gate_primary_fallback_used",
+        "baseline_fingerprint_status",
+    )
+    return perf_path, {key: meta.get(key) for key in keys}
+
+
 def _build_run_summary(slope_path: Path, fixed_cost_filenames: List[str]) -> RunSummary:
     slope = _load_json(slope_path)
     sc = _scenario_index(slope)
@@ -229,6 +306,8 @@ def _build_run_summary(slope_path: Path, fixed_cost_filenames: List[str]) -> Run
 
     run_id = slope_path.parent.name
     mtime_utc = _fmt_ts_utc(slope_path.stat().st_mtime)
+    primary_impl, shadow_impl, shadow_status = _parse_shadow_compare(slope_path)
+    perf_report_path, promotion_context = _parse_promotion_context(slope_path)
 
     return RunSummary(
         run_id=run_id,
@@ -248,6 +327,11 @@ def _build_run_summary(slope_path: Path, fixed_cost_filenames: List[str]) -> Run
         low_n_total=low_total,
         cold_gate=cold_gate,
         perf_stat_available=perf_avail,
+        slope_primary_impl=primary_impl,
+        slope_shadow_impl=shadow_impl,
+        shadow_compare_status=shadow_status,
+        perf_report_path=perf_report_path,
+        promotion_context=promotion_context,
     )
 
 
@@ -265,14 +349,17 @@ def _pass_fail_tag(gate: Optional[str]) -> str:
 
 def _to_json_report(root: Path, runs: List[RunSummary]) -> dict:
     class_counts = {"pass": 0, "retryable": 0, "hard": 0}
+    shadow_counts = {"match": 0, "mismatch": 0, "missing": 0, "error": 0}
     for r in runs:
         class_counts[r.retry_class] = class_counts.get(r.retry_class, 0) + 1
+        shadow_counts[r.shadow_compare_status] = shadow_counts.get(r.shadow_compare_status, 0) + 1
     return {
         "meta": {
             "artifacts_root": str(root),
             "run_count": len(runs),
         },
         "retry_class_counts": class_counts,
+        "shadow_compare_counts": shadow_counts,
         "runs": [
             {
                 "run_id": r.run_id,
@@ -300,6 +387,13 @@ def _to_json_report(root: Path, runs: List[RunSummary]) -> dict:
                 "low_n_total": r.low_n_total,
                 "cold_gate": r.cold_gate,
                 "perf_stat_available": r.perf_stat_available,
+                "slope_primary_impl": r.slope_primary_impl,
+                "slope_shadow_impl": r.slope_shadow_impl,
+                "shadow_compare_status": r.shadow_compare_status,
+                "perf_report": (
+                    None if r.perf_report_path is None else str(r.perf_report_path)
+                ),
+                "promotion_context": r.promotion_context,
             }
             for r in runs
         ],
@@ -312,12 +406,14 @@ def _to_markdown_report(root: Path, runs: List[RunSummary]) -> str:
     lines.append("")
     lines.append(f"- artifacts_root: `{root}`")
     lines.append(f"- run_count: `{len(runs)}`")
+    shadow_match_count = sum(1 for run in runs if run.shadow_compare_status == "match")
+    lines.append(f"- shadow_match: `{shadow_match_count}/{len(runs)}`")
     lines.append("")
     lines.append(
-        "| run_id | mtime_utc | retry_class | dot_a | dot_r2 | map_a | guard_map_a | "
+        "| run_id | mtime_utc | retry_class | slope impl | shadow | dot_a | dot_r2 | map_a | guard_map_a | "
         "fuse_add | fuse_mul_acc | fuse_cmp_branch | fixed_cost | low_n | cold | perf_stat |"
     )
-    lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|")
+    lines.append("|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|")
     for r in runs:
         low_n = "-"
         if r.low_n_total is not None and r.low_n_failed is not None:
@@ -328,10 +424,12 @@ def _to_markdown_report(root: Path, runs: List[RunSummary]) -> str:
         if r.fixed_cost_error:
             fixed_cost = f"{fixed_cost} ({r.fixed_cost_error})"
         lines.append(
-            "| {run_id} | {mtime} | {retry} | {dot_a} | {dot_r2} | {map_a} | {guard_a} | {f_add} | {f_mul} | {f_cmp} | {fixed_cost} | {low_n} | {cold} | {perf} |".format(
+            "| {run_id} | {mtime} | {retry} | {impl} | {shadow} | {dot_a} | {dot_r2} | {map_a} | {guard_a} | {f_add} | {f_mul} | {f_cmp} | {fixed_cost} | {low_n} | {cold} | {perf} |".format(
                 run_id=r.run_id,
                 mtime=r.mtime_utc,
                 retry=r.retry_class,
+                impl=r.slope_primary_impl or "-",
+                shadow=r.shadow_compare_status,
                 dot_a=_fmt_float(r.dot_runtime.a_ns_per_elem, 6),
                 dot_r2=_fmt_float(r.dot_runtime.r2, 4),
                 map_a=_fmt_float(r.map_heavy.a_ns_per_elem, 6),
@@ -388,6 +486,12 @@ def main() -> int:
                 RETRY_CLASS_PASS: 0,
                 RETRY_CLASS_RETRYABLE: 0,
                 RETRY_CLASS_HARD: 0,
+            },
+            "shadow_compare_counts": {
+                "match": 0,
+                "mismatch": 0,
+                "missing": 0,
+                "error": 0,
             },
             "runs": [],
         }

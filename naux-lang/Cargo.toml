@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 
+[features]
+default = []
+experimental-regions = []
+
 [lib]
 name = "naux"
 path = "src/lib.rs"

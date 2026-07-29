@@ -4,6 +4,12 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      rust_slope_primary:
+        description: Promote Rust slope gate to primary after the cached shadow preflight passes
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   ci:
@@ -17,6 +23,32 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
       - name: test
         run: cargo test --workspace --all-features
+      - name: performance governance tests
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+
+  compatibility-smoke:
+    name: core compatibility (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check core workspace
+        run: cargo check --workspace --all-features
+      - name: Test platform-neutral library core
+        run: cargo test -p naux --lib --all-features
+      - name: Test new-project workflow
+        run: cargo test -p naux --test project_workflow
+      - name: Test region escape evidence
+        run: cargo test -p naux --test region_escape_tests
+      - name: Run VM CLI smoke
+        run: cargo run -p naux -- run naux-lang/examples/hello.nx --engine vm
 
   sanity-parity:
     needs: ci
@@ -26,6 +58,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: VM/JIT sanity parity
         run: bash ./scripts/sanity_matrix.sh
+      - name: Deterministic JIT alias mutation fuzz
+        shell: 'bash --noprofile --norc -eo pipefail "{0}"'
+        run: |
+          mkdir -p target/fuzz
+          cargo test -p naux --test jit_alias_fuzz -- --nocapture 2>&1 \
+            | tee target/fuzz/jit_alias_fuzz.log
+      - name: Upload alias fuzz report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jit-alias-fuzz-report
+          path: target/fuzz/jit_alias_fuzz.log
 
   perf-fixed-cost:
     needs: [ci, sanity-parity]
@@ -60,10 +104,10 @@ jobs:
           MAX_TEMP_MAP_MATERIALIZED: 0
           MAX_TEMP_LIST_MATERIALIZED_RATIO_PCT: 5
           MAX_TEMP_MAP_MATERIALIZED_RATIO_PCT: 5
-          REQUIRE_TEMP_MAP_ALLOC_METRICS: 0
+          REQUIRE_TEMP_MAP_ALLOC_METRICS: 1
           TEMP_MAP_ALLOC_BENCH_FILE: naux-lang/examples/bench_map_temp_alloc.nx
           MIN_TEMP_MAP_BENCH_ELIDED: 1000
-          MAX_TEMP_MAP_BENCH_MATERIALIZED: 10
+          MAX_TEMP_MAP_BENCH_MATERIALIZED: 0
           MAX_TEMP_MAP_BENCH_MATERIALIZED_RATIO_PCT: 5
           PERF_BASELINE_TSV: benchmarks/perf_baseline.tsv
           FIXED_COST_LOW_N_ITERS: 220
@@ -79,9 +123,11 @@ jobs:
           ENABLE_DEOPT_WARN_GATE: 0
           ENABLE_TREND_REPORT: 0
           ENABLE_STABILITY_WINDOW_GATE: 0
-          ENABLE_ROADMAP_STATUS_UPDATE: 0
+          ENABLE_PERF_STATUS_UPDATE: 0
           PERF_ENV_ENFORCE: 1
           PERF_REQUIRE_TASKSET: 1
+          PERF_BASELINE_FINGERPRINT_REQUIRE: 1
+          PERF_BASELINE_FINGERPRINT_ENFORCE: 1
           PERF_EXPECT_GOVERNOR: performance
           PERF_EXPECT_INTEL_NO_TURBO: 1
           PERF_EXPECT_AMD_BOOST: 0
@@ -98,11 +144,89 @@ jobs:
             target/perf/fixed_cost_report.md
             target/perf/*.log
 
+  perf-cross-language:
+    needs: [ci, sanity-parity]
+    runs-on: [self-hosted, linux, x64, perf]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Zig baseline toolchain
+        shell: 'bash --noprofile --norc -eo pipefail "{0}"'
+        env:
+          ZIG_VERSION: 0.16.0
+          ZIG_SHA256: 70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
+        run: |
+          zig_root="$RUNNER_TEMP/naux-zig-$ZIG_VERSION"
+          mkdir -p "$zig_root"
+          curl -fsSL --retry 3 \
+            -o "$zig_root/zig.tar.xz" \
+            "https://ziglang.org/download/$ZIG_VERSION/zig-x86_64-linux-$ZIG_VERSION.tar.xz"
+          printf '%s  %s\n' "$ZIG_SHA256" "$zig_root/zig.tar.xz" | sha256sum -c -
+          tar -xJf "$zig_root/zig.tar.xz" -C "$zig_root"
+          echo "$zig_root/zig-x86_64-linux-$ZIG_VERSION" >> "$GITHUB_PATH"
+      - name: Run claim-eligible cross-language baseline
+        shell: 'bash --noprofile --norc -eo pipefail "{0}"'
+        env:
+          CPU_CORE: 2
+          N: 100000
+          REPS: 50
+          ITERS: 50
+          WARMUP_MS: 100
+          ENGINE: jit
+          EXPECT_GOVERNOR: performance
+          EXPECT_INTEL_NO_TURBO: 1
+          ENFORCE_CLAIM_ENV: 1
+          MIN_CLAIM_ITERS: 30
+          MIN_CLAIM_WARMUP_MS: 100
+          MAX_CLAIM_CV_PCT: 5
+        run: bash ./scripts/bench_cross_language.sh
+      - name: Package deterministic performance evidence
+        shell: 'bash --noprofile --norc -eo pipefail "{0}"'
+        run: python3 ./scripts/perf_claim_bundle.py
+      - name: Upload cross-language evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-cross-language-evidence
+          path: |
+            target/perf/cross_language/
+            target/perf/claims/
+
   perf-slope:
     needs: [ci, sanity-parity]
     runs-on: [self-hosted, linux, x64, perf]
     steps:
       - uses: actions/checkout@v4
+      - name: Restore controlled slope history
+        uses: actions/cache@v4
+        with:
+          path: target/perf/history
+          key: perf-slope-history-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            perf-slope-history-${{ runner.os }}-${{ runner.arch }}-
+      - name: Require two clean shadow windows before Rust-primary promotion
+        if: github.event_name == 'workflow_dispatch' && inputs.rust_slope_primary
+        shell: 'bash --noprofile --norc -eo pipefail "{0}"'
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          test "$GITHUB_REF_NAME" != "$DEFAULT_BRANCH"
+          python3 ./scripts/perf_trend_artifacts.py \
+            --artifacts-root target/perf/history \
+            --limit 8 \
+            --strict \
+            --out-json target/perf/prepromotion_trend.json \
+            --out-md target/perf/prepromotion_trend.md
+          python3 ./scripts/perf_stability_window.py \
+            --trend-json target/perf/prepromotion_trend.json \
+            --window 8 \
+            --min-runs 8 \
+            --max-retryable-pct 0 \
+            --max-hard-count 0 \
+            --require-shadow-match \
+            --min-shadow-match-pct 100 \
+            --fail-on-insufficient-runs \
+            --out-json target/perf/prepromotion_stability.json \
+            --out-md target/perf/prepromotion_stability.md
       - name: Settle machine state
         shell: 'bash --noprofile --norc -eo pipefail "{0}"'
         run: sleep 10
@@ -140,12 +264,12 @@ jobs:
           MAX_TEMP_MAP_BENCH_MATERIALIZED: 10
           MAX_TEMP_MAP_BENCH_MATERIALIZED_RATIO_PCT: 5
           PERF_BASELINE_TSV: benchmarks/perf_baseline.tsv
-          SLOPE_GATE_PRIMARY: python
-          SLOPE_GATE_PRIMARY_FALLBACK_PY: 1
+          SLOPE_GATE_PRIMARY: ${{ github.event_name == 'workflow_dispatch' && inputs.rust_slope_primary && 'rust' || 'python' }}
+          SLOPE_GATE_PRIMARY_FALLBACK_PY: ${{ github.event_name == 'workflow_dispatch' && inputs.rust_slope_primary && '0' || '1' }}
           ENABLE_SLOPE_GATE_RUST_SHADOW: 1
           SLOPE_GATE_RUST_COMPARE: 1
           SLOPE_RETRYABLE_FINAL_ENFORCE: 0
-          SLOPE_NONBLOCKING_SCENARIOS: map_get_mul_acc,map_get_cmp_branch
+          SLOPE_NONBLOCKING_SCENARIOS: map_get_mul_acc
           SLOPE_DEFAULT_ITERS: 80
           SLOPE_DEFAULT_WARMUP_MS: 250
           SLOPE_DOT_RUNTIME_ITERS: 140
@@ -165,11 +289,23 @@ jobs:
           ENABLE_FIXED_COST_GATE: 0
           ENABLE_DEOPT_REPORT: 0
           ENABLE_DEOPT_WARN_GATE: 0
-          ENABLE_TREND_REPORT: 0
-          ENABLE_STABILITY_WINDOW_GATE: 0
-          ENABLE_ROADMAP_STATUS_UPDATE: 0
+          ENABLE_TREND_REPORT: 1
+          PERF_TREND_LIMIT: 10
+          ENABLE_STABILITY_WINDOW_GATE: 1
+          STABILITY_WINDOW_SIZE: 10
+          STABILITY_WINDOW_MIN_RUNS: 10
+          STABILITY_WINDOW_MAX_RETRYABLE_PCT: 0
+          STABILITY_WINDOW_MAX_HARD_COUNT: 0
+          STABILITY_WINDOW_REQUIRE_SHADOW_MATCH: 1
+          STABILITY_WINDOW_MIN_SHADOW_MATCH_PCT: 100
+          STABILITY_WINDOW_FAIL_ON_INSUFFICIENT_RUNS: 1
+          STABILITY_WINDOW_ENFORCE: 0
+          ENABLE_PERF_STATUS_UPDATE: 0
           PERF_ENV_ENFORCE: 1
+          PERF_CONTROLLED_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.rust_slope_primary && github.ref_name != github.event.repository.default_branch && '1' || '0' }}
           PERF_REQUIRE_TASKSET: 1
+          PERF_BASELINE_FINGERPRINT_REQUIRE: 1
+          PERF_BASELINE_FINGERPRINT_ENFORCE: 1
           PERF_EXPECT_GOVERNOR: performance
           PERF_EXPECT_INTEL_NO_TURBO: 1
           PERF_EXPECT_AMD_BOOST: 0
@@ -185,3 +321,47 @@ jobs:
             target/perf/slope_report*.txt
             target/perf/perf_report.json
             target/perf/perf_report.md
+            target/perf/trend_report.json
+            target/perf/trend_report.md
+            target/perf/stability_window_report.json
+            target/perf/stability_window_report.md
+            target/perf/prepromotion_*.json
+            target/perf/prepromotion_*.md
+
+  m1-readiness:
+    needs: [perf-cross-language, perf-slope]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download cross-language evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: perf-cross-language-evidence
+          path: target/download/cross-language
+      - name: Download slope-window evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: perf-slope-report
+          path: target/download/slope
+      - name: Evaluate fail-closed M1 readiness
+        id: readiness
+        continue-on-error: true
+        shell: 'bash --noprofile --norc -eo pipefail "{0}"'
+        run: |
+          bundle="$(find target/download/cross-language -type f \
+            -name 'naux-performance-evidence-*.tar' -print -quit)"
+          test -n "$bundle"
+          python3 ./scripts/perf_m1_readiness.py \
+            --trend-json target/download/slope/trend_report.json \
+            --stability-json target/download/slope/stability_window_report.json \
+            --bundle "$bundle" \
+            --out-json target/perf/m1_readiness.json \
+            --out-md target/perf/m1_readiness.md
+      - name: Upload M1 readiness report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-readiness-report
+          path: |
+            target/perf/m1_readiness.json
+            target/perf/m1_readiness.md

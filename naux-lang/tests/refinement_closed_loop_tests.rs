@@ -171,7 +171,7 @@ fn test_refinement_report_has_proof_slots() {
 
     let x_slot = &report.proof_slots["x"];
     assert!(
-        x_slot.numeric.as_ref().map_or(false, |n| n.nonzero),
+        x_slot.numeric.as_ref().is_some_and(|n| n.nonzero),
         "Expected x to have nonzero proof, got: {:?}",
         x_slot
     );

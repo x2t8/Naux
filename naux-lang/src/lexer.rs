@@ -12,12 +12,12 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
     while let Some((_, ch)) = chars.next() {
         // Update line/col for current char
         if ch == '\n' {
-            line += 1;
-            col = 1;
             tokens.push(Token {
                 kind: TokenKind::Newline,
                 span: Span { line, column: col },
             });
+            line += 1;
+            col = 1;
             continue;
         }
 
@@ -31,12 +31,15 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
             let mut newline_found = false;
             for (_, ch2) in chars.by_ref() {
                 if ch2 == '\n' {
-                    line += 1;
-                    col = 1;
                     tokens.push(Token {
                         kind: TokenKind::Newline,
-                        span: Span { line, column: col },
+                        span: Span {
+                            line,
+                            column: cur_col,
+                        },
                     });
+                    line += 1;
+                    col = 1;
                     newline_found = true;
                     break;
                 }
@@ -347,7 +350,7 @@ pub fn lex(input: &str) -> Result<Vec<Token>, LexError> {
         }
 
         // Number literal
-        if ch.is_ascii_digit() || (ch == '-' && peek_is_digit(&mut chars)) {
+        if ch.is_ascii_digit() {
             let mut s = String::new();
             s.push(ch);
             let mut cur_col = col + 1;
@@ -436,12 +439,6 @@ fn is_ident_part(c: char) -> bool {
 
 fn is_ignored_punctuation(c: char) -> bool {
     matches!(c, '?' | '\\' | '—' | '–')
-}
-
-fn peek_is_digit(iter: &mut std::iter::Peekable<std::str::CharIndices<'_>>) -> bool {
-    iter.peek()
-        .map(|(_, ch)| ch.is_ascii_digit())
-        .unwrap_or(false)
 }
 
 fn is_inline_ws(ch: char) -> bool {

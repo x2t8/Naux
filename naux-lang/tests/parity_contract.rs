@@ -11,7 +11,11 @@ use naux::runtime::error::{format_runtime_error_with_file, RuntimeError};
 use naux::runtime::events::RuntimeEvent;
 use naux::runtime::value::Value;
 use naux::runtime::{eval_script, eval_script_with_base_dir};
-use naux::vm::run::run_vm;
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+use naux::vm::compiler::compile_script;
+use naux::vm::run::{run_jit, run_vm};
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+use naux::vm::typed::TypedRunner;
 
 fn parse(src: &str) -> Vec<Stmt> {
     let tokens = lex(src).expect("lex");
@@ -36,6 +40,11 @@ fn run_vm_result(src: &str) -> Result<(Vec<RuntimeEvent>, Value), String> {
     run_vm(&ast, src, "<parity>")
 }
 
+fn run_jit_result(src: &str) -> Result<(Vec<RuntimeEvent>, Value, bool), String> {
+    let ast = parse(src);
+    run_jit(&ast, src, "<parity>")
+}
+
 fn assert_interpreter_error_contains(src: &str, needle: &str) {
     let (_env, _events, errors) = run_interpreter(src);
     assert!(
@@ -49,6 +58,14 @@ fn assert_vm_error_contains(src: &str, needle: &str) {
     assert!(
         err.contains(needle),
         "expected VM error containing `{needle}`, got {err}"
+    );
+}
+
+fn assert_jit_error_contains(src: &str, needle: &str) {
+    let err = run_jit_result(src).expect_err("JIT entrypoint should reject this program");
+    assert!(
+        err.contains(needle),
+        "expected JIT error containing `{needle}`, got {err}"
     );
 }
 
@@ -210,6 +227,389 @@ fn eff_001_events_keep_source_evaluation_order() {
     assert_eq!(say_events(&vm_events), vec!["a", "b"]);
 }
 
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+#[test]
+fn jit_001_unrolled_list_loops_preserve_scalar_tail() {
+    let cases = [
+        r#"
+~ rite
+    $n = 1000
+    $reps = 2
+    $arr = list_range($n)
+    $r = 0
+    $total = 0
+    ~ while $r < $reps
+        $i = 0
+        $sum = 0
+        ~ while $i < len($arr)
+            $sum = $sum + 0
+            $sum = $sum + 0
+            $sum = $sum + __index($arr, $i)
+            $i = $i + 1
+        ~ end
+        $total = $total + $sum
+        $r = $r + 1
+    ~ end
+    ^ $total
+~ end
+"#,
+        r#"
+~ rite
+    $n = 1000
+    $reps = 2
+    $arr = list_range($n)
+    $r = 0
+    $total = 0
+    ~ while $r < $reps
+        $i = 0
+        $sum = 0
+        ~ while $i < len($arr)
+            $v = __index($arr, $i)
+            $sum = $sum + $v
+            $__ = __setindex($arr, $i, $v + 1)
+            $i = $i + 1
+        ~ end
+        $total = $total + $sum
+        $r = $r + 1
+    ~ end
+    ^ $total
+~ end
+"#,
+        r#"
+~ rite
+    $n = 1000
+    $reps = 2
+    $arr = list_range($n)
+    $r = 0
+    $total = 0
+    ~ while $r < $reps
+        $i = 0
+        $sum = 0
+        ~ while $i < len($arr)
+            $v = __index($arr, $i)
+            $sum = $sum + $v * $v
+            $i = $i + 1
+        ~ end
+        $total = $total + $sum
+        $r = $r + 1
+    ~ end
+    ^ $total
+~ end
+"#,
+    ];
+
+    for src in cases {
+        let (_vm_events, vm_value) = run_vm_result(src).expect("VM run");
+        let (_jit_events, jit_value, used_jit) = run_jit_result(src).expect("JIT run");
+        assert!(used_jit, "expected typed trace JIT path");
+        assert_eq!(jit_value, vm_value);
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+#[test]
+fn jit_002_mutation_tail_is_version_safe_across_mod4_and_runner_reuse() {
+    for n in 51..=58 {
+        let src = format!(
+            r#"
+~ rite
+    $n = {n}
+    $reps = 3
+    $arr = list_range($n)
+    $view = $arr
+    $r = 0
+    $total = 0
+    ~ while $r < $reps
+        $i = 0
+        $sum = 0
+        ~ while $i < len($view)
+            $v = __index($view, $i)
+            $sum = $sum + $v
+            $__ = __setindex($view, $i, $v + 1)
+            $i = $i + 1
+        ~ end
+        $total = $total + $sum
+        $r = $r + 1
+    ~ end
+    $head = __index($arr, 0)
+    ^ $total + $head
+~ end
+"#
+        );
+        let ast = parse(&src);
+        let prog = compile_script(&ast);
+        let (_vm_events, expected) = run_vm_result(&src).expect("VM run");
+        let mut runner = TypedRunner::new(&prog);
+        let mut previous_hits = 0;
+
+        for run_idx in 0..4 {
+            let (actual, _events) = runner.run(&prog).expect("typed JIT run");
+            assert_eq!(actual, expected, "n={n}, runner reuse iteration={run_idx}");
+
+            let summary = runner.trace_summary();
+            assert_eq!(summary.total_deopts, 0, "n={n}");
+            assert_eq!(summary.total_runtime_deopts, 0, "n={n}");
+            assert_eq!(summary.guard_fail_total, 0, "n={n}");
+            let hit_delta = summary.total_hits.saturating_sub(previous_hits);
+            assert_eq!(
+                hit_delta, 3,
+                "each of the three inner loops must enter the trace exactly once for n={n}"
+            );
+            previous_hits = summary.total_hits;
+        }
+
+        let summary = runner.trace_summary();
+        assert_eq!(
+            summary.trace_count, 1,
+            "trace cache should remain stable for n={n}"
+        );
+        assert!(
+            summary.total_hits > 0,
+            "expected hot trace execution for n={n}"
+        );
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+#[test]
+fn jit_003_read_only_tail_handoff_avoids_trace_bounce() {
+    let src = r#"
+~ rite
+    $n = 56
+    $reps = 3
+    $arr = list_range($n)
+    $r = 0
+    $total = 0
+    ~ while $r < $reps
+        $i = 0
+        $sum = 0
+        ~ while $i < len($arr)
+            $sum = $sum + 0
+            $sum = $sum + 0
+            $sum = $sum + __index($arr, $i)
+            $i = $i + 1
+        ~ end
+        $total = $total + $sum
+        $r = $r + 1
+    ~ end
+    ^ $total
+~ end
+"#;
+    let ast = parse(src);
+    let prog = compile_script(&ast);
+    let (_vm_events, expected) = run_vm_result(src).expect("VM run");
+    let mut runner = TypedRunner::new(&prog);
+
+    for run_idx in 0..4 {
+        let previous_hits = runner.trace_summary().total_hits;
+        let (actual, _events) = runner.run(&prog).expect("typed JIT run");
+        assert_eq!(actual, expected, "runner reuse iteration={run_idx}");
+        let summary = runner.trace_summary();
+        assert_eq!(summary.total_hits.saturating_sub(previous_hits), 3);
+        assert_eq!(summary.total_deopts, 0);
+        assert_eq!(summary.guard_fail_total, 0);
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+#[test]
+fn jit_004_uniform_numeric_map_branch_reaches_cmp_fusion() {
+    let src = r#"
+~ rite
+    $n = 256
+    $reps = 3
+    $m = {k0: 96}
+    $k = "k0"
+    $sum = 0
+    $last = 0
+    $r = 0
+    ~ while $r < $reps
+        $v = 0
+        $i = 0
+        ~ while $i < $n
+            $v = __index($m, $k)
+            ~ if $v > 64
+                $sum = $sum + 1
+            ~ end
+            $v = __index($m, $k)
+            ~ if $v > 80
+                $sum = $sum + 1
+            ~ end
+            $i = $i + 1
+        ~ end
+        $last = $last + $v
+        $r = $r + 1
+    ~ end
+    ^ $sum + $last
+~ end
+"#;
+    let ast = parse(src);
+    let prog = compile_script(&ast);
+    let (_vm_events, expected) = run_vm_result(src).expect("VM run");
+    let mut runner = TypedRunner::new(&prog);
+    let (actual, _events) = runner.run(&prog).expect("typed JIT run");
+    assert_eq!(actual, expected);
+
+    let summary = runner.trace_summary();
+    assert_eq!(summary.trace_count, 1);
+    assert!(summary.total_hits > 0);
+    assert_eq!(summary.total_deopts, 0);
+    assert_eq!(summary.total_runtime_deopts, 0);
+    assert_eq!(summary.guard_fail_total, 0);
+    let cmp_fusion = summary
+        .fusion_hits_by_rule
+        .iter()
+        .find(|profile| profile.rule == "map_stable_cmp_branch")
+        .expect("map comparison branch should reach the stable fusion tier");
+    assert!(cmp_fusion.static_hits > 0);
+    assert!(cmp_fusion.runtime_hits > 0);
+}
+
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+#[test]
+fn jit_005_distinct_list_does_not_inherit_another_lists_bounds_guard() {
+    let src = r#"
+~ rite
+    $long = list_range(100)
+    $short = list_range(60)
+    $i = 0
+    $sum = 0
+    ~ while $i < len($long)
+        $sum = $sum + __index($short, $i)
+        $i = $i + 1
+    ~ end
+    ^ $sum
+~ end
+"#;
+    let (_vm_events, expected) = run_vm_result(src).expect("reference VM run");
+    let (_jit_events, actual, used_jit) = run_jit_result(src).expect("typed JIT run");
+    assert_eq!(actual, expected);
+    assert_eq!(actual, Value::Null);
+    assert!(
+        !used_jit,
+        "a bound proven for one list must not admit unchecked indexing into another list"
+    );
+}
+
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+#[test]
+fn jit_006_internal_branch_executes_natively_without_side_exit_bounce() {
+    let src = r#"
+~ rite
+    $n = 90
+    $pivot = 80
+    $reps = 3
+    $arr = list_range($n)
+    $view = $arr
+    $digest = 0
+    $r = 0
+    ~ while $r < $reps
+        $i = 0
+        ~ while $i < len($view)
+            $v = __index($view, $i)
+            ~ if $i < $pivot
+                $digest = $digest + $v
+            ~ end
+            $digest = $digest + $v
+            $__ = __setindex($arr, $i, $v + 1)
+            $i = $i + 1
+        ~ end
+        $r = $r + 1
+    ~ end
+    ^ $digest + __index($view, 0) + __index($arr, $n - 1)
+~ end
+"#;
+    let ast = parse(src);
+    let prog = compile_script(&ast);
+    let (_vm_events, expected) = run_vm_result(src).expect("reference VM run");
+    let mut runner = TypedRunner::new(&prog);
+    let mut previous_hits = 0;
+
+    for run_idx in 0..4 {
+        let (actual, _events) = runner.run(&prog).expect("typed JIT run");
+        assert_eq!(actual, expected, "runner reuse iteration={run_idx}");
+
+        let summary = runner.trace_summary();
+        assert_eq!(
+            summary.trace_count, 1,
+            "native branch must not split traces"
+        );
+        assert_eq!(
+            summary.total_internal_side_exits, 0,
+            "forward internal branches must stay in machine code"
+        );
+        assert_eq!(
+            summary.total_hits.saturating_sub(previous_hits),
+            3,
+            "the trace should be entered once per loop invocation"
+        );
+        assert!(
+            summary.total_static_branches >= 3,
+            "trace must retain the internal branch plus loop guards"
+        );
+        assert_eq!(summary.total_deopts, 0);
+        assert_eq!(summary.total_runtime_deopts, 0);
+        assert_eq!(summary.guard_fail_total, 0);
+        previous_hits = summary.total_hits;
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+#[test]
+fn jit_007_forward_if_else_branch_stays_in_one_native_trace() {
+    let src = r#"
+~ rite
+    $n = 257
+    $reps = 3
+    $arr = list_range($n)
+    $total = 0
+    $r = 0
+    ~ while $r < $reps
+        $i = 0
+        $sum = 0
+        $state = 0
+        ~ while $i < len($arr)
+            $v = __index($arr, $i)
+            $state = $state + 17
+            ~ if $state >= 97
+                $state = $state - 97
+            ~ end
+            ~ if $state < 48
+                $sum = $sum + $v
+            ~ else
+                $sum = $sum - $v
+            ~ end
+            $i = $i + 1
+        ~ end
+        $total = $total + $sum
+        $r = $r + 1
+    ~ end
+    ^ $total
+~ end
+"#;
+    let ast = parse(src);
+    let prog = compile_script(&ast);
+    let (_vm_events, expected) = run_vm_result(src).expect("reference VM run");
+    let mut runner = TypedRunner::new(&prog);
+
+    for run_idx in 0..4 {
+        let (actual, _events) = runner.run(&prog).expect("typed JIT run");
+        assert_eq!(actual, expected, "runner reuse iteration={run_idx}");
+    }
+
+    let summary = runner.trace_summary();
+    assert_eq!(summary.trace_count, 1);
+    assert!(summary.total_hits > 0);
+    assert_eq!(summary.total_internal_side_exits, 0);
+    assert_eq!(summary.total_deopts, 0);
+    assert_eq!(summary.total_runtime_deopts, 0);
+    assert_eq!(summary.guard_fail_total, 0);
+    assert!(
+        summary.total_static_branches >= 5,
+        "trace should contain loop guards and both forward branch sites"
+    );
+}
+
 #[test]
 fn call_001_arguments_evaluate_in_source_order() {
     let src = r#"
@@ -286,6 +686,7 @@ fn err_002_error_shape_keeps_backend_stable_kind_and_message() {
 }
 
 #[test]
+#[allow(clippy::mutable_key_type)] // The contract intentionally exercises Value's Ord implementation.
 fn col_003_ordering_fallback_is_deterministic_and_distinguishes_structural_values() {
     let list_a = Value::make_list(vec![Value::SmallInt(1)]);
     let list_b = Value::make_list(vec![Value::SmallInt(2)]);
@@ -335,6 +736,78 @@ $out = $a[0]
 "#,
         Value::SmallInt(9),
     );
+}
+
+#[test]
+fn mem_001_collection_assignment_preserves_backing_identity() {
+    assert_interpreter_vm_out(
+        r#"
+$list = [1]
+$list_alias = $list
+$__ = __setindex($list_alias, 0, 9)
+$map = {x: 2}
+$map_alias = $map
+$__ = __setindex($map_alias, "x", 11)
+$out = __index($list, 0) + __index($map, "x")
+^ $out
+"#,
+        Value::SmallInt(20),
+    );
+}
+
+#[test]
+fn mem_002_safe_index_contract_is_null_on_read_and_error_on_write() {
+    for src in [
+        "$out = __index([1], 1)\n^ $out\n",
+        "$out = __index([1], -1)\n^ $out\n",
+        "$out = __index({x: 1}, \"missing\")\n^ $out\n",
+    ] {
+        let (env, _events, errors) = run_interpreter(src);
+        assert!(errors.is_empty(), "runtime errors: {errors:?}");
+        assert_eq!(env.get("out"), Some(Value::Null));
+
+        let (_events, vm_value) = run_vm_result(src).expect("VM safe read");
+        assert_eq!(vm_value, Value::Null);
+        let (_events, jit_value, _used_jit) = run_jit_result(src).expect("JIT safe read");
+        assert_eq!(jit_value, Value::Null);
+    }
+
+    for src in [
+        "$list = [1]\n$__ = __setindex($list, 1, 9)\n^ 0\n",
+        "$list = [1]\n$__ = __setindex($list, -1, 9)\n^ 0\n",
+    ] {
+        let expected = if src.contains("-1") {
+            "index cannot be negative"
+        } else {
+            "index out of range"
+        };
+        assert_interpreter_error_contains(src, expected);
+        assert_vm_error_contains(src, expected);
+        assert_jit_error_contains(src, expected);
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", not(windows)))]
+#[test]
+fn mem_003_unsafe_valid_access_preserves_vm_jit_result() {
+    let src = r#"
+~ rite
+    $arr = list_range(64)
+    $sum = 0
+    ~ unsafe
+        $i = 0
+        ~ while $i < len($arr)
+            $sum = $sum + __index($arr, $i)
+            $i = $i + 1
+        ~ end
+    ~ end
+    ^ $sum
+~ end
+"#;
+    let (_vm_events, expected) = run_vm_result(src).expect("VM unsafe run");
+    let (_jit_events, actual, used_jit) = run_jit_result(src).expect("JIT unsafe run");
+    assert!(used_jit, "valid unsafe loop should reach the typed JIT");
+    assert_eq!(actual, expected);
 }
 
 #[test]

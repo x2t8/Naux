@@ -1,4 +1,6 @@
-use crate::ast::{ActionKind, BinaryOp, Expr, ExprKind, Span, Stmt, UnaryOp};
+use crate::ast::{
+    ActionKind, BinaryOp, Expr, ExprKind, Param, Span, Stmt, TypeAnnotation, UnaryOp,
+};
 use crate::parser::error::{ParseError, ParseErrorKind};
 use crate::token::{Token, TokenKind};
 
@@ -187,8 +189,17 @@ impl Parser {
                 if self.current().kind == TokenKind::Dollar {
                     self.advance();
                 }
-                let param = self.parse_ident_string()?;
-                params.push(crate::ast::Param::plain(param));
+                let name = self.parse_ident_string()?;
+                let annotation = if self.current().kind == TokenKind::Colon {
+                    self.advance();
+                    Some(TypeAnnotation {
+                        base: self.parse_ident_string()?,
+                        predicate: None,
+                    })
+                } else {
+                    None
+                };
+                params.push(Param { name, annotation });
                 if self.current().kind == TokenKind::Comma {
                     self.advance();
                     continue;
@@ -197,6 +208,15 @@ impl Parser {
             }
         }
         self.expect(TokenKind::RParen)?;
+        let return_type = if self.current().kind == TokenKind::Arrow {
+            self.advance();
+            Some(TypeAnnotation {
+                base: self.parse_ident_string()?,
+                predicate: None,
+            })
+        } else {
+            None
+        };
         self.optional_newlines();
         let mut body = Vec::new();
         while !(self.current().kind == TokenKind::Tilde
@@ -211,7 +231,7 @@ impl Parser {
             name,
             params,
             body,
-            return_type: None,
+            return_type,
             span,
         })
     }
@@ -337,7 +357,12 @@ impl Parser {
         } else {
             value_expr
         };
-        Ok(Stmt::Assign { name, annotation: None, expr, span })
+        Ok(Stmt::Assign {
+            name,
+            annotation: None,
+            expr,
+            span,
+        })
     }
 
     fn parse_return_stmt(&mut self) -> Result<Stmt, ParseError> {
@@ -390,6 +415,10 @@ impl Parser {
                     "fetch" => {
                         let target = self.parse_expr()?;
                         ActionKind::Fetch { target }
+                    }
+                    "log" => {
+                        let value = self.parse_expr()?;
+                        ActionKind::Log { value }
                     }
                     "syscall" => self.parse_syscall_action()?,
                     other => return Err(self.error_custom(format!("Unknown action '!{}'", other))),

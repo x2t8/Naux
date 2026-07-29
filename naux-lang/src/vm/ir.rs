@@ -131,10 +131,9 @@ impl NumericProofLattice {
             (Self::Bottom, _) | (_, Self::Bottom) => Self::Bottom,
             (Self::Top, rhs) => rhs,
             (lhs, Self::Top) => lhs,
-            (Self::Facts(lhs), Self::Facts(rhs)) => lhs
-                .meet_facts(rhs)
-                .map(Self::Facts)
-                .unwrap_or(Self::Bottom),
+            (Self::Facts(lhs), Self::Facts(rhs)) => {
+                lhs.meet_facts(rhs).map(Self::Facts).unwrap_or(Self::Bottom)
+            }
         }
     }
 
@@ -846,7 +845,10 @@ mod tests {
     fn numeric_lattice_meet_nonzero_and_range_is_consistent() {
         let nonzero = NumericProofLattice::from_term(ProofTerm::NonZero);
         let in_range = NumericProofLattice::from_term(ProofTerm::InRange { lo: 0, hi: 255 });
-        let out = nonzero.meet(in_range).into_facts().expect("must stay in Facts");
+        let out = nonzero
+            .meet(in_range)
+            .into_facts()
+            .expect("must stay in Facts");
         assert_eq!(out.range, Some((0, 255)));
         assert!(out.nonzero);
     }

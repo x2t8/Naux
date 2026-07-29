@@ -236,11 +236,7 @@ fn generate_stmt_constraints(
     cset: &mut ConstraintSet,
 ) -> Result<(), RefinementError> {
     match stmt {
-        Stmt::Assign {
-            name,
-            expr,
-            ..
-        } => {
+        Stmt::Assign { name, expr, .. } => {
             let mut refined = synthesize_expr(expr, env, cset)?;
             attach_assignment_facts(name, expr, &mut refined);
             env.bind(name, refined);
@@ -294,11 +290,7 @@ fn generate_stmt_constraints(
 
             Ok(())
         }
-        Stmt::FnDef {
-            params,
-            body,
-            ..
-        } => {
+        Stmt::FnDef { params, body, .. } => {
             env.push_scope();
             for p in params {
                 env.bind(&p.name, Refined::trivial(Type::Any));

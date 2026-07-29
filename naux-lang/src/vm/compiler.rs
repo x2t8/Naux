@@ -288,6 +288,41 @@ pub fn compile_script(stmts: &[Stmt]) -> Program {
     lower_ir_to_bytecode(ir)
 }
 
+#[cfg(feature = "experimental-regions")]
+#[derive(Debug, Clone)]
+pub struct RegionCompiledProgram {
+    pub bytecode: Program,
+    pub region_report: crate::region::analyze::RegionReport,
+    pub region_plan: crate::region::RegionLoweringPlan,
+}
+
+/// Compile ordinary bytecode together with a verified sidecar region plan.
+///
+/// The bytecode is intentionally identical to `compile_script` in this
+/// admission stage. A future region runtime must consume the verified sidecar
+/// rather than infer lifetimes again from bytecode shapes.
+#[cfg(feature = "experimental-regions")]
+pub fn compile_script_with_region_plan(
+    stmts: &[Stmt],
+) -> Result<RegionCompiledProgram, crate::region::RegionLoweringError> {
+    let region_report = crate::region::infer_regions(stmts);
+    if !region_report.violations.is_empty() {
+        return Err(crate::region::RegionLoweringError {
+            message: format!(
+                "region analysis has {} unresolved constraint(s)",
+                region_report.violations.len()
+            ),
+        });
+    }
+    let region_plan = crate::region::lower_region_report(&region_report);
+    crate::region::verify_region_lowering_plan(&region_report, &region_plan)?;
+    Ok(RegionCompiledProgram {
+        bytecode: compile_script(stmts),
+        region_report,
+        region_plan,
+    })
+}
+
 /// Compile AST into IR (stack-based).
 pub fn compile_ir(stmts: &[Stmt]) -> IRProgram {
     compile_ir_with_report(stmts).0
@@ -903,10 +938,12 @@ fn has_proof_gated_numeric_rewrite_surface(block: &[IRNode]) -> bool {
     for i in 2..block.len() {
         match block[i].instr {
             IRInstr::Div if matches!(block[i].result_type, Some(Type::Num)) => return true,
-            IRInstr::And if matches!(block[i].result_type, Some(Type::Num)) => {
-                if is_const_num(&block[i - 1], 255.0) || is_const_num(&block[i - 2], 255.0) {
-                    return true;
-                }
+            IRInstr::And
+                if matches!(block[i].result_type, Some(Type::Num))
+                    && (is_const_num(&block[i - 1], 255.0)
+                        || is_const_num(&block[i - 2], 255.0)) =>
+            {
+                return true;
             }
             _ => {}
         }
@@ -1609,8 +1646,8 @@ fn optimize_bytecode_block(
                     && matches!(result_types.get(i + 2), Some(Some(Type::Num)))
                 {
                     let new_idx = out.len();
-                    for old in i..=i + 3 {
-                        map_old_to_new[old] = Some(new_idx);
+                    for mapped in map_old_to_new.iter_mut().skip(i).take(4) {
+                        *mapped = Some(new_idx);
                     }
                     let delta = if matches!(op, Instr::Sub) { -*c } else { *c };
                     out.push(Instr::AddLocalConst(*load_idx, delta));
@@ -1697,12 +1734,10 @@ fn collect_locals(block: &[IRNode], params: &[String]) -> (Vec<String>, HashMap<
     }
     for node in block {
         match &node.instr {
-            IRInstr::LoadVar(name) | IRInstr::StoreVar(name) => {
-                if !map.contains_key(name) {
-                    let idx = locals.len();
-                    locals.push(name.clone());
-                    map.insert(name.clone(), idx);
-                }
+            IRInstr::LoadVar(name) | IRInstr::StoreVar(name) if !map.contains_key(name) => {
+                let idx = locals.len();
+                locals.push(name.clone());
+                map.insert(name.clone(), idx);
             }
             _ => {}
         }
@@ -1718,7 +1753,9 @@ fn compile_stmt_ir(
     proof_state: &mut CompileProofState,
 ) -> Option<Type> {
     match stmt {
-        Stmt::Assign { name, expr, span, .. } => {
+        Stmt::Assign {
+            name, expr, span, ..
+        } => {
             let ty = compile_expr_ir(expr, bc, env, fns, proof_state);
             let mut node = IRNode::new(IRInstr::StoreVar(name.clone()), span.clone(), None);
             if let Some(slot) = proof_state.assign(name, expr) {
@@ -3045,5 +3082,33 @@ mod tests {
             "unexpected stop reason: {:?}",
             report.main_feedback_stop
         );
+    }
+
+    #[cfg(feature = "experimental-regions")]
+    #[test]
+    fn region_sidecar_compilation_preserves_ordinary_bytecode() {
+        let source = r#"
+~ fn work()
+    $scratch = [1, 2, 3]
+    ^ len($scratch)
+~ end
+^ work()
+"#;
+        let stmts =
+            crate::parser::parse_script(&crate::lexer::lex(source).expect("lex")).expect("parse");
+        let ordinary = compile_script(&stmts);
+        let region_compiled =
+            compile_script_with_region_plan(&stmts).expect("verified region sidecar");
+
+        assert_eq!(
+            format!("{:?}", ordinary.main),
+            format!("{:?}", region_compiled.bytecode.main)
+        );
+        assert_eq!(region_compiled.region_plan.region_local_count, 1);
+        crate::region::verify_region_lowering_plan(
+            &region_compiled.region_report,
+            &region_compiled.region_plan,
+        )
+        .expect("region certificate");
     }
 }

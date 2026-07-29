@@ -18,6 +18,7 @@ pub mod run;
 pub mod test;
 pub mod upgrade;
 pub mod util;
+pub mod verify;
 
 pub const NAUX_VERSION: &str = "0.2.0-dev";
 
@@ -73,6 +74,7 @@ pub enum Command {
     Test {
         pattern: Option<String>,
     },
+    Verify,
     Dev {
         cmd: DevCommand,
     },
@@ -179,6 +181,12 @@ fn parse_args(mut args: Vec<String>) -> Result<Cli, String> {
         "test" => Command::Test {
             pattern: args.first().cloned(),
         },
+        "verify" => {
+            if !args.is_empty() {
+                return Err("`naux verify` does not accept arguments; use naux.toml".into());
+            }
+            Command::Verify
+        }
         "dev" => parse_dev(args)?,
         "doctor" => parse_doctor(args)?,
         "clean" => Command::Clean,
@@ -681,10 +689,7 @@ fn parse_u32(label: &str, value: &str) -> Result<u32, String> {
 pub fn run(cli: Cli) -> Result<(), String> {
     match cli.command {
         Command::New { name } => new::handle_new(name),
-        Command::Init { path } => {
-            init::init_project(&path);
-            Ok(())
-        }
+        Command::Init { path } => init::init_project(&path),
         Command::Debug { path } => debug::handle_debug(path),
         Command::Run {
             path,
@@ -701,6 +706,7 @@ pub fn run(cli: Cli) -> Result<(), String> {
             indent_width,
         } => fmt::handle_fmt(path, check, indent_width),
         Command::Test { pattern } => test::handle_test(pattern),
+        Command::Verify => verify::handle_verify(),
         Command::Dev { cmd } => dev::handle_dev(cmd),
         Command::Doctor { json, out } => doctor::handle_doctor(json, out),
         Command::Clean => clean::handle_clean(),
@@ -744,5 +750,15 @@ mod tests {
             }
             other => panic!("unexpected command: {:?}", other),
         }
+    }
+
+    #[test]
+    fn parse_verify_is_config_driven_and_argument_free() {
+        let Cli { command, .. } = parse_args(vec!["verify".into()]).expect("verify command");
+        assert!(matches!(command, Command::Verify));
+
+        let error = parse_args(vec!["verify".into(), "bench.nx".into()])
+            .expect_err("verify arguments must be rejected");
+        assert!(error.contains("does not accept arguments"));
     }
 }

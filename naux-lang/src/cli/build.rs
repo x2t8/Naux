@@ -71,6 +71,10 @@ pub fn handle_build() -> Result<(), String> {
     Ok(())
 }
 
+pub(crate) fn project_entry_path() -> Result<PathBuf, String> {
+    Ok(PathBuf::from(load_build_config()?.entry))
+}
+
 fn load_build_config() -> Result<BuildOptions, String> {
     let path = Path::new("naux.toml");
     if !path.exists() {

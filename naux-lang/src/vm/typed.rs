@@ -267,6 +267,8 @@ struct TraceEntry {
     tier: TraceTier,
     hits: u32,
     deopt_count: u32,
+    deopts_total: u64,
+    internal_side_exits: u64,
     runtime_calls: u64,
     runtime_trace_iters: u64,
     runtime_branch_taken: u64,
@@ -278,6 +280,7 @@ struct TraceEntry {
     runtime_temp_map_materialized: u64,
     fusion_hits: FusionRuleHits,
     mutated_lists: Vec<usize>,
+    version_managed_lists: Vec<usize>,
     mutated_maps: Vec<usize>,
     pic_map_locals: Vec<usize>,
     adaptive_sites: Vec<AdaptiveSiteState>,
@@ -292,6 +295,31 @@ struct TraceEntry {
     guard_fail_counts: HashMap<GuardFailKey, u64>,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct ScalarTailListSnapshot {
+    local_idx: usize,
+    bits: u64,
+    ptr: u64,
+    len: usize,
+    cap: usize,
+    version: u64,
+    data: u64,
+    max_version_delta: u64,
+}
+
+#[derive(Clone, Debug)]
+struct ScalarTailHandoff {
+    key: TraceKey,
+    exit_target: usize,
+    lists: Vec<ScalarTailListSnapshot>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct InternalBranchHandoff {
+    key: TraceKey,
+    exit_target: usize,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct GuardFailKey {
     guard_id: u64,
@@ -300,8 +328,12 @@ struct GuardFailKey {
 
 #[derive(Clone, Debug, Default)]
 struct TraceTelemetryTotals {
+    hits_total: u64,
+    deopts_total: u64,
+    runtime_deopts_total: u64,
     guard_checks_total: u64,
     guard_fail_total: u64,
+    internal_side_exits_total: u64,
     deopt_reason_counts: HashMap<String, u64>,
     guard_fail_counts: HashMap<GuardFailKey, u64>,
 }
@@ -588,6 +620,7 @@ pub struct TraceSummary {
     pub max_bc_len: usize,
     pub total_hits: u64,
     pub total_deopts: u64,
+    pub total_internal_side_exits: u64,
     pub total_static_calls: u64,
     pub total_static_branches: u64,
     pub total_runtime_calls: u64,
@@ -674,7 +707,8 @@ pub struct TraceTelemetryProfile {
     pub last_seen_ts_ms: u64,
     pub trace_lifetime_ms: u64,
     pub hits: u32,
-    pub deopts: u32,
+    pub deopts: u64,
+    pub internal_side_exits: u64,
     pub guard_checks: u64,
     pub guard_fails: u64,
     pub runtime_deopts: u64,
@@ -982,10 +1016,14 @@ impl TypedRunner {
 
         let mut summary = TraceSummary {
             trace_count: self.trace_cache.len(),
+            total_hits: self.telemetry_totals.hits_total,
+            total_deopts: self.telemetry_totals.deopts_total,
+            total_runtime_deopts: self.telemetry_totals.runtime_deopts_total,
             total_runtime_avx_dot_elements: self.total_runtime_avx_dot_elements,
             total_runtime_interp_index_elements: self.total_runtime_interp_index_elements,
             guard_checks_total: self.telemetry_totals.guard_checks_total,
             guard_fail_total: self.telemetry_totals.guard_fail_total,
+            total_internal_side_exits: self.telemetry_totals.internal_side_exits_total,
             build_fingerprint: build_fingerprint(),
             ..TraceSummary::default()
         };
@@ -1059,10 +1097,6 @@ impl TypedRunner {
             max_hot_code = max_hot_code.max(hot_code_len);
             summary.max_live = summary.max_live.max(entry.stats.live_values);
             summary.max_bc_len = summary.max_bc_len.max(entry.stats.bc_len);
-            summary.total_hits = summary.total_hits.saturating_add(entry.hits as u64);
-            summary.total_deopts = summary
-                .total_deopts
-                .saturating_add(entry.deopt_count as u64);
             summary.total_static_calls = summary
                 .total_static_calls
                 .saturating_add(entry.stats.static_calls);
@@ -1081,9 +1115,6 @@ impl TypedRunner {
             summary.total_runtime_branch_not_taken = summary
                 .total_runtime_branch_not_taken
                 .saturating_add(entry.runtime_branch_not_taken);
-            summary.total_runtime_deopts = summary
-                .total_runtime_deopts
-                .saturating_add(entry.runtime_deopts);
             summary.total_runtime_temp_list_elided = summary
                 .total_runtime_temp_list_elided
                 .saturating_add(entry.runtime_temp_list_elided);
@@ -1160,7 +1191,8 @@ impl TypedRunner {
                 last_seen_ts_ms: entry.last_seen_ts_ms,
                 trace_lifetime_ms: entry.last_seen_ts_ms.saturating_sub(entry.first_seen_ts_ms),
                 hits: entry.hits,
-                deopts: entry.deopt_count,
+                deopts: entry.deopts_total,
+                internal_side_exits: entry.internal_side_exits,
                 guard_checks: entry.guard_checks,
                 guard_fails: entry.guard_fails,
                 runtime_deopts: entry.runtime_deopts,
@@ -1547,6 +1579,8 @@ fn run_block(
     let mut ip: usize = 0;
     let code_id = code.as_ptr() as usize;
     let run_seen_ts_ms = now_unix_ms();
+    let mut scalar_tail_handoff: Option<ScalarTailHandoff> = None;
+    let mut internal_branch_handoff: Option<InternalBranchHandoff> = None;
 
     while ip < code.len() {
         match &code[ip] {
@@ -1608,6 +1642,19 @@ fn run_block(
             Instr::Jump(target) => {
                 if *target < ip && *sp == 0 {
                     let key = (code_id, *target);
+                    if scalar_tail_handoff
+                        .as_ref()
+                        .is_some_and(|handoff| handoff.key == key)
+                        || internal_branch_handoff
+                            .as_ref()
+                            .is_some_and(|handoff| handoff.key == key)
+                    {
+                        // A trace has handed the rest of this loop invocation to the
+                        // interpreter. Do not bounce through the same tail/side exit on
+                        // every remaining scalar iteration.
+                        ip = *target;
+                        continue;
+                    }
                     let mut exit_target: Option<usize> = None;
                     let mut can_run = false;
                     let mut should_evict = false;
@@ -1664,6 +1711,8 @@ fn run_block(
                     if can_run {
                         if let Some(entry) = trace_cache.get_mut(&key) {
                             entry.hits = entry.hits.saturating_add(1);
+                            telemetry_totals.hits_total =
+                                telemetry_totals.hits_total.saturating_add(1);
                             entry.last_seen_ts_ms = run_seen_ts_ms;
                             trace_debug_log("trace run: executing compiled trace");
                             if entry.tier == TraceTier::Trace && entry.hits >= SUPER_TRACE_THRESHOLD
@@ -1683,7 +1732,7 @@ fn run_block(
                                     if let Ok(exec) = jit::compile_trace_typed(
                                         &super_ops,
                                         &super_sources,
-                                        entry.exit_target,
+                                        key.1,
                                         runtime.profile_enabled(),
                                         &super_promoted,
                                         &entry.merge_locals,
@@ -1693,6 +1742,8 @@ fn run_block(
                                             stats.static_branches = exec.static_branch_count();
                                             entry.exec = exec;
                                             entry.ops = super_ops;
+                                            entry.version_managed_lists =
+                                                collect_version_managed_lists(&entry.ops);
                                             entry.temp_list_sources = super_sources;
                                             entry.promoted_locals = super_promoted;
                                             entry.stats = stats;
@@ -1735,6 +1786,9 @@ fn run_block(
                                     .saturating_add(prof.branch_not_taken);
                                 entry.runtime_deopts =
                                     entry.runtime_deopts.saturating_add(prof.deopts);
+                                telemetry_totals.runtime_deopts_total = telemetry_totals
+                                    .runtime_deopts_total
+                                    .saturating_add(prof.deopts);
                                 entry.runtime_temp_list_elided = entry
                                     .runtime_temp_list_elided
                                     .saturating_add(prof.temp_list_elided);
@@ -1768,6 +1822,15 @@ fn run_block(
                             let deopt_ip = runtime.deopt_ip;
                             let deopt_sp = runtime.deopt_sp;
                             let deopt_site = runtime.deopt_site;
+                            let internal_branch_deopt = is_internal_branch_deopt(
+                                code,
+                                key.1,
+                                trace_cache
+                                    .get(&key)
+                                    .map(|entry| entry.back_edge)
+                                    .unwrap_or(ip),
+                                deopt_ip,
+                            );
                             runtime.exit_flag = 0;
                             if deopt_sp <= stack.len() {
                                 *sp = deopt_sp;
@@ -1776,17 +1839,6 @@ fn run_block(
                             // returning to interpreter semantics after deopt.
                             runtime.materialize_temps_in_frame(locals, stack, *sp);
                             if let Some(entry) = trace_cache.get_mut(&key) {
-                                let reason = format!("runtime_site_{deopt_site}");
-                                entry
-                                    .deopt_reason_counts
-                                    .entry(reason.clone())
-                                    .and_modify(|count| *count = count.saturating_add(1))
-                                    .or_insert(1);
-                                telemetry_totals
-                                    .deopt_reason_counts
-                                    .entry(reason.clone())
-                                    .and_modify(|count| *count = count.saturating_add(1))
-                                    .or_insert(1);
                                 bump_mutated_list_versions(entry, locals, runtime);
                                 if trace_debug() {
                                     let checksum =
@@ -1795,29 +1847,61 @@ fn run_block(
                                         "deopt temp-source checksum={checksum}"
                                     ));
                                 }
-                                let mut promoted =
-                                    try_promote_map_pic2(entry, deopt_ip, locals, runtime);
-                                if promoted {
-                                    if let Ok(exec) = jit::compile_trace_typed(
-                                        &entry.ops,
-                                        &entry.temp_list_sources,
-                                        entry.exit_target,
-                                        runtime.profile_enabled(),
-                                        &entry.promoted_locals,
-                                        &entry.merge_locals,
-                                    ) {
-                                        entry.stats.static_calls = exec.static_call_count();
-                                        entry.stats.static_branches = exec.static_branch_count();
-                                        entry.exec = exec;
-                                        entry.deopt_count = 0;
-                                        reset_adaptive_state(entry);
-                                        trace_debug_log("trace promote: map PIC2");
-                                    } else {
-                                        promoted = false;
+                                if internal_branch_deopt {
+                                    entry.internal_side_exits =
+                                        entry.internal_side_exits.saturating_add(1);
+                                    telemetry_totals.internal_side_exits_total = telemetry_totals
+                                        .internal_side_exits_total
+                                        .saturating_add(1);
+                                    if entry.exec.profile_enabled() {
+                                        // The machine-code profiler records all exit-flag=2
+                                        // paths as deopts. Reclassify this known internal
+                                        // branch handoff so the speculative-deopt budget is
+                                        // not poisoned by an expected side exit.
+                                        entry.runtime_deopts =
+                                            entry.runtime_deopts.saturating_sub(1);
+                                        telemetry_totals.runtime_deopts_total =
+                                            telemetry_totals.runtime_deopts_total.saturating_sub(1);
                                     }
-                                }
-                                if !promoted {
-                                    entry.deopt_count = entry.deopt_count.saturating_add(1);
+                                    internal_branch_handoff = Some(InternalBranchHandoff {
+                                        key,
+                                        exit_target: entry.exit_target,
+                                    });
+                                    trace_debug_log(
+                                        "trace side exit: handing remaining loop iterations to VM",
+                                    );
+                                } else {
+                                    record_speculative_deopt(
+                                        &mut entry.deopts_total,
+                                        &mut entry.deopt_reason_counts,
+                                        telemetry_totals,
+                                        deopt_site,
+                                    );
+                                    let mut promoted =
+                                        try_promote_map_pic2(entry, deopt_ip, locals, runtime);
+                                    if promoted {
+                                        if let Ok(exec) = jit::compile_trace_typed(
+                                            &entry.ops,
+                                            &entry.temp_list_sources,
+                                            key.1,
+                                            runtime.profile_enabled(),
+                                            &entry.promoted_locals,
+                                            &entry.merge_locals,
+                                        ) {
+                                            entry.stats.static_calls = exec.static_call_count();
+                                            entry.stats.static_branches =
+                                                exec.static_branch_count();
+                                            entry.exec = exec;
+                                            entry.deopt_count = 0;
+                                            reset_adaptive_state(entry);
+                                            trace_debug_log("trace promote: map PIC2");
+                                        } else {
+                                            promoted = false;
+                                        }
+                                    }
+                                    if !promoted {
+                                        entry.deopt_count = entry.deopt_count.saturating_add(1);
+                                    }
                                     if entry.deopt_count >= MAX_DEOPT {
                                         trace_cache.remove(&key);
                                         hot_counters.remove(&key);
@@ -1825,6 +1909,31 @@ fn run_block(
                                 }
                             }
                             ip = deopt_ip;
+                            continue;
+                        } else if runtime.exit_flag == 3 {
+                            // An unrolled trace exhausted its full-width range while scalar
+                            // iterations may remain. Resume at the bytecode loop header rather
+                            // than treating this expected tail as a speculative deopt.
+                            let resume_ip = runtime.deopt_ip;
+                            let resume_sp = runtime.deopt_sp;
+                            runtime.exit_flag = 0;
+                            if resume_sp <= stack.len() {
+                                *sp = resume_sp;
+                            }
+                            runtime.materialize_temps_in_frame(locals, stack, *sp);
+                            let mut evict_trace = false;
+                            if let Some(entry) = trace_cache.get_mut(&key) {
+                                bump_mutated_list_versions(entry, locals, runtime);
+                                refresh_mutated_map_guards(entry, locals, runtime);
+                                scalar_tail_handoff =
+                                    capture_scalar_tail_handoff(key, entry, locals, runtime);
+                                evict_trace = scalar_tail_handoff.is_none();
+                            }
+                            if evict_trace {
+                                trace_cache.remove(&key);
+                                hot_counters.remove(&key);
+                            }
+                            ip = resume_ip;
                             continue;
                         }
                     } else {
@@ -1836,7 +1945,7 @@ fn run_block(
                                 if trace_len < MIN_TRACE_LEN {
                                     // Skip tiny traces.
                                 } else if let Some((jump_ip, jump_target)) =
-                                    find_non_header_internal_jump(code, *target, ip)
+                                    find_unsupported_internal_backedge(code, *target, ip)
                                 {
                                     trace_debug_log(&format!(
                                         "trace skipped: nested/internal jump in candidate (start={}, end={}, jump_ip={}, jump_target={})",
@@ -1853,7 +1962,7 @@ fn run_block(
                                     if let Ok(exec) = jit::compile_trace_typed(
                                         &plan.ops,
                                         &plan.temp_list_sources,
-                                        exit_target,
+                                        *target,
                                         runtime.profile_enabled(),
                                         &plan.promoted_locals,
                                         &plan.merge_locals,
@@ -1862,6 +1971,8 @@ fn run_block(
                                         stats.static_calls = exec.static_call_count();
                                         stats.static_branches = exec.static_branch_count();
                                         let adaptive_sites = init_adaptive_sites(&exec);
+                                        let version_managed_lists =
+                                            collect_version_managed_lists(&plan.ops);
                                         trace_debug_log("trace compiled at hot threshold");
                                         trace_cache.insert(
                                             key,
@@ -1887,6 +1998,8 @@ fn run_block(
                                                 tier: TraceTier::Trace,
                                                 hits: 0,
                                                 deopt_count: 0,
+                                                deopts_total: 0,
+                                                internal_side_exits: 0,
                                                 runtime_calls: 0,
                                                 runtime_trace_iters: 0,
                                                 runtime_branch_taken: 0,
@@ -1898,6 +2011,7 @@ fn run_block(
                                                 runtime_temp_map_materialized: 0,
                                                 fusion_hits: plan.fusion_hits,
                                                 mutated_lists: plan.mutated_lists,
+                                                version_managed_lists,
                                                 mutated_maps: plan.mutated_maps,
                                                 pic_map_locals: plan.pic_map_locals,
                                                 adaptive_sites,
@@ -1924,6 +2038,16 @@ fn run_block(
             Instr::JumpIfFalse(target) => {
                 let cond_bits = pop_bits(stack, sp)?;
                 if !is_truthy(cond_bits, runtime)? {
+                    finish_scalar_tail_for_exit(
+                        code_id,
+                        *target,
+                        &mut scalar_tail_handoff,
+                        locals,
+                        runtime,
+                        trace_cache,
+                        hot_counters,
+                    );
+                    finish_internal_branch_for_exit(code_id, *target, &mut internal_branch_handoff);
                     ip = *target;
                     continue;
                 }
@@ -1931,6 +2055,16 @@ fn run_block(
             Instr::JumpLocalIfFalse(idx, target) => {
                 let cond_bits = locals.get(*idx).copied().unwrap_or(0.0).to_bits();
                 if !is_truthy(cond_bits, runtime)? {
+                    finish_scalar_tail_for_exit(
+                        code_id,
+                        *target,
+                        &mut scalar_tail_handoff,
+                        locals,
+                        runtime,
+                        trace_cache,
+                        hot_counters,
+                    );
+                    finish_internal_branch_for_exit(code_id, *target, &mut internal_branch_handoff);
                     ip = *target;
                     continue;
                 }
@@ -2140,6 +2274,12 @@ fn run_block(
                 let _ = pop_bits(stack, sp)?;
             }
             Instr::Return => {
+                discard_scalar_tail_handoff(scalar_tail_handoff.take(), trace_cache, hot_counters);
+                discard_internal_branch_handoff(
+                    internal_branch_handoff.take(),
+                    trace_cache,
+                    hot_counters,
+                );
                 let bits = if *sp == 0 {
                     vb::tag_null()
                 } else {
@@ -2151,6 +2291,8 @@ fn run_block(
         }
         ip += 1;
     }
+    discard_scalar_tail_handoff(scalar_tail_handoff.take(), trace_cache, hot_counters);
+    discard_internal_branch_handoff(internal_branch_handoff.take(), trace_cache, hot_counters);
     let bits = if *sp == 0 {
         vb::tag_null()
     } else {
@@ -2279,15 +2421,16 @@ fn find_loop_exit(code: &[Instr], start: usize, end: usize) -> Option<usize> {
     exit
 }
 
-fn find_non_header_internal_jump(
+fn find_unsupported_internal_backedge(
     code: &[Instr],
     start: usize,
     end: usize,
 ) -> Option<(usize, usize)> {
     for (off, instr) in code[start..=end].iter().enumerate() {
         if let Instr::Jump(target) = instr {
-            if *target >= start && *target <= end && *target != start {
-                return Some((start + off, *target));
+            let jump_ip = start + off;
+            if *target >= start && *target <= end && *target != start && *target <= jump_ip {
+                return Some((jump_ip, *target));
             }
         }
     }
@@ -2423,6 +2566,8 @@ fn trace_stack_delta(op: &jit::TraceOp) -> i32 {
         | jit::TraceOp::LeNum
         | jit::TraceOp::GtNum
         | jit::TraceOp::GeNum => -1,
+        jit::TraceOp::Label(_) | jit::TraceOp::JumpTo(_) => 0,
+        jit::TraceOp::BranchFalse(_) => -1,
         jit::TraceOp::JumpStart => 0,
         jit::TraceOp::GuardFalse | jit::TraceOp::GuardFalseDeopt(_) => -1,
         jit::TraceOp::GuardIndexCmpConst(_, _, _) => 0,
@@ -2521,10 +2666,28 @@ fn build_super_ops(ops: &[jit::TraceOp], iters: usize) -> Option<Vec<jit::TraceO
     Some(out)
 }
 
-fn optimize_trace_ops(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
+fn optimize_trace_ops_pass(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
     let mut out: Vec<jit::TraceOp> = Vec::with_capacity(ops.len());
     let mut i = 0usize;
     while i < ops.len() {
+        if i + 4 < ops.len() {
+            if let (
+                jit::TraceOp::LoadLocal(a),
+                jit::TraceOp::ConstNum(c),
+                jit::TraceOp::AddNum,
+                jit::TraceOp::Dup,
+                jit::TraceOp::StoreLocal(b),
+            ) = (&ops[i], &ops[i + 1], &ops[i + 2], &ops[i + 3], &ops[i + 4])
+            {
+                if a == b && *c == 0.0 {
+                    // StoreLocalKeep after `x + 0` leaves the unchanged value on
+                    // the stack. The local already contains that same value.
+                    out.push(jit::TraceOp::LoadLocal(*a));
+                    i += 5;
+                    continue;
+                }
+            }
+        }
         if i + 3 < ops.len() {
             match (&ops[i], &ops[i + 1], &ops[i + 2], &ops[i + 3]) {
                 (
@@ -2627,6 +2790,17 @@ fn optimize_trace_ops(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
     out
 }
 
+fn optimize_trace_ops(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
+    let mut current = ops.to_vec();
+    loop {
+        let optimized = optimize_trace_ops_pass(&current);
+        if optimized.len() == current.len() {
+            return optimized;
+        }
+        current = optimized;
+    }
+}
+
 fn specialize_list_data_ptr(
     ops: &[jit::TraceOp],
     locals: &[f64],
@@ -2704,13 +2878,13 @@ fn rewrite_lenlist_const(
                     continue;
                 }
             }
-            jit::TraceOp::LoadLocal(idx) => {
-                if i + 1 < ops.len() && matches!(ops[i + 1], jit::TraceOp::LenList) {
-                    if let Some(len) = len_map.get(idx) {
-                        out.push(jit::TraceOp::ConstNum(*len as f64));
-                        i += 2;
-                        continue;
-                    }
+            jit::TraceOp::LoadLocal(idx)
+                if i + 1 < ops.len() && matches!(ops[i + 1], jit::TraceOp::LenList) =>
+            {
+                if let Some(len) = len_map.get(idx) {
+                    out.push(jit::TraceOp::ConstNum(*len as f64));
+                    i += 2;
+                    continue;
                 }
             }
             _ => {}
@@ -2768,10 +2942,6 @@ fn unroll_list_update_x4(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
     if len_const.fract() != 0.0 {
         return ops.to_vec();
     }
-    let len_usize = len_const as usize;
-    if !len_usize.is_multiple_of(UNROLL) {
-        return ops.to_vec();
-    }
     let len_adjusted = len_const - (UNROLL as f64 - 1.0);
 
     let body = &ops[guard_idx + 1..jump_pos];
@@ -2784,6 +2954,7 @@ fn unroll_list_update_x4(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
     let mut bump_list_idx: Option<usize> = None;
     let mut bump_count: usize = 0;
     let mut incr_count: usize = 0;
+    let mut mutation_count: usize = 0;
 
     for op in body {
         match op {
@@ -2805,6 +2976,7 @@ fn unroll_list_update_x4(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
                 data_ptr = Some(*data);
             }
             jit::TraceOp::SetIndexListNumLocalPtrNoVer(list, idx, data) => {
+                mutation_count += 1;
                 if *idx != idx_local {
                     return ops.to_vec();
                 }
@@ -2837,15 +3009,18 @@ fn unroll_list_update_x4(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
                 bump_count += 1;
                 bump_list_idx = Some(*list);
             }
-            jit::TraceOp::GuardFalse
-            | jit::TraceOp::GuardFalseDeopt(_)
-            | jit::TraceOp::GuardListBounds(_, _)
-            | jit::TraceOp::GuardIndexNonNeg(_)
-            | jit::TraceOp::GuardIndexCmpConst(_, _, _)
-            | jit::TraceOp::JumpStart => {
+            jit::TraceOp::ConstNum(_)
+            | jit::TraceOp::Dup
+            | jit::TraceOp::LoadLocal(_)
+            | jit::TraceOp::StoreLocal(_)
+            | jit::TraceOp::AddLocalFromStack(_)
+            | jit::TraceOp::AddNum
+            | jit::TraceOp::SubNum
+            | jit::TraceOp::MulNum
+            | jit::TraceOp::DivNum => {}
+            _ => {
                 return ops.to_vec();
             }
-            _ => {}
         }
     }
 
@@ -2859,6 +3034,49 @@ fn unroll_list_update_x4(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
         if Some(list) != list_idx {
             return ops.to_vec();
         }
+    }
+    if mutation_count > 0 {
+        if mutation_count != 1 || body.len() != 12 {
+            return ops.to_vec();
+        }
+        match (
+            &body[0], &body[1], &body[2], &body[3], &body[4], &body[5], &body[6], &body[7],
+            &body[8], &body[9], &body[10], &body[11],
+        ) {
+            (
+                jit::TraceOp::IndexListNumLocalPtr(read_list, read_idx, read_data),
+                jit::TraceOp::StoreLocal(value_local),
+                jit::TraceOp::LoadLocal(value_for_sum),
+                jit::TraceOp::AddLocalFromStack(_),
+                jit::TraceOp::LoadLocal(write_list),
+                jit::TraceOp::LoadLocal(write_idx),
+                jit::TraceOp::LoadLocal(value_for_write),
+                jit::TraceOp::ConstNum(_),
+                jit::TraceOp::AddNum,
+                jit::TraceOp::SetIndexListNumLocalPtrNoVer(set_list, set_idx, set_data),
+                jit::TraceOp::StoreLocal(_),
+                jit::TraceOp::AddLocalConst(incr_idx, incr),
+            ) if read_list == write_list
+                && read_list == set_list
+                && *read_list == list_idx.unwrap()
+                && read_idx == write_idx
+                && read_idx == set_idx
+                && *read_idx == idx_local
+                && read_data == set_data
+                && *read_data == data_ptr.unwrap()
+                && value_local == value_for_sum
+                && value_local == value_for_write
+                && *incr_idx == idx_local
+                && (*incr - 1.0).abs() < f64::EPSILON => {}
+            _ => return ops.to_vec(),
+        }
+    } else if body
+        .iter()
+        .any(|op| matches!(op, jit::TraceOp::LoadLocal(idx) if *idx == idx_local))
+    {
+        // Read-only lanes must derive the induction value through the offset-aware
+        // list op. A raw load of the induction local would reuse lane 0 for all lanes.
+        return ops.to_vec();
     }
 
     let mut out: Vec<jit::TraceOp> = Vec::with_capacity(ops.len() * UNROLL);
@@ -2912,7 +3130,7 @@ fn unroll_list_update_x4(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
     }
 
     out.push(jit::TraceOp::AddLocalConst(idx_local, UNROLL as f64));
-    if let Some(list) = bump_list_idx {
+    if let Some(list) = bump_list_idx.or_else(|| (mutation_count > 0).then_some(list_idx)) {
         out.push(jit::TraceOp::BumpListVersionLocal(list));
     }
     out.push(jit::TraceOp::JumpStart);
@@ -3288,9 +3506,59 @@ fn rewrite_map_stable_cmp_branch(ops: &[jit::TraceOp]) -> (Vec<jit::TraceOp>, u6
                     )
                     && matches!(
                         guard_op,
-                        jit::TraceOp::GuardFalse | jit::TraceOp::GuardFalseDeopt(_)
+                        jit::TraceOp::GuardFalse
+                            | jit::TraceOp::GuardFalseDeopt(_)
+                            | jit::TraceOp::BranchFalse(_)
                     )
                     && !temp_local_reused_before_overwrite(ops, i + 8, *tmp_local_a) =>
+                {
+                    out.push(jit::TraceOp::LoadLocal(*map_local));
+                    out.push(jit::TraceOp::LoadLocal(*key_local));
+                    out.push(jit::TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(
+                        *map_idx, *key_idx, *key_bits, *deopt_ip, *value_ptr,
+                    ));
+                    out.push(jit::TraceOp::ConstNum(*cmp_rhs));
+                    out.push(cmp_op.clone());
+                    out.push(guard_op.clone());
+                    rewrite_count = rewrite_count.saturating_add(1);
+                    i += 8;
+                    continue;
+                }
+                (
+                    jit::TraceOp::LoadLocal(map_local),
+                    jit::TraceOp::LoadLocal(key_local),
+                    jit::TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(
+                        map_idx,
+                        key_idx,
+                        key_bits,
+                        deopt_ip,
+                        value_ptr,
+                    ),
+                    jit::TraceOp::Dup,
+                    jit::TraceOp::StoreLocal(tmp_local),
+                    jit::TraceOp::ConstNum(cmp_rhs),
+                    cmp_op,
+                    guard_op,
+                ) if map_local == map_idx
+                    && key_local == key_idx
+                    && *tmp_local != *map_local
+                    && *tmp_local != *key_local
+                    && matches!(
+                        cmp_op,
+                        jit::TraceOp::EqNum
+                            | jit::TraceOp::NeNum
+                            | jit::TraceOp::LtNum
+                            | jit::TraceOp::LeNum
+                            | jit::TraceOp::GtNum
+                            | jit::TraceOp::GeNum
+                    )
+                    && matches!(
+                        guard_op,
+                        jit::TraceOp::GuardFalse
+                            | jit::TraceOp::GuardFalseDeopt(_)
+                            | jit::TraceOp::BranchFalse(_)
+                    )
+                    && !temp_local_reused_before_overwrite(ops, i + 8, *tmp_local) =>
                 {
                     out.push(jit::TraceOp::LoadLocal(*map_local));
                     out.push(jit::TraceOp::LoadLocal(*key_local));
@@ -4135,6 +4403,20 @@ fn rewrite_dot_product_multi_accum(
 fn eliminate_dead_stores(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
     let mut dead_stores: std::collections::HashSet<usize> = std::collections::HashSet::new();
     let mut used: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    if ops.iter().any(|op| matches!(op, jit::TraceOp::JumpStart)) {
+        // A trace is cyclic: values read near the beginning are live across the
+        // backedge, so the final store in the body must survive DSE.
+        for op in ops {
+            match op {
+                jit::TraceOp::LoadLocal(local)
+                | jit::TraceOp::AddLocalConst(local, _)
+                | jit::TraceOp::AddLocalFromStack(local) => {
+                    used.insert(*local);
+                }
+                _ => {}
+            }
+        }
+    }
     for (idx, op) in ops.iter().enumerate().rev() {
         match op {
             jit::TraceOp::LoadLocal(local) => {
@@ -4219,10 +4501,10 @@ fn rewrite_loop_bounds_guard(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
             | jit::TraceOp::SetIndexListNumLocalPtrNoVer(list, idx, _)
             | jit::TraceOp::SetIndexListNumLocalPtrNoVerOff(list, idx, _, _)
             | jit::TraceOp::SetIndexListNumLocalPtrNoVerFast(list, idx, _)
-            | jit::TraceOp::SetIndexListNumLocalPtrNoVerOffFast(list, idx, _, _) => {
-                if *list != list_idx || *idx != idx_idx {
-                    return out;
-                }
+            | jit::TraceOp::SetIndexListNumLocalPtrNoVerOffFast(list, idx, _, _)
+                if *list != list_idx || *idx != idx_idx =>
+            {
+                return out;
             }
             _ => {}
         }
@@ -5374,6 +5656,9 @@ fn mark_temp_allocs(
                 }
             }
             jit::TraceOp::JumpStart
+            | jit::TraceOp::Label(_)
+            | jit::TraceOp::JumpTo(_)
+            | jit::TraceOp::BranchFalse(_)
             | jit::TraceOp::GuardFalse
             | jit::TraceOp::GuardFalseDeopt(_)
             | jit::TraceOp::GuardListBounds(_, _)
@@ -5384,7 +5669,12 @@ fn mark_temp_allocs(
             | jit::TraceOp::ToText
             | jit::TraceOp::BumpListVersionLocal(_)
             | jit::TraceOp::BumpMapVersionLocal(_) => {
-                if matches!(op, jit::TraceOp::JumpStart) {
+                if matches!(
+                    op,
+                    jit::TraceOp::JumpStart
+                        | jit::TraceOp::JumpTo(_)
+                        | jit::TraceOp::BranchFalse(_)
+                ) {
                     for (local_idx, temp) in &locals {
                         if write_first_locals.contains(local_idx) {
                             continue;
@@ -5455,7 +5745,10 @@ fn collect_temp_list_sources(ops: &[jit::TraceOp]) -> Vec<jit::TempListSource> {
                 let _ = pop_or_unknown(&mut stack);
                 invalidate_local(&mut stack, *idx);
             }
-            jit::TraceOp::GuardFalse | jit::TraceOp::GuardFalseDeopt(_) | jit::TraceOp::Pop => {
+            jit::TraceOp::BranchFalse(_)
+            | jit::TraceOp::GuardFalse
+            | jit::TraceOp::GuardFalseDeopt(_)
+            | jit::TraceOp::Pop => {
                 let _ = pop_or_unknown(&mut stack);
             }
             jit::TraceOp::AddLocalConst(idx, _) => {
@@ -5562,6 +5855,8 @@ fn collect_temp_list_sources(ops: &[jit::TraceOp]) -> Vec<jit::TempListSource> {
             | jit::TraceOp::GuardIndexCmpConst(_, _, _)
             | jit::TraceOp::GuardIndexRangeConst(_, _, _)
             | jit::TraceOp::GuardListNoAliasSameLen(_, _)
+            | jit::TraceOp::Label(_)
+            | jit::TraceOp::JumpTo(_)
             | jit::TraceOp::JumpStart
             | jit::TraceOp::BumpListVersionLocal(_)
             | jit::TraceOp::BumpMapVersionLocal(_) => {}
@@ -5756,6 +6051,7 @@ fn analyze_bounds_guards(
                 let target = stack.pop()?;
                 let ty = match (target.ty, idx.ty) {
                     (TraceTy::List(ElemTag::Num), TraceTy::Num) => TraceTy::Num,
+                    (TraceTy::Map(elem), TraceTy::Text) => ty_from_elem_tag(&elem),
                     _ => TraceTy::Unknown,
                 };
                 stack.push(ValueMeta {
@@ -5797,6 +6093,24 @@ fn analyze_bounds_guards(
     Some(guards)
 }
 
+fn bounds_guard_covers_list(
+    bounds_guards: &std::collections::HashSet<(usize, usize)>,
+    list_idx: usize,
+    idx_local: usize,
+    locals: &[f64],
+) -> bool {
+    if bounds_guards.contains(&(list_idx, idx_local)) {
+        return true;
+    }
+    let Some(list_bits) = locals.get(list_idx).copied().map(f64::to_bits) else {
+        return false;
+    };
+    bounds_guards.iter().any(|(guarded_list, guarded_idx)| {
+        *guarded_idx == idx_local
+            && locals.get(*guarded_list).copied().map(f64::to_bits) == Some(list_bits)
+    })
+}
+
 fn build_trace_plan(
     code: &[Instr],
     start: usize,
@@ -5814,11 +6128,34 @@ fn build_trace_plan(
     let mut unsafe_pic_map_locals: std::collections::BTreeSet<usize> =
         std::collections::BTreeSet::new();
     let mut mutated_locals: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
+    let mut internal_targets: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
     let mut stack: Vec<ValueMeta> = Vec::new();
     let mut depth: i32 = 0;
 
     for (offset, instr) in code[start..=end].iter().enumerate() {
         let ip = start + offset;
+        let target = match instr {
+            Instr::Jump(target)
+            | Instr::JumpIfFalse(target)
+            | Instr::JumpLocalIfFalse(_, target) => Some(*target),
+            _ => None,
+        };
+        if let Some(target) = target {
+            if target >= start && target <= end && target != start {
+                if target <= ip {
+                    trace_debug_log("build_trace_plan: backward internal branch");
+                    return None;
+                }
+                internal_targets.insert(target);
+            }
+        }
+    }
+
+    for (offset, instr) in code[start..=end].iter().enumerate() {
+        let ip = start + offset;
+        if internal_targets.contains(&ip) {
+            ops.push(jit::TraceOp::Label(ip));
+        }
         match instr {
             Instr::ConstNum(n) => {
                 ops.push(jit::TraceOp::ConstNum(*n));
@@ -5919,17 +6256,20 @@ fn build_trace_plan(
                 depth -= 1;
             }
             Instr::Jump(target) => {
-                if *target != start {
+                if *target == start {
+                    for &map_idx in &mutated_maps {
+                        ops.push(jit::TraceOp::BumpMapVersionLocal(map_idx));
+                    }
+                    ops.push(jit::TraceOp::JumpStart);
+                } else if *target > ip && *target <= end {
+                    ops.push(jit::TraceOp::JumpTo(*target));
+                } else {
                     trace_debug_log(&format!(
                         "build_trace_plan: unsupported internal jump target (target={}, loop_start={}, ip={})",
                         *target, start, ip
                     ));
                     return None;
                 }
-                for &map_idx in &mutated_maps {
-                    ops.push(jit::TraceOp::BumpMapVersionLocal(map_idx));
-                }
-                ops.push(jit::TraceOp::JumpStart);
             }
             Instr::JumpIfFalse(target) => {
                 let cond = stack.pop()?;
@@ -5945,7 +6285,7 @@ fn build_trace_plan(
                         trace_debug_log("build_trace_plan: JumpIfFalse backward inside trace");
                         return None;
                     }
-                    ops.push(jit::TraceOp::GuardFalseDeopt(*target));
+                    ops.push(jit::TraceOp::BranchFalse(*target));
                 } else {
                     ops.push(jit::TraceOp::GuardFalse);
                 }
@@ -5963,7 +6303,7 @@ fn build_trace_plan(
                         trace_debug_log("build_trace_plan: JumpLocalIfFalse backward inside trace");
                         return None;
                     }
-                    ops.push(jit::TraceOp::GuardFalseDeopt(*target));
+                    ops.push(jit::TraceOp::BranchFalse(*target));
                 } else {
                     ops.push(jit::TraceOp::GuardFalse);
                 }
@@ -6070,8 +6410,12 @@ fn build_trace_plan(
                         TraceTy::Num,
                         ValueOrigin::Local(idx_local),
                     ) if elem == ElemTag::Num
-                        && (bounds_guards.contains(&(list_idx, idx_local))
-                            || bounds_guards.iter().any(|(_, idx)| *idx == idx_local))
+                        && bounds_guard_covers_list(
+                            &bounds_guards,
+                            list_idx,
+                            idx_local,
+                            locals,
+                        )
                         && !unsafe_policy.skip_bounds_check =>
                     {
                         uses_bounds_guards = true;
@@ -6256,7 +6600,12 @@ fn build_trace_plan(
                         ValueOrigin::Local(idx_local),
                         TraceTy::Num,
                     ) if elem == ElemTag::Num
-                        && bounds_guards.contains(&(list_idx, idx_local))
+                        && bounds_guard_covers_list(
+                            &bounds_guards,
+                            list_idx,
+                            idx_local,
+                            locals,
+                        )
                         && !unsafe_policy.skip_bounds_check =>
                     {
                         uses_bounds_guards = true;
@@ -6474,6 +6823,52 @@ fn build_trace_plan(
         ops = guard_ops;
     }
 
+    let has_internal_control_flow = ops.iter().any(|op| {
+        matches!(
+            op,
+            jit::TraceOp::Label(_) | jit::TraceOp::BranchFalse(_) | jit::TraceOp::JumpTo(_)
+        )
+    });
+    if has_internal_control_flow {
+        if ops.len() < MIN_TRACE_LEN {
+            trace_debug_log("build_trace_plan: native-branch trace too short");
+            return None;
+        }
+        let optimized = rewrite_lenlist_const(&ops, locals, runtime);
+        let optimized = specialize_list_data_ptr(&optimized, locals, runtime);
+        let fusion_result = apply_fusion_tier(&optimized, &mutated_maps, locals);
+        let optimized = fusion_result.ops;
+        for idx in &fusion_result.stable_const_slot_maps {
+            pic_map_locals.remove(idx);
+        }
+        let stats = TraceStats {
+            bc_len: end.saturating_sub(start) + 1,
+            ops_len: optimized.len(),
+            live_values: trace_live_values(&optimized),
+            static_calls: 0,
+            static_branches: 0,
+        };
+        let write_first_locals = trace_write_first_locals(code, start, end);
+        let profile = build_trace_profile(code, start, end, locals, runtime, &write_first_locals)?;
+        expand_profiled_mutation_aliases(&mut mutated_lists, &profile, locals, vb::TAG_LIST);
+        expand_profiled_mutation_aliases(&mut mutated_maps, &profile, locals, vb::TAG_MAP);
+        for idx in unsafe_pic_map_locals {
+            pic_map_locals.remove(&idx);
+        }
+        return Some(TracePlan {
+            ops: optimized,
+            temp_list_sources: Vec::new(),
+            promoted_locals: Vec::new(),
+            merge_locals: Vec::new(),
+            profile,
+            stats,
+            mutated_lists: mutated_lists.into_iter().collect(),
+            mutated_maps: mutated_maps.into_iter().collect(),
+            pic_map_locals: pic_map_locals.into_iter().collect(),
+            fusion_hits: fusion_result.hits,
+        });
+    }
+
     let folded = fold_trace_constants(&ops);
     if folded.len() < MIN_TRACE_LEN {
         trace_debug_log("build_trace_plan: trace too short after fold");
@@ -6558,6 +6953,8 @@ fn build_trace_plan(
         static_branches: 0,
     };
     let profile = build_trace_profile(code, start, end, locals, runtime, &write_first_locals)?;
+    expand_profiled_mutation_aliases(&mut mutated_lists, &profile, locals, vb::TAG_LIST);
+    expand_profiled_mutation_aliases(&mut mutated_maps, &profile, locals, vb::TAG_MAP);
     for idx in unsafe_pic_map_locals {
         pic_map_locals.remove(&idx);
     }
@@ -6631,6 +7028,33 @@ fn build_trace_profile(
         guards.push(LocalGuard { idx, tag, shape });
     }
     Some(TraceProfile { locals: guards })
+}
+
+fn expand_profiled_mutation_aliases(
+    mutated: &mut std::collections::BTreeSet<usize>,
+    profile: &TraceProfile,
+    locals: &[f64],
+    expected_tag: u64,
+) {
+    let mutated_bits: std::collections::BTreeSet<u64> = mutated
+        .iter()
+        .filter_map(|idx| locals.get(*idx).copied().map(f64::to_bits))
+        .filter(|bits| vb::tag_of(*bits) == Some(expected_tag))
+        .collect();
+    if mutated_bits.is_empty() {
+        return;
+    }
+    for guard in &profile.locals {
+        if guard.tag != Some(expected_tag) {
+            continue;
+        }
+        let Some(bits) = locals.get(guard.idx).copied().map(f64::to_bits) else {
+            continue;
+        };
+        if mutated_bits.contains(&bits) {
+            mutated.insert(guard.idx);
+        }
+    }
 }
 
 fn trace_write_first_locals(
@@ -6847,13 +7271,208 @@ fn refresh_mutated_list_guards(entry: &mut TraceEntry, locals: &[f64], runtime: 
     }
 }
 
+fn capture_scalar_tail_handoff(
+    key: TraceKey,
+    entry: &TraceEntry,
+    locals: &[f64],
+    runtime: &jit::JitRuntime,
+) -> Option<ScalarTailHandoff> {
+    let mut lists = Vec::with_capacity(entry.mutated_lists.len());
+    for &local_idx in &entry.mutated_lists {
+        let bits = locals.get(local_idx).copied()?.to_bits();
+        if vb::tag_of(bits) != Some(vb::TAG_LIST) {
+            return None;
+        }
+        let (ptr, len, cap, version, data) = runtime.list_meta(bits)?;
+        lists.push(ScalarTailListSnapshot {
+            local_idx,
+            bits,
+            ptr,
+            len,
+            cap,
+            version,
+            data,
+            max_version_delta: 3,
+        });
+    }
+    Some(ScalarTailHandoff {
+        key,
+        exit_target: entry.exit_target,
+        lists,
+    })
+}
+
+fn record_speculative_deopt(
+    trace_total: &mut u64,
+    trace_reasons: &mut HashMap<String, u64>,
+    telemetry_totals: &mut TraceTelemetryTotals,
+    deopt_site: usize,
+) {
+    let reason = format!("runtime_site_{deopt_site}");
+    *trace_total = trace_total.saturating_add(1);
+    telemetry_totals.deopts_total = telemetry_totals.deopts_total.saturating_add(1);
+    trace_reasons
+        .entry(reason.clone())
+        .and_modify(|count| *count = count.saturating_add(1))
+        .or_insert(1);
+    telemetry_totals
+        .deopt_reason_counts
+        .entry(reason)
+        .and_modify(|count| *count = count.saturating_add(1))
+        .or_insert(1);
+}
+
+fn is_internal_branch_deopt(
+    code: &[Instr],
+    loop_start: usize,
+    back_edge: usize,
+    deopt_ip: usize,
+) -> bool {
+    if loop_start >= code.len()
+        || back_edge >= code.len()
+        || loop_start > back_edge
+        || deopt_ip < loop_start
+        || deopt_ip > back_edge
+    {
+        return false;
+    }
+    code[loop_start..=back_edge]
+        .iter()
+        .enumerate()
+        .any(|(offset, instr)| {
+            let branch_ip = loop_start + offset;
+            match instr {
+                Instr::JumpIfFalse(target) | Instr::JumpLocalIfFalse(_, target) => {
+                    *target == deopt_ip && *target > branch_ip && *target <= back_edge
+                }
+                _ => false,
+            }
+        })
+}
+
+fn finish_internal_branch_for_exit(
+    code_id: usize,
+    exit_target: usize,
+    handoff: &mut Option<InternalBranchHandoff>,
+) {
+    if handoff
+        .as_ref()
+        .is_some_and(|pending| pending.key.0 == code_id && pending.exit_target == exit_target)
+    {
+        handoff.take();
+    }
+}
+
+fn discard_internal_branch_handoff(
+    handoff: Option<InternalBranchHandoff>,
+    trace_cache: &mut HashMap<TraceKey, TraceEntry>,
+    hot_counters: &mut HashMap<TraceKey, u32>,
+) {
+    let Some(handoff) = handoff else {
+        return;
+    };
+    trace_debug_log("trace evicted: internal branch handoff left through an unexpected edge");
+    trace_cache.remove(&handoff.key);
+    hot_counters.remove(&handoff.key);
+}
+
+fn finish_scalar_tail_for_exit(
+    code_id: usize,
+    exit_target: usize,
+    handoff: &mut Option<ScalarTailHandoff>,
+    locals: &[f64],
+    runtime: &jit::JitRuntime,
+    trace_cache: &mut HashMap<TraceKey, TraceEntry>,
+    hot_counters: &mut HashMap<TraceKey, u32>,
+) {
+    let should_finish = handoff
+        .as_ref()
+        .is_some_and(|pending| pending.key.0 == code_id && pending.exit_target == exit_target);
+    if should_finish {
+        finish_scalar_tail_handoff(handoff.take(), locals, runtime, trace_cache, hot_counters);
+    }
+}
+
+fn finish_scalar_tail_handoff(
+    handoff: Option<ScalarTailHandoff>,
+    locals: &[f64],
+    runtime: &jit::JitRuntime,
+    trace_cache: &mut HashMap<TraceKey, TraceEntry>,
+    hot_counters: &mut HashMap<TraceKey, u32>,
+) {
+    let Some(handoff) = handoff else {
+        return;
+    };
+
+    let valid = handoff.lists.iter().all(|snapshot| {
+        let Some(bits) = locals.get(snapshot.local_idx).copied().map(f64::to_bits) else {
+            return false;
+        };
+        if bits != snapshot.bits {
+            return false;
+        }
+        let Some((ptr, len, cap, version, data)) = runtime.list_meta(bits) else {
+            return false;
+        };
+        ptr == snapshot.ptr
+            && len == snapshot.len
+            && cap == snapshot.cap
+            && data == snapshot.data
+            && version.wrapping_sub(snapshot.version) <= snapshot.max_version_delta
+    });
+
+    if valid {
+        if let Some(entry) = trace_cache.get_mut(&handoff.key) {
+            refresh_mutated_list_guards(entry, locals, runtime);
+        }
+    } else {
+        trace_debug_log("trace evicted: scalar mutation tail changed list identity/shape");
+        trace_cache.remove(&handoff.key);
+        hot_counters.remove(&handoff.key);
+    }
+}
+
+fn discard_scalar_tail_handoff(
+    handoff: Option<ScalarTailHandoff>,
+    trace_cache: &mut HashMap<TraceKey, TraceEntry>,
+    hot_counters: &mut HashMap<TraceKey, u32>,
+) {
+    let Some(handoff) = handoff else {
+        return;
+    };
+    trace_debug_log("trace evicted: scalar tail left through an unexpected control-flow edge");
+    trace_cache.remove(&handoff.key);
+    hot_counters.remove(&handoff.key);
+}
+
+fn collect_version_managed_lists(ops: &[jit::TraceOp]) -> Vec<usize> {
+    let mut lists = std::collections::BTreeSet::new();
+    for op in ops {
+        if let jit::TraceOp::BumpListVersionLocal(idx) = op {
+            lists.insert(*idx);
+        }
+    }
+    lists.into_iter().collect()
+}
+
 fn bump_mutated_list_versions(entry: &TraceEntry, locals: &[f64], runtime: &mut jit::JitRuntime) {
     if entry.mutated_lists.is_empty() {
         return;
     }
+    let version_managed_bits: std::collections::BTreeSet<u64> = entry
+        .version_managed_lists
+        .iter()
+        .filter_map(|idx| locals.get(*idx).copied().map(f64::to_bits))
+        .collect();
+    let mut bumped_bits = std::collections::BTreeSet::new();
     for &idx in &entry.mutated_lists {
         let bits = locals.get(idx).copied().unwrap_or(0.0).to_bits();
-        runtime.bump_list_version(bits);
+        if version_managed_bits.contains(&bits) {
+            continue;
+        }
+        if bumped_bits.insert(bits) {
+            runtime.bump_list_version(bits);
+        }
     }
 }
 
@@ -7333,13 +7952,16 @@ fn guard_profile(
 #[cfg(test)]
 mod tests {
     use super::{
-        analyze_bounds_guards, build_trace_plan, find_non_header_internal_jump, guard_profile,
-        mark_temp_allocs, optimize_trace_ops, rewrite_map_stable_cmp_branch,
-        rewrite_map_stable_mul_acc, LocalGuard, ShapeGuard, TraceProfile,
+        analyze_bounds_guards, bounds_guard_covers_list, build_trace_plan, eliminate_dead_stores,
+        expand_profiled_mutation_aliases, find_unsupported_internal_backedge, guard_profile,
+        mark_temp_allocs, optimize_trace_ops, record_speculative_deopt,
+        rewrite_map_stable_cmp_branch, rewrite_map_stable_mul_acc, unroll_list_update_x4,
+        LocalGuard, ShapeGuard, TraceProfile, TraceTelemetryTotals,
     };
     use crate::vm::bytecode::Instr;
     use crate::vm::jit::TraceOp;
     use crate::vm::{jit, value_bits as vb};
+    use std::collections::HashMap;
 
     fn map_profile(indices: &[usize], map_bits: u64, runtime: &jit::JitRuntime) -> TraceProfile {
         let elem = runtime
@@ -7404,6 +8026,177 @@ mod tests {
         guard_profile(profile, mutated_lists, mutated_maps, &[], &locals, runtime)
     }
 
+    #[cfg_attr(
+        any(not(target_arch = "x86_64"), windows),
+        ignore = "x64 JIT runtime is disabled on this target"
+    )]
+    #[test]
+    fn analyze_bounds_guards_propagates_uniform_map_index_value_type() {
+        let mut runtime = jit::JitRuntime::new();
+        let keys = vec!["k0".to_string()];
+        let numeric_map = runtime.make_map(&keys, &[96.0f64.to_bits()]);
+        let text_value = runtime.make_text("value");
+        let text_map = runtime.make_map(&keys, &[text_value]);
+        let key = runtime.make_text("k0");
+        let code = vec![
+            Instr::LoadLocal(0),
+            Instr::LoadLocal(1),
+            Instr::CallBuiltin("__index".into(), 2),
+            Instr::StoreLocalKeep(2),
+            Instr::ConstNum(64.0),
+            Instr::Gt,
+            Instr::JumpIfFalse(7),
+        ];
+
+        let numeric_locals = [f64::from_bits(numeric_map), f64::from_bits(key), 0.0f64];
+        assert!(
+            analyze_bounds_guards(&code, 0, code.len() - 1, &numeric_locals, &runtime).is_some(),
+            "numeric uniform map values must remain numeric after __index"
+        );
+
+        let text_locals = [
+            f64::from_bits(text_map),
+            f64::from_bits(key),
+            f64::from_bits(text_value),
+        ];
+        assert!(
+            analyze_bounds_guards(&code, 0, code.len() - 1, &text_locals, &runtime).is_none(),
+            "non-numeric map values must not be admitted into a numeric comparison"
+        );
+    }
+
+    #[cfg_attr(
+        any(not(target_arch = "x86_64"), windows),
+        ignore = "x64 JIT runtime is disabled on this target"
+    )]
+    #[test]
+    fn list_bounds_guard_covers_exact_alias_but_not_unrelated_list() {
+        let mut runtime = jit::JitRuntime::new();
+        let guarded_list = runtime.make_list(&[1.0, 2.0, 3.0]);
+        let unrelated_list = runtime.make_list(&[1.0]);
+        let locals = [
+            f64::from_bits(guarded_list),
+            f64::from_bits(guarded_list),
+            f64::from_bits(unrelated_list),
+            0.0,
+        ];
+        let guards = std::collections::HashSet::from([(0usize, 3usize)]);
+
+        assert!(bounds_guard_covers_list(&guards, 0, 3, &locals));
+        assert!(bounds_guard_covers_list(&guards, 1, 3, &locals));
+        assert!(!bounds_guard_covers_list(&guards, 2, 3, &locals));
+        assert!(!bounds_guard_covers_list(&guards, 1, 2, &locals));
+    }
+
+    #[cfg_attr(
+        any(not(target_arch = "x86_64"), windows),
+        ignore = "x64 JIT runtime is disabled on this target"
+    )]
+    #[test]
+    fn mutation_metadata_expands_only_profiled_collection_aliases() {
+        let mut runtime = jit::JitRuntime::new();
+        let list_bits = runtime.make_list(&[1.0, 2.0]);
+        let list_locals = [f64::from_bits(list_bits), f64::from_bits(list_bits)];
+        let list_profile = list_profile(&[0, 1], list_bits, &runtime);
+        let mut mutated_lists = std::collections::BTreeSet::from([1usize]);
+        expand_profiled_mutation_aliases(
+            &mut mutated_lists,
+            &list_profile,
+            &list_locals,
+            vb::TAG_LIST,
+        );
+        assert_eq!(
+            mutated_lists,
+            std::collections::BTreeSet::from([0usize, 1usize])
+        );
+
+        let keys = vec!["k0".to_string()];
+        let map_bits = runtime.make_map(&keys, &[1.0f64.to_bits()]);
+        let map_locals = [f64::from_bits(map_bits), f64::from_bits(map_bits)];
+        let map_profile = map_profile(&[0, 1], map_bits, &runtime);
+        let mut mutated_maps = std::collections::BTreeSet::from([0usize]);
+        expand_profiled_mutation_aliases(&mut mutated_maps, &map_profile, &map_locals, vb::TAG_MAP);
+        assert_eq!(
+            mutated_maps,
+            std::collections::BTreeSet::from([0usize, 1usize])
+        );
+    }
+
+    #[test]
+    fn speculative_deopt_lifetime_totals_survive_pressure_reset() {
+        let mut trace_total = 0u64;
+        let mut trace_reasons = HashMap::new();
+        let mut telemetry = TraceTelemetryTotals::default();
+        let mut eviction_pressure = 0u32;
+
+        record_speculative_deopt(&mut trace_total, &mut trace_reasons, &mut telemetry, 7);
+        eviction_pressure = eviction_pressure.saturating_add(1);
+        assert_eq!(eviction_pressure, 1);
+        eviction_pressure = 0; // A successful PIC promotion resets only eviction pressure.
+        record_speculative_deopt(&mut trace_total, &mut trace_reasons, &mut telemetry, 7);
+
+        assert_eq!(eviction_pressure, 0);
+        assert_eq!(trace_total, 2);
+        assert_eq!(telemetry.deopts_total, 2);
+        assert_eq!(trace_reasons.get("runtime_site_7"), Some(&2));
+        assert_eq!(
+            telemetry.deopt_reason_counts.get("runtime_site_7"),
+            Some(&2)
+        );
+    }
+
+    #[cfg_attr(
+        any(not(target_arch = "x86_64"), windows),
+        ignore = "x64 JIT runtime is disabled on this target"
+    )]
+    #[test]
+    fn profiled_branch_counters_preserve_cmp_flags_and_scratch_registers() {
+        let ops = vec![
+            TraceOp::LoadLocal(0),
+            TraceOp::ConstNum(10.0),
+            TraceOp::LtNum,
+            TraceOp::GuardFalse,
+            TraceOp::AddLocalConst(0, 1.0),
+            TraceOp::JumpStart,
+        ];
+        let exec = jit::compile_trace_typed(&ops, &[], 0, true, &[], &[])
+            .expect("profiled trace should compile");
+        assert!(exec.profile_enabled());
+        assert!(!exec.patch_sites().is_empty());
+
+        let mut runtime = jit::JitRuntime::new();
+        runtime.set_profile_enabled(true);
+        runtime.set_profile_site_count(exec.patch_sites().len());
+        runtime.reset_profile_counters();
+        let mut locals = vec![0.0f64];
+        let mut stack = vec![0.0f64; 16];
+        let _ = exec.run(&mut locals, &mut stack, &mut runtime);
+
+        assert_eq!(locals[0], 10.0);
+        assert_eq!(runtime.exit_flag, 1);
+        let profile = runtime.profile_snapshot();
+        let (site_taken, site_not_taken) = (0..exec.patch_sites().len())
+            .map(|site_idx| {
+                runtime
+                    .profile_site_snapshot(site_idx)
+                    .expect("compiled patch site should have a runtime counter")
+            })
+            .fold(
+                (0u64, 0u64),
+                |(taken, not_taken), (site_taken, site_not_taken)| {
+                    (
+                        taken.saturating_add(site_taken),
+                        not_taken.saturating_add(site_not_taken),
+                    )
+                },
+            );
+        assert!(profile.trace_iters >= 10);
+        assert!(profile.branch_taken > 0);
+        assert!(profile.branch_not_taken > 0);
+        assert_eq!(profile.branch_taken, site_taken);
+        assert_eq!(profile.branch_not_taken, site_not_taken);
+    }
+
     #[test]
     fn mark_temp_allocs_marks_non_escaping_map() {
         let ops = vec![
@@ -7415,6 +8208,131 @@ mod tests {
         ];
         let out = mark_temp_allocs(&ops, &std::collections::BTreeSet::new());
         assert!(matches!(out[1], TraceOp::MakeMapTemp(_)));
+    }
+
+    #[test]
+    fn list_mutation_unroll_accepts_non_multiple_length_with_scalar_tail() {
+        let ops = vec![
+            TraceOp::GuardListBounds(0, 1),
+            TraceOp::LoadLocal(1),
+            TraceOp::ConstNum(55.0),
+            TraceOp::LtNum,
+            TraceOp::GuardFalse,
+            TraceOp::IndexListNumLocalPtr(0, 1, 0x1000),
+            TraceOp::StoreLocal(2),
+            TraceOp::LoadLocal(2),
+            TraceOp::AddLocalFromStack(3),
+            TraceOp::LoadLocal(0),
+            TraceOp::LoadLocal(1),
+            TraceOp::LoadLocal(2),
+            TraceOp::ConstNum(1.0),
+            TraceOp::AddNum,
+            TraceOp::SetIndexListNumLocalPtrNoVer(0, 1, 0x1000),
+            TraceOp::StoreLocal(4),
+            TraceOp::AddLocalConst(1, 1.0),
+            TraceOp::JumpStart,
+        ];
+
+        let unrolled = unroll_list_update_x4(&ops);
+        assert!(matches!(unrolled[2], TraceOp::ConstNum(limit) if limit == 52.0));
+        assert_eq!(
+            unrolled
+                .iter()
+                .filter(|op| matches!(op, TraceOp::IndexListNumLocalPtrOff(..)))
+                .count(),
+            4
+        );
+        assert_eq!(
+            unrolled
+                .iter()
+                .filter(|op| matches!(op, TraceOp::SetIndexListNumLocalPtrNoVerOff(..)))
+                .count(),
+            4
+        );
+        assert!(unrolled
+            .iter()
+            .any(|op| matches!(op, TraceOp::AddLocalConst(1, step) if *step == 4.0)));
+        assert_eq!(
+            unrolled
+                .iter()
+                .filter(|op| matches!(op, TraceOp::BumpListVersionLocal(0)))
+                .count(),
+            1
+        );
+        let offsets: Vec<i32> = unrolled
+            .iter()
+            .filter_map(|op| match op {
+                TraceOp::SetIndexListNumLocalPtrNoVerOff(_, _, _, offset) => Some(*offset),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(offsets, vec![0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn list_mutation_unroll_rejects_induction_value_used_as_lane_data() {
+        let ops = vec![
+            TraceOp::GuardListBounds(0, 1),
+            TraceOp::LoadLocal(1),
+            TraceOp::ConstNum(55.0),
+            TraceOp::LtNum,
+            TraceOp::GuardFalse,
+            TraceOp::IndexListNumLocalPtr(0, 1, 0x1000),
+            TraceOp::StoreLocal(2),
+            TraceOp::LoadLocal(2),
+            TraceOp::AddLocalFromStack(3),
+            TraceOp::LoadLocal(0),
+            TraceOp::LoadLocal(1),
+            TraceOp::LoadLocal(1),
+            TraceOp::ConstNum(1.0),
+            TraceOp::AddNum,
+            TraceOp::SetIndexListNumLocalPtrNoVer(0, 1, 0x1000),
+            TraceOp::StoreLocal(4),
+            TraceOp::AddLocalConst(1, 1.0),
+            TraceOp::JumpStart,
+        ];
+
+        let candidate = unroll_list_update_x4(&ops);
+        assert_eq!(format!("{candidate:?}"), format!("{ops:?}"));
+    }
+
+    #[test]
+    fn dead_store_elimination_preserves_loop_carried_store() {
+        let ops = vec![
+            TraceOp::LoadLocal(0),
+            TraceOp::ConstNum(1.0),
+            TraceOp::AddNum,
+            TraceOp::StoreLocal(0),
+            TraceOp::JumpStart,
+        ];
+
+        let optimized = eliminate_dead_stores(&ops);
+
+        assert!(matches!(optimized[3], TraceOp::StoreLocal(0)));
+    }
+
+    #[test]
+    fn trace_optimizer_reaches_fixed_point_for_identity_store_chain() {
+        let ops = vec![
+            TraceOp::LoadLocal(0),
+            TraceOp::ConstNum(0.0),
+            TraceOp::AddNum,
+            TraceOp::Dup,
+            TraceOp::StoreLocal(0),
+            TraceOp::ConstNum(0.0),
+            TraceOp::AddNum,
+            TraceOp::Dup,
+            TraceOp::StoreLocal(0),
+            TraceOp::LoadLocal(1),
+            TraceOp::AddNum,
+            TraceOp::StoreLocal(0),
+        ];
+
+        let optimized = optimize_trace_ops(&ops);
+
+        assert_eq!(optimized.len(), 2);
+        assert!(matches!(optimized[0], TraceOp::LoadLocal(1)));
+        assert!(matches!(optimized[1], TraceOp::AddLocalFromStack(0)));
     }
 
     #[test]
@@ -7444,25 +8362,28 @@ mod tests {
     }
 
     #[test]
-    fn find_non_header_internal_jump_detects_nested_loop_jump() {
+    fn unsupported_internal_backedge_detects_nested_loop() {
+        let code = vec![
+            Instr::LoadLocal(0),
+            Instr::Jump(1),
+            Instr::Jump(0),
+            Instr::Return,
+        ];
+        assert_eq!(
+            find_unsupported_internal_backedge(&code, 0, 2),
+            Some((1, 1))
+        );
+    }
+
+    #[test]
+    fn unsupported_internal_backedge_allows_forward_branch_and_outer_loop_backedge() {
         let code = vec![
             Instr::LoadLocal(0),
             Instr::Jump(2),
             Instr::Jump(0),
             Instr::Return,
         ];
-        assert_eq!(find_non_header_internal_jump(&code, 0, 2), Some((1, 2)));
-    }
-
-    #[test]
-    fn find_non_header_internal_jump_ignores_backedge_and_exit_jump() {
-        let code = vec![
-            Instr::LoadLocal(0),
-            Instr::Jump(0),
-            Instr::Jump(7),
-            Instr::Return,
-        ];
-        assert_eq!(find_non_header_internal_jump(&code, 0, 2), None);
+        assert_eq!(find_unsupported_internal_backedge(&code, 0, 2), None);
     }
 
     #[test]
@@ -7550,6 +8471,57 @@ mod tests {
     }
 
     #[test]
+    fn rewrite_map_stable_cmp_branch_preserves_native_branch_target() {
+        let ops = vec![
+            TraceOp::LoadLocal(0),
+            TraceOp::LoadLocal(1),
+            TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(0, 1, 123, 77, 0xCAFE),
+            TraceOp::StoreLocal(2),
+            TraceOp::LoadLocal(2),
+            TraceOp::ConstNum(64.0),
+            TraceOp::GtNum,
+            TraceOp::BranchFalse(1234),
+            TraceOp::JumpStart,
+        ];
+        let (out, hits) = rewrite_map_stable_cmp_branch(&ops);
+        assert_eq!(hits, 1);
+        assert_eq!(out.len(), 7);
+        assert!(matches!(out[4], TraceOp::GtNum));
+        assert!(matches!(out[5], TraceOp::BranchFalse(1234)));
+        assert!(matches!(out[6], TraceOp::JumpStart));
+    }
+
+    #[test]
+    fn rewrite_map_stable_cmp_branch_accepts_store_local_keep_shape() {
+        let ops = vec![
+            TraceOp::LoadLocal(0),
+            TraceOp::LoadLocal(1),
+            TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(0, 1, 123, 77, 0xCAFE),
+            TraceOp::Dup,
+            TraceOp::StoreLocal(2),
+            TraceOp::ConstNum(64.0),
+            TraceOp::GtNum,
+            TraceOp::GuardFalseDeopt(1234),
+            TraceOp::StoreLocal(2),
+            TraceOp::JumpStart,
+        ];
+        let (out, hits) = rewrite_map_stable_cmp_branch(&ops);
+        assert_eq!(hits, 1);
+        assert_eq!(out.len(), 8);
+        assert!(matches!(out[0], TraceOp::LoadLocal(0)));
+        assert!(matches!(out[1], TraceOp::LoadLocal(1)));
+        assert!(matches!(
+            out[2],
+            TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(0, 1, 123, 77, 0xCAFE)
+        ));
+        assert!(matches!(out[3], TraceOp::ConstNum(v) if (v - 64.0).abs() < f64::EPSILON));
+        assert!(matches!(out[4], TraceOp::GtNum));
+        assert!(matches!(out[5], TraceOp::GuardFalseDeopt(1234)));
+        assert!(matches!(out[6], TraceOp::StoreLocal(2)));
+        assert!(matches!(out[7], TraceOp::JumpStart));
+    }
+
+    #[test]
     fn rewrite_map_stable_cmp_branch_keeps_tmp_if_reused_before_overwrite() {
         let ops = vec![
             TraceOp::LoadLocal(0),
@@ -7567,6 +8539,26 @@ mod tests {
         let (out, hits) = rewrite_map_stable_cmp_branch(&ops);
         assert_eq!(hits, 0);
         assert_eq!(format!("{:?}", out), format!("{:?}", ops));
+    }
+
+    #[test]
+    fn rewrite_map_stable_cmp_branch_keeps_store_local_keep_when_tmp_is_live() {
+        let ops = vec![
+            TraceOp::LoadLocal(0),
+            TraceOp::LoadLocal(1),
+            TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(0, 1, 123, 77, 0xCAFE),
+            TraceOp::Dup,
+            TraceOp::StoreLocal(2),
+            TraceOp::ConstNum(64.0),
+            TraceOp::GtNum,
+            TraceOp::GuardFalse,
+            TraceOp::LoadLocal(2),
+            TraceOp::StoreLocal(3),
+            TraceOp::JumpStart,
+        ];
+        let (out, hits) = rewrite_map_stable_cmp_branch(&ops);
+        assert_eq!(hits, 0);
+        assert_eq!(format!("{out:?}"), format!("{ops:?}"));
     }
 
     #[test]

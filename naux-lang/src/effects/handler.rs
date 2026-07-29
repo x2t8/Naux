@@ -9,7 +9,6 @@
 //! - **Redirection**: handle `!say` → write to file instead of stdout
 //! - **Composition**: stack handlers for different effects
 
-
 use crate::ast::{ActionKind, Stmt};
 use crate::effects::types::*;
 
@@ -135,7 +134,11 @@ fn collect_actions<'a>(
                 collect_actions(s, registry, result, action_names);
             }
         }
-        Stmt::If { then_block, else_block, .. } => {
+        Stmt::If {
+            then_block,
+            else_block,
+            ..
+        } => {
             for s in then_block {
                 collect_actions(s, registry, result, action_names);
             }
@@ -169,9 +172,7 @@ fn action_to_effect(action: &ActionKind) -> (String, Vec<EffectValue>) {
         ActionKind::Log { .. } => ("log".into(), vec![EffectValue::Text("<expr>".into())]),
         ActionKind::Text { .. } => ("text".into(), vec![EffectValue::Text("<expr>".into())]),
         ActionKind::Button { .. } => ("button".into(), vec![EffectValue::Text("<expr>".into())]),
-        ActionKind::Ui { kind, .. } => {
-            ("ui".into(), vec![EffectValue::Text(kind.clone())])
-        }
+        ActionKind::Ui { kind, .. } => ("ui".into(), vec![EffectValue::Text(kind.clone())]),
         ActionKind::Syscall { .. } => ("syscall".into(), vec![EffectValue::Num(0.0)]),
     }
 }

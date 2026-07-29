@@ -111,6 +111,7 @@ def main() -> int:
 
     total_hits = 0
     total_deopts = 0
+    total_internal_side_exits = 0
     total_guard_checks = 0
     total_guard_fails = 0
     total_clones = 0
@@ -128,6 +129,7 @@ def main() -> int:
         hot_trace_id = int(payload.get("hot_trace_id", 0) or 0)
         hits = int(payload.get("total_hits", 0) or 0)
         deopts = int(payload.get("total_deopts", 0) or 0)
+        internal_side_exits = int(payload.get("total_internal_side_exits", 0) or 0)
         guard_checks = int(payload.get("guard_checks_total", 0) or 0)
         guard_fails = int(payload.get("guard_fail_total", 0) or 0)
         avg_hot_code = float(payload.get("avg_hot_code_bytes", 0.0) or 0.0)
@@ -163,6 +165,7 @@ def main() -> int:
             loop_header = int(row.get("loop_header", 0) or 0)
             row_hits = int(row.get("hits", 0) or 0)
             row_deopts = int(row.get("deopts", 0) or 0)
+            row_internal_side_exits = int(row.get("internal_side_exits", 0) or 0)
             row_guard_checks = int(row.get("guard_checks", 0) or 0)
             row_guard_fails = int(row.get("guard_fails", 0) or 0)
             runtime_deopts = int(row.get("runtime_deopts", 0) or 0)
@@ -180,6 +183,7 @@ def main() -> int:
                     "is_hot": is_hot,
                     "hits": row_hits,
                     "deopts": row_deopts,
+                    "internal_side_exits": row_internal_side_exits,
                     "deopt_rate_pct": share_pct(row_deopts, row_hits),
                     "guard_checks": row_guard_checks,
                     "guard_fails": row_guard_fails,
@@ -231,6 +235,7 @@ def main() -> int:
                 "hot_trace_id": hot_trace_id,
                 "total_hits": hits,
                 "total_deopts": deopts,
+                "total_internal_side_exits": internal_side_exits,
                 "deopt_rate_pct": share_pct(deopts, hits),
                 "guard_checks_total": guard_checks,
                 "guard_fail_total": guard_fails,
@@ -247,6 +252,7 @@ def main() -> int:
 
         total_hits += hits
         total_deopts += deopts
+        total_internal_side_exits += internal_side_exits
         total_guard_checks += guard_checks
         total_guard_fails += guard_fails
         total_clones += scenario_clone_count
@@ -307,6 +313,7 @@ def main() -> int:
         "summary": {
             "total_hits": total_hits,
             "total_deopts": total_deopts,
+            "total_internal_side_exits": total_internal_side_exits,
             "deopt_rate_pct": share_pct(total_deopts, total_hits),
             "guard_checks_total": total_guard_checks,
             "guard_fail_total": total_guard_fails,
@@ -339,6 +346,7 @@ def main() -> int:
         f"- profiles_processed: `{len(scenario_rows)}`",
         f"- total_hits: `{total_hits}`",
         f"- total_deopts: `{total_deopts}`",
+        f"- total_internal_side_exits: `{total_internal_side_exits}`",
         f"- deopt_rate_pct: `{report['summary']['deopt_rate_pct']:.4f}`",
         f"- guard_checks_total: `{total_guard_checks}`",
         f"- guard_fail_total: `{total_guard_fails}`",
@@ -380,39 +388,39 @@ def main() -> int:
             "",
             "## Scenario Breakdown",
             "",
-            "| scenario | traces | hits | deopts | deopt % | guard checks | guard fails | guard fail % | clones | hot trace | avg hot bytes |",
-            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+            "| scenario | traces | hits | deopts | side exits | deopt % | guard checks | guard fails | guard fail % | clones | hot trace | avg hot bytes |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
     if scenario_rows:
         for row in scenario_rows:
             md_lines.append(
-                "| {scenario} | {trace_count} | {total_hits} | {total_deopts} | {deopt_rate_pct:.2f} | "
+                "| {scenario} | {trace_count} | {total_hits} | {total_deopts} | {total_internal_side_exits} | {deopt_rate_pct:.2f} | "
                 "{guard_checks_total} | {guard_fail_total} | {guard_fail_rate_pct:.2f} | {clone_count} | "
                 "{hot_trace_id} | {avg_hot_code_bytes:.2f} |".format(**row)
             )
     else:
-        md_lines.append("| - | 0 | 0 | 0 | 0.00 | 0 | 0 | 0.00 | 0 | 0 | 0.00 |")
+        md_lines.append("| - | 0 | 0 | 0 | 0 | 0.00 | 0 | 0 | 0.00 | 0 | 0 | 0.00 |")
 
     md_lines.extend(
         [
             "",
             "## Trace Breakdown",
             "",
-            "| scenario | trace_id | loop_header | hot | hits | deopts | deopt % | guard checks | guard fails | guard fail % | runtime deopts | lifetime ms |",
-            "|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+            "| scenario | trace_id | loop_header | hot | hits | deopts | side exits | deopt % | guard checks | guard fails | guard fail % | runtime deopts | lifetime ms |",
+            "|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
     if trace_rows:
         for row in trace_rows[:50]:
             md_lines.append(
-                "| {scenario} | {trace_id} | {loop_header} | {is_hot} | {hits} | {deopts} | {deopt_rate_pct:.2f} | "
+                "| {scenario} | {trace_id} | {loop_header} | {is_hot} | {hits} | {deopts} | {internal_side_exits} | {deopt_rate_pct:.2f} | "
                 "{guard_checks} | {guard_fails} | {guard_fail_rate_pct:.2f} | {runtime_deopts} | {trace_lifetime_ms} |".format(
                     **row
                 )
             )
     else:
-        md_lines.append("| - | 0 | 0 | false | 0 | 0 | 0.00 | 0 | 0 | 0.00 | 0 | 0 |")
+        md_lines.append("| - | 0 | 0 | false | 0 | 0 | 0 | 0.00 | 0 | 0 | 0.00 | 0 | 0 |")
 
     out_json.write_text(json.dumps(report, indent=2), encoding="utf-8")
     out_md.write_text("\n".join(md_lines) + "\n", encoding="utf-8")

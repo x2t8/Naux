@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use crate::cli::run;
 use crate::cli::util;
 use crate::cli::DefaultEngine;
 use crate::runtime::env::Env;
@@ -25,7 +24,7 @@ pub fn bench_core(path: &Path, engine: &str, iters: u32) -> Result<(), String> {
     }
     let elapsed = start.elapsed();
     let avg_ns = elapsed.as_nanos() / iters as u128;
-    let ops_sec = if avg_ns > 0 { 1_000_000_000 / avg_ns } else { 0 };
+    let ops_sec = 1_000_000_000u128.checked_div(avg_ns).unwrap_or(0);
 
     println!("~ NAUX BENCH ~");
     println!(
@@ -145,7 +144,7 @@ pub fn bench_runtime_core(
         } else {
             0.0
         };
-        let median_ops = if median > 0 { 1_000_000_000u128 / median } else { 0 };
+        let median_ops = 1_000_000_000u128.checked_div(median).unwrap_or(0);
         let total_index_elements =
             total_avx_dot_elements.saturating_add(total_interp_index_elements);
         let avx_element_share = if total_index_elements > 0 {
@@ -345,6 +344,7 @@ pub fn bench_runtime_core(
 
     let trace_summary = jit_runner.as_ref().map(|runner| runner.trace_summary());
 
+    let cv_pct = coefficient_of_variation_pct(&samples);
     samples.sort_unstable();
     let median = percentile(&samples, 50.0);
     let p95 = percentile(&samples, 95.0);
@@ -362,11 +362,7 @@ pub fn bench_runtime_core(
         } else {
             (false, 0, 0, 0, 0)
         };
-    let median_ops = if median > 0 {
-        1_000_000_000u128 / median
-    } else {
-        0
-    };
+    let median_ops = 1_000_000_000u128.checked_div(median).unwrap_or(0);
     let total_index_elements = total_avx_dot_elements.saturating_add(total_interp_index_elements);
     let avx_element_share = if total_index_elements > 0 {
         (total_avx_dot_elements as f64) / (total_index_elements as f64)
@@ -470,7 +466,7 @@ pub fn bench_runtime_core(
                         out.push(',');
                     }
                     out.push_str(&format!(
-                        "{{\"trace_id\":{},\"loop_header\":{},\"first_seen_ts_ms\":{},\"last_seen_ts_ms\":{},\"trace_lifetime_ms\":{},\"hits\":{},\"deopts\":{},\"guard_checks\":{},\"guard_fails\":{},\"runtime_deopts\":{},\"is_hot\":{}}}",
+                        "{{\"trace_id\":{},\"loop_header\":{},\"first_seen_ts_ms\":{},\"last_seen_ts_ms\":{},\"trace_lifetime_ms\":{},\"hits\":{},\"deopts\":{},\"internal_side_exits\":{},\"guard_checks\":{},\"guard_fails\":{},\"runtime_deopts\":{},\"is_hot\":{}}}",
                         p.trace_id,
                         p.loop_header,
                         p.first_seen_ts_ms,
@@ -478,6 +474,7 @@ pub fn bench_runtime_core(
                         p.trace_lifetime_ms,
                         p.hits,
                         p.deopts,
+                        p.internal_side_exits,
                         p.guard_checks,
                         p.guard_fails,
                         p.runtime_deopts,
@@ -573,6 +570,10 @@ pub fn bench_runtime_core(
                 0, 0, 0, 0, 0.0, 0, 0, 0.0, 0, 0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             ));
+        let total_internal_side_exits = trace_summary
+            .as_ref()
+            .map(|summary| summary.total_internal_side_exits)
+            .unwrap_or(0);
         let (hot_trace_id, guard_checks_total, guard_fail_total, build_fingerprint_json) =
             trace_summary
                 .as_ref()
@@ -602,7 +603,7 @@ pub fn bench_runtime_core(
             0.0
         };
         println!(
-            "{{\"engine\":\"{}\",\"iters\":{},\"warmup_ms\":{},\"warmup_iters\":{},\"preheat_iters\":{},\"dropped_transition_samples\":{},\"sample_attempts\":{},\"median_ns\":{},\"p95_ns\":{},\"median_ops\":{},\"fallback\":{},\"split_available\":{},\"setup_median_ns\":{},\"setup_p95_ns\":{},\"compute_median_ns\":{},\"compute_p95_ns\":{},\"list_range_calls_total\":{},\"avx_dot_elements_total\":{},\"interp_index_elements_total\":{},\"avx_element_share\":{:.4},\"trace_count\":{},\"super_count\":{},\"min_ops\":{},\"max_ops\":{},\"avg_ops\":{:.2},\"min_code_bytes\":{},\"max_code_bytes\":{},\"avg_code_bytes\":{:.2},\"min_hot_code_bytes\":{},\"max_hot_code_bytes\":{},\"avg_hot_code_bytes\":{:.2},\"max_live\":{},\"max_bc_len\":{},\"total_hits\":{},\"total_deopts\":{},\"total_static_calls\":{},\"total_static_branches\":{},\"total_runtime_calls\":{},\"total_runtime_branch_taken\":{},\"total_runtime_branch_not_taken\":{},\"total_runtime_branches\":{},\"branch_taken_ratio\":{:.4},\"total_runtime_trace_iters\":{},\"total_runtime_deopts\":{},\"total_runtime_temp_list_elided\":{},\"total_runtime_temp_map_elided\":{},\"total_runtime_temp_list_materialized\":{},\"total_runtime_temp_map_materialized\":{},\"total_patch_sites\":{},\"max_patch_sites\":{},\"total_patch_attempts\":{},\"total_patch_commits\":{},\"total_patch_reverts\":{},\"total_adaptive_epochs\":{},\"max_adaptive_stable_epochs\":{},\"max_revert_streak\":{},\"max_deopt\":{},\"max_hot\":{},\"hot_trace_id\":{},\"guard_checks_total\":{},\"guard_fail_total\":{},\"build_fingerprint\":{},\"fusion_hits_by_rule\":{},\"site_profiles\":{},\"deopt_reasons\":{},\"guard_fails_by_guard\":{},\"by_trace\":{}}}",
+            "{{\"engine\":\"{}\",\"iters\":{},\"warmup_ms\":{},\"warmup_iters\":{},\"preheat_iters\":{},\"dropped_transition_samples\":{},\"sample_attempts\":{},\"median_ns\":{},\"p95_ns\":{},\"cv_pct\":{:.4},\"median_ops\":{},\"fallback\":{},\"split_available\":{},\"setup_median_ns\":{},\"setup_p95_ns\":{},\"compute_median_ns\":{},\"compute_p95_ns\":{},\"list_range_calls_total\":{},\"avx_dot_elements_total\":{},\"interp_index_elements_total\":{},\"avx_element_share\":{:.4},\"trace_count\":{},\"super_count\":{},\"min_ops\":{},\"max_ops\":{},\"avg_ops\":{:.2},\"min_code_bytes\":{},\"max_code_bytes\":{},\"avg_code_bytes\":{:.2},\"min_hot_code_bytes\":{},\"max_hot_code_bytes\":{},\"avg_hot_code_bytes\":{:.2},\"max_live\":{},\"max_bc_len\":{},\"total_hits\":{},\"total_deopts\":{},\"total_internal_side_exits\":{},\"total_static_calls\":{},\"total_static_branches\":{},\"total_runtime_calls\":{},\"total_runtime_branch_taken\":{},\"total_runtime_branch_not_taken\":{},\"total_runtime_branches\":{},\"branch_taken_ratio\":{:.4},\"total_runtime_trace_iters\":{},\"total_runtime_deopts\":{},\"total_runtime_temp_list_elided\":{},\"total_runtime_temp_map_elided\":{},\"total_runtime_temp_list_materialized\":{},\"total_runtime_temp_map_materialized\":{},\"total_patch_sites\":{},\"max_patch_sites\":{},\"total_patch_attempts\":{},\"total_patch_commits\":{},\"total_patch_reverts\":{},\"total_adaptive_epochs\":{},\"max_adaptive_stable_epochs\":{},\"max_revert_streak\":{},\"max_deopt\":{},\"max_hot\":{},\"hot_trace_id\":{},\"guard_checks_total\":{},\"guard_fail_total\":{},\"build_fingerprint\":{},\"fusion_hits_by_rule\":{},\"site_profiles\":{},\"deopt_reasons\":{},\"guard_fails_by_guard\":{},\"by_trace\":{}}}",
             format_engine(engine),
             iters,
             warmup_ms,
@@ -612,6 +613,7 @@ pub fn bench_runtime_core(
             sample_attempts,
             median,
             p95,
+            cv_pct,
             median_ops,
             used_fallback,
             split_available,
@@ -638,6 +640,7 @@ pub fn bench_runtime_core(
             max_bc_len,
             total_hits,
             total_deopts,
+            total_internal_side_exits,
             total_static_calls,
             total_static_branches,
             total_runtime_calls,
@@ -674,10 +677,11 @@ pub fn bench_runtime_core(
     } else {
         println!("~ NAUX BENCH (runtime-only) ~");
         println!(
-            "[BENCH] median={} ns/op ({} ops/sec), p95={} ns/op over {} runs (warmup {} ms, {} iters) engine={}",
+            "[BENCH] median={} ns/op ({} ops/sec), p95={} ns/op, cv_pct={:.4} over {} runs (warmup {} ms, {} iters) engine={}",
             median,
             median_ops,
             p95,
+            cv_pct,
             iters,
             warmup_ms,
             warmup_iters,
@@ -735,7 +739,7 @@ pub fn bench_runtime_core(
                     0.0
                 };
                 println!(
-                    "[TRACE] count={} super={} ops(min/avg/max)={}/{:.1}/{} code(min/avg/max)={}/{:.1}/{} hot_code(min/avg/max)={}/{:.1}/{} live_max={} bc_max={} hits={} deopt={} (rate {:.2}%) calls(static/runtime)={}/{} branches(static/runtime/taken/not)={}/{}/{}/{} ratio={:.2}% trace_iters={} runtime_deopts={} temps(elided_list/elided_map/materialized_list/materialized_map)={}/{}/{}/{} patch_sites(total/max)={}/{} patcher(attempt/commit/revert/epochs/max_stable/max_revert_streak)={}/{}/{}/{}/{}/{} max_deopt={} max_hot={}",
+                    "[TRACE] count={} super={} ops(min/avg/max)={}/{:.1}/{} code(min/avg/max)={}/{:.1}/{} hot_code(min/avg/max)={}/{:.1}/{} live_max={} bc_max={} hits={} deopt={} (rate {:.2}%) internal_side_exits={} calls(static/runtime)={}/{} branches(static/runtime/taken/not)={}/{}/{}/{} ratio={:.2}% trace_iters={} runtime_deopts={} temps(elided_list/elided_map/materialized_list/materialized_map)={}/{}/{}/{} patch_sites(total/max)={}/{} patcher(attempt/commit/revert/epochs/max_stable/max_revert_streak)={}/{}/{}/{}/{}/{} max_deopt={} max_hot={}",
                     summary.trace_count,
                     summary.super_count,
                     summary.min_ops,
@@ -752,6 +756,7 @@ pub fn bench_runtime_core(
                     summary.total_hits,
                     summary.total_deopts,
                     deopt_rate * 100.0,
+                    summary.total_internal_side_exits,
                     summary.total_static_calls,
                     summary.total_runtime_calls,
                     summary.total_static_branches,
@@ -904,6 +909,25 @@ fn percentile(samples: &[u128], pct: f64) -> u128 {
     samples[rank.min(samples.len() - 1)]
 }
 
+fn coefficient_of_variation_pct(samples: &[u128]) -> f64 {
+    if samples.len() < 2 {
+        return 0.0;
+    }
+    let mean = samples.iter().map(|sample| *sample as f64).sum::<f64>() / samples.len() as f64;
+    if mean == 0.0 {
+        return 0.0;
+    }
+    let variance = samples
+        .iter()
+        .map(|sample| {
+            let delta = *sample as f64 - mean;
+            delta * delta
+        })
+        .sum::<f64>()
+        / samples.len() as f64;
+    variance.sqrt() * 100.0 / mean
+}
+
 fn percentile_u64(samples: &[u64], pct: f64) -> u64 {
     if samples.is_empty() {
         return 0;
@@ -921,29 +945,12 @@ fn parse_engine(engine: &str) -> Result<DefaultEngine, String> {
     }
 }
 
-fn parse_mode(mode: &str) -> Result<DefaultMode, String> {
-    match mode.to_ascii_lowercase().as_str() {
-        "cli" => Ok(DefaultMode::Cli),
-        "html" => Ok(DefaultMode::Html),
-        "json" => Ok(DefaultMode::Json),
-        other => Err(format!("Unknown mode `{}`", other)),
-    }
-}
-
 fn format_engine(engine: DefaultEngine) -> &'static str {
     match engine {
         DefaultEngine::Interp => "interp",
         DefaultEngine::Vm => "vm",
         DefaultEngine::Jit => "jit",
     }
-}
-
-fn print_ir_block(name: &str, code: &[bytecode::Instr]) {
-    println!("~ NAUX IR (function {}) ~", name);
-    for (i, instr) in code.iter().enumerate() {
-        println!("{:04} {}", i, bytecode::fmt_instr_bc(instr));
-    }
-    println!();
 }
 
 fn summarize_hotspots(program: &bytecode::Program, limit: usize) -> Vec<(String, usize)> {
@@ -956,15 +963,22 @@ fn summarize_hotspots(program: &bytecode::Program, limit: usize) -> Vec<(String,
         *counts.entry(bytecode::fmt_instr_bc(instr)).or_default() += 1;
     }
     let mut items: Vec<_> = counts.into_iter().collect();
-    items.sort_by(|a, b| b.1.cmp(&a.1));
+    items.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
     items.truncate(limit);
     items
 }
 
-fn percent(used: usize, reserved: usize) -> f64 {
-    if reserved == 0 {
-        0.0
-    } else {
-        (used as f64 * 100.0) / reserved as f64
+#[cfg(test)]
+mod tests {
+    use super::coefficient_of_variation_pct;
+
+    #[test]
+    fn coefficient_of_variation_reports_stable_and_noisy_samples() {
+        assert_eq!(coefficient_of_variation_pct(&[]), 0.0);
+        assert_eq!(coefficient_of_variation_pct(&[100]), 0.0);
+        assert_eq!(coefficient_of_variation_pct(&[100, 100, 100]), 0.0);
+
+        let noisy = coefficient_of_variation_pct(&[100, 200]);
+        assert!((noisy - 33.333_333).abs() < 0.000_1, "{noisy}");
     }
 }

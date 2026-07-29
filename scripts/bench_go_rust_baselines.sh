@@ -30,9 +30,9 @@ C_SRCS=(
     "benchmarks/c/bench_dot_product.c"
 )
 C_BINS=(
-    "benchmarks/c/bench_sum_dense"
-    "benchmarks/c/bench_list_update"
-    "benchmarks/c/bench_dot_product"
+    "bench_sum_dense"
+    "bench_list_update"
+    "bench_dot_product"
 )
 GO_SRCS=(
     "benchmarks/go/bench_sum_dense.go"
@@ -40,9 +40,9 @@ GO_SRCS=(
     "benchmarks/go/bench_dot_product.go"
 )
 GO_BINS=(
-    "benchmarks/go/bin/bench_sum_dense"
-    "benchmarks/go/bin/bench_list_update"
-    "benchmarks/go/bin/bench_dot_product"
+    "bench_sum_dense"
+    "bench_list_update"
+    "bench_dot_product"
 )
 RUST_BINS=(
     "bench_sum_dense"
@@ -50,8 +50,7 @@ RUST_BINS=(
     "bench_dot_product"
 )
 
-mkdir -p "$OUT_DIR"
-mkdir -p "$ROOT_DIR/benchmarks/go/bin"
+mkdir -p "$OUT_DIR/bin/c" "$OUT_DIR/bin/go"
 
 for cmd in cargo cc go python3; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -93,14 +92,14 @@ echo "[bench] build naux release"
 echo "[bench] build C baselines"
 for i in "${!C_SRCS[@]}"; do
     src="$ROOT_DIR/${C_SRCS[$i]}"
-    out="$ROOT_DIR/${C_BINS[$i]}"
-    cc $C_FLAGS -o "$out" "$src"
+    out="$OUT_DIR/bin/c/${C_BINS[$i]}"
+    cc $C_FLAGS -o "$out" "$src" -lm
 done
 
 echo "[bench] build Go baselines"
 for i in "${!GO_SRCS[@]}"; do
     src="$ROOT_DIR/${GO_SRCS[$i]}"
-    out="$ROOT_DIR/${GO_BINS[$i]}"
+    out="$OUT_DIR/bin/go/${GO_BINS[$i]}"
     go build $GO_BUILD_FLAGS -o "$out" "$src"
 done
 
@@ -116,8 +115,8 @@ FAILED=0
 for i in "${!BENCH_NAMES[@]}"; do
     name="${BENCH_NAMES[$i]}"
     naux_file="$ROOT_DIR/${NAUX_FILES[$i]}"
-    c_bin="$ROOT_DIR/${C_BINS[$i]}"
-    go_bin="$ROOT_DIR/${GO_BINS[$i]}"
+    c_bin="$OUT_DIR/bin/c/${C_BINS[$i]}"
+    go_bin="$OUT_DIR/bin/go/${GO_BINS[$i]}"
     rust_bin="$ROOT_DIR/benchmarks/rust/target/release/${RUST_BINS[$i]}"
 
     naux_out="$(run_pinned "$ROOT_DIR/target/release/naux" dev benchrt "$naux_file" --engine="$ENGINE" --iters="$ITERS" --warmup-ms="$WARMUP_MS")"

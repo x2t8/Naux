@@ -43,10 +43,7 @@ pub fn check_program(stmts: &[Stmt]) -> Result<(), TypeError> {
 fn check_stmt(stmt: &Stmt, env: &mut Env, fns: &mut FnTable) -> Result<(), TypeError> {
     match stmt {
         Stmt::FnDef {
-            name,
-            params,
-            body,
-            ..
+            name, params, body, ..
         } => {
             // Đăng ký fn (nếu chưa có) và typecheck thân với env mới.
             fns.insert(name.clone(), params.len());
@@ -60,11 +57,7 @@ fn check_stmt(stmt: &Stmt, env: &mut Env, fns: &mut FnTable) -> Result<(), TypeE
             }
             Ok(())
         }
-        Stmt::Assign {
-            name,
-            expr,
-            ..
-        } => {
+        Stmt::Assign { name, expr, .. } => {
             let ty = check_expr(expr, env, fns)?;
             env.insert(name.clone(), ty);
             Ok(())

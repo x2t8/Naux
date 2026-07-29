@@ -61,7 +61,10 @@ pub struct Param {
 
 impl Param {
     pub fn plain(name: String) -> Self {
-        Self { name, annotation: None }
+        Self {
+            name,
+            annotation: None,
+        }
     }
 }
 

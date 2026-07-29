@@ -90,6 +90,9 @@ def render_markdown(payload: Dict) -> str:
     lines.append("")
     lines.append(f"- total_hits: `{summary.get('total_hits', 0)}`")
     lines.append(f"- total_deopts: `{summary.get('total_deopts', 0)}`")
+    lines.append(
+        f"- total_internal_side_exits: `{summary.get('total_internal_side_exits', 0)}`"
+    )
     lines.append(f"- deopt_rate_pct: `{safe_float(summary.get('deopt_rate_pct', 0.0)):.4f}`")
     lines.append(f"- guard_checks_total: `{summary.get('guard_checks_total', 0)}`")
     lines.append(f"- guard_fail_total: `{summary.get('guard_fail_total', 0)}`")
@@ -144,6 +147,7 @@ def main() -> int:
     summary: Dict = {
         "total_hits": 0,
         "total_deopts": 0,
+        "total_internal_side_exits": 0,
         "deopt_rate_pct": 0.0,
         "guard_checks_total": 0,
         "guard_fail_total": 0,

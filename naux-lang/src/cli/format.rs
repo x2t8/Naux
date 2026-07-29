@@ -59,14 +59,29 @@ impl Formatter {
                 self.write_line("~ end");
             }
             Stmt::FnDef {
-                name, params, body, ..
+                name,
+                params,
+                body,
+                return_type,
+                ..
             } => {
                 let params = params
                     .iter()
-                    .map(|param| format!("${}", param))
+                    .map(|param| {
+                        let annotation = param
+                            .annotation
+                            .as_ref()
+                            .map(|annotation| format!(": {}", annotation.base))
+                            .unwrap_or_default();
+                        format!("${}{annotation}", param.name)
+                    })
                     .collect::<Vec<_>>()
                     .join(", ");
-                self.write_line(&format!("~ fn {}({})", name, params));
+                let result = return_type
+                    .as_ref()
+                    .map(|annotation| format!(" -> {}", annotation.base))
+                    .unwrap_or_default();
+                self.write_line(&format!("~ fn {name}({params}){result}"));
                 self.indent += 1;
                 for stmt in body {
                     self.format_stmt(stmt);

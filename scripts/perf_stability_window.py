@@ -36,6 +36,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--required-rules", default="", help="Comma-separated fusion rules expected to hit")
     p.add_argument("--min-rule-hit-pct", type=float, default=90.0, help="Min hit ratio for each required rule")
     p.add_argument(
+        "--require-shadow-match",
+        action="store_true",
+        help="Require every run to include a successful primary/shadow slope comparison",
+    )
+    p.add_argument(
+        "--min-shadow-match-pct",
+        type=float,
+        default=100.0,
+        help="Minimum shadow-match percentage across the evaluated window",
+    )
+    p.add_argument(
         "--fail-on-insufficient-runs",
         action="store_true",
         help="Fail when run count in window is less than --min-runs",
@@ -92,6 +103,10 @@ def main() -> int:
     retryable_count = 0
     hard_count = 0
     pass_count = 0
+    shadow_match_count = 0
+    shadow_mismatch_count = 0
+    shadow_missing_count = 0
+    shadow_error_count = 0
     for run in window_runs:
         cls = normalize_retry_class((run or {}).get("retry_class", ""))
         if cls == RETRY_CLASS_RETRYABLE:
@@ -100,8 +115,20 @@ def main() -> int:
             hard_count += 1
         else:
             pass_count += 1
+        shadow_status = str((run or {}).get("shadow_compare_status", "missing")).lower()
+        if shadow_status == "match":
+            shadow_match_count += 1
+        elif shadow_status == "mismatch":
+            shadow_mismatch_count += 1
+        elif shadow_status == "error":
+            shadow_error_count += 1
+        else:
+            shadow_missing_count += 1
 
     retryable_pct = (100.0 * retryable_count / run_count) if run_count > 0 else 0.0
+    shadow_match_pct = (100.0 * shadow_match_count / run_count) if run_count > 0 else 0.0
+    shadow_coverage_count = shadow_match_count + shadow_mismatch_count
+    shadow_coverage_pct = (100.0 * shadow_coverage_count / run_count) if run_count > 0 else 0.0
 
     required_rules = parse_csv(args.required_rules)
     rule_stats = []
@@ -149,6 +176,23 @@ def main() -> int:
             "detail": f"{hard_count} <= {args.max_hard_count}",
         }
     )
+    if args.require_shadow_match:
+        shadow_ok = (
+            run_count > 0
+            and shadow_coverage_count == run_count
+            and shadow_error_count == 0
+            and shadow_match_pct >= args.min_shadow_match_pct
+        )
+        checks.append(
+            {
+                "name": "shadow_match_pct",
+                "gate": "PASS" if shadow_ok else "FAIL",
+                "detail": (
+                    f"{shadow_match_pct:.2f}% >= {args.min_shadow_match_pct:.2f}%"
+                    f"; coverage={shadow_coverage_count}/{run_count}"
+                ),
+            }
+        )
     for rs in rule_stats:
         checks.append(
             {
@@ -187,10 +231,20 @@ def main() -> int:
             RETRY_CLASS_HARD: hard_count,
         },
         "retryable_pct": retryable_pct,
+        "shadow_compare_counts": {
+            "match": shadow_match_count,
+            "mismatch": shadow_mismatch_count,
+            "missing": shadow_missing_count,
+            "error": shadow_error_count,
+        },
+        "shadow_match_pct": shadow_match_pct,
+        "shadow_coverage_pct": shadow_coverage_pct,
         "thresholds": {
             "max_retryable_pct": float(args.max_retryable_pct),
             "max_hard_count": int(args.max_hard_count),
             "min_rule_hit_pct": float(args.min_rule_hit_pct),
+            "require_shadow_match": bool(args.require_shadow_match),
+            "min_shadow_match_pct": float(args.min_shadow_match_pct),
             "fail_on_insufficient_runs": bool(args.fail_on_insufficient_runs),
         },
         "required_rules": required_rules,
@@ -207,6 +261,10 @@ def main() -> int:
     lines.append(f"- run_count: `{run_count}` (min `{args.min_runs}`)")
     lines.append(f"- retryable_pct: `{retryable_pct:.2f}%` (max `{args.max_retryable_pct:.2f}%`)")
     lines.append(f"- hard_count: `{hard_count}` (max `{args.max_hard_count}`)")
+    lines.append(
+        f"- shadow_match_pct: `{shadow_match_pct:.2f}%` "
+        f"(coverage `{shadow_coverage_count}/{run_count}`, required `{args.require_shadow_match}`)"
+    )
     if required_rules:
         lines.append(f"- required_rules: `{','.join(required_rules)}` (min hit `{args.min_rule_hit_pct:.2f}%`)")
     else:

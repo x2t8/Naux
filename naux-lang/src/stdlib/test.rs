@@ -15,6 +15,15 @@ fn builtin_assert_equal(args: Vec<Value>) -> Result<Value, RuntimeError> {
     if expected == actual {
         Ok(Value::Bool(true))
     } else {
-        Ok(Value::Bool(false))
+        let msg = args[2].to_display_text();
+        Err(RuntimeError::new(
+            format!(
+                "[FAIL] assert_equal: {} (expected {}, got {})",
+                msg,
+                expected.to_display_text(),
+                actual.to_display_text()
+            ),
+            None,
+        ))
     }
 }

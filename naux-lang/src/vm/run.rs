@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+#[cfg(feature = "experimental-regions")]
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 use crate::runtime::env::Env;
@@ -9,6 +11,8 @@ use crate::typecheck::Type;
 use crate::vm::bytecode::VmResult;
 use crate::vm::bytecode::{Instr, Program};
 use crate::vm::compiler::compile_script;
+#[cfg(feature = "experimental-regions")]
+use crate::vm::compiler::{compile_script_with_region_plan, RegionCompiledProgram};
 use crate::vm::interpreter::run_program;
 use crate::vm::jit;
 use crate::vm::typed;
@@ -25,6 +29,84 @@ pub fn run_vm(
     let prog = compile_script(stmts);
     let (val, events) = run_program(&prog, &builtins, src, filename)?;
     Ok((events, val))
+}
+
+#[cfg(feature = "experimental-regions")]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RegionExecutionTelemetry {
+    pub certificate_verified: bool,
+    pub region_local_allocations: usize,
+    pub rc_fallback_allocations: usize,
+    pub bulk_free_points: usize,
+    pub bulk_free_allocations: usize,
+    pub rc_fallback_by_reason: BTreeMap<String, usize>,
+}
+
+#[cfg(feature = "experimental-regions")]
+impl RegionExecutionTelemetry {
+    fn from_compilation(compiled: &RegionCompiledProgram) -> Self {
+        let mut rc_fallback_by_reason = BTreeMap::new();
+        for allocation in &compiled.region_plan.allocations {
+            if let crate::region::RegionStorageClass::RcFallback { reason } = allocation.storage {
+                *rc_fallback_by_reason
+                    .entry(reason.as_str().to_string())
+                    .or_default() += 1;
+            }
+        }
+        Self {
+            certificate_verified: true,
+            region_local_allocations: compiled.region_plan.region_local_count,
+            rc_fallback_allocations: compiled.region_plan.rc_fallback_count,
+            bulk_free_points: compiled.region_plan.free_points.len(),
+            bulk_free_allocations: compiled
+                .region_plan
+                .free_points
+                .iter()
+                .map(|point| point.allocation_indices.len())
+                .sum(),
+            rc_fallback_by_reason,
+        }
+    }
+}
+
+/// Execute unchanged VM bytecode while consuming the verified region sidecar
+/// as observe-only telemetry.
+#[cfg(feature = "experimental-regions")]
+pub fn run_vm_with_region_plan(
+    stmts: &[crate::ast::Stmt],
+    src: &str,
+    filename: &str,
+) -> VmResult<(
+    Vec<RuntimeEvent>,
+    crate::runtime::value::Value,
+    RegionExecutionTelemetry,
+)> {
+    let mut env = Env::new();
+    crate::stdlib::register_all(&mut env);
+    let builtins: HashMap<String, crate::runtime::env::BuiltinFn> = env.builtins();
+    let compiled = compile_script_with_region_plan(stmts).map_err(|error| error.to_string())?;
+    let telemetry = RegionExecutionTelemetry::from_compilation(&compiled);
+    let (value, events) = run_program(&compiled.bytecode, &builtins, src, filename)?;
+    Ok((events, value, telemetry))
+}
+
+/// Execute the ordinary JIT/fallback path and attach observe-only telemetry
+/// from the separately verified region sidecar.
+#[cfg(feature = "experimental-regions")]
+pub fn run_jit_with_region_plan(
+    stmts: &[crate::ast::Stmt],
+    src: &str,
+    filename: &str,
+) -> VmResult<(
+    Vec<RuntimeEvent>,
+    crate::runtime::value::Value,
+    bool,
+    RegionExecutionTelemetry,
+)> {
+    let compiled = compile_script_with_region_plan(stmts).map_err(|error| error.to_string())?;
+    let telemetry = RegionExecutionTelemetry::from_compilation(&compiled);
+    let (events, value, used_jit) = run_jit(stmts, src, filename)?;
+    Ok((events, value, used_jit, telemetry))
 }
 
 /// JIT backend entry. Currently stubbed; returns Err if not available.

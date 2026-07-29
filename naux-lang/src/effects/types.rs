@@ -68,7 +68,9 @@ pub struct EffectSignature {
 
 impl EffectSignature {
     pub fn pure() -> Self {
-        Self { effects: Vec::new() }
+        Self {
+            effects: Vec::new(),
+        }
     }
 
     pub fn with(mut self, effect: &str) -> Self {
@@ -121,7 +123,9 @@ impl fmt::Display for EffectValue {
             Self::List(items) => {
                 write!(f, "[")?;
                 for (i, item) in items.iter().enumerate() {
-                    if i > 0 { write!(f, ", ")?; }
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
                     write!(f, "{}", item)?;
                 }
                 write!(f, "]")

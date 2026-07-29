@@ -9,6 +9,6 @@ pub mod run;
 pub mod value;
 
 pub use env::Env;
-pub use eval::{eval_script, eval_script_with_base_dir};
+pub use eval::{eval_script, eval_script_with_base_dir, eval_script_with_bindings};
 pub use events::RuntimeEvent;
 pub use value::Value;

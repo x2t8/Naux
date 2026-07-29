@@ -28,7 +28,7 @@ REQUIRE_NAUX_BEAT_V2="${REQUIRE_NAUX_BEAT_V2:-1}"
 MIN_V3_TO_NAUX_RATIO_WARN="${MIN_V3_TO_NAUX_RATIO_WARN:-0.85}"
 
 CPP_SRC="$ROOT_DIR/benchmarks/cpp/bench_dot_product_cpp.cpp"
-CPP_BIN_DIR="$ROOT_DIR/benchmarks/cpp/bin"
+CPP_BIN_DIR="${CPP_BIN_DIR:-$ROOT_DIR/target/perf/cpp_variants/bin}"
 
 parse_median_ns() {
     sed -n 's/.*median=\([0-9][0-9]*\) ns\/op.*/\1/p' | head -n 1

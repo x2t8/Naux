@@ -52,3 +52,18 @@ fn fmt_idempotent_fn_and_loop() {
     let second = normalize(&first);
     assert_eq!(first, second);
 }
+
+#[test]
+fn fmt_preserves_t2b_function_annotations() {
+    let messy = r#"
+~ fn add($left:F64,$right: F64)->F64
+ ^ $left+$right
+~end
+"#;
+    let first = normalize(messy);
+    assert_eq!(
+        first,
+        "~ fn add($left: F64, $right: F64) -> F64\n    ^ $left + $right\n~ end\n"
+    );
+    assert_eq!(normalize(&first), first);
+}

@@ -37,6 +37,9 @@ pub enum TraceOp {
     LeNum,
     GtNum,
     GeNum,
+    Label(usize),
+    BranchFalse(usize),
+    JumpTo(usize),
     JumpStart,
     GuardFalse,
     GuardFalseDeopt(usize),
@@ -433,8 +436,6 @@ mod x64 {
         profile_enabled: u8,
         profile_calls: u64,
         profile_trace_iters: u64,
-        profile_branch_taken: u64,
-        profile_branch_not_taken: u64,
         profile_deopts: u64,
         profile_temp_list_elided: u64,
         profile_temp_map_elided: u64,
@@ -700,8 +701,6 @@ mod x64 {
                 profile_enabled: 0,
                 profile_calls: 0,
                 profile_trace_iters: 0,
-                profile_branch_taken: 0,
-                profile_branch_not_taken: 0,
                 profile_deopts: 0,
                 profile_temp_list_elided: 0,
                 profile_temp_map_elided: 0,
@@ -741,8 +740,6 @@ mod x64 {
         pub fn reset_profile_counters(&mut self) {
             self.profile_calls = 0;
             self.profile_trace_iters = 0;
-            self.profile_branch_taken = 0;
-            self.profile_branch_not_taken = 0;
             self.profile_deopts = 0;
             self.profile_temp_list_elided = 0;
             self.profile_temp_map_elided = 0;
@@ -1958,10 +1955,6 @@ mod x64 {
     const PROFILE_CALLS_OFFSET: i32 = std::mem::offset_of!(JitRuntime, profile_calls) as i32;
     const PROFILE_TRACE_ITERS_OFFSET: i32 =
         std::mem::offset_of!(JitRuntime, profile_trace_iters) as i32;
-    const PROFILE_BRANCH_TAKEN_OFFSET: i32 =
-        std::mem::offset_of!(JitRuntime, profile_branch_taken) as i32;
-    const PROFILE_BRANCH_NOT_TAKEN_OFFSET: i32 =
-        std::mem::offset_of!(JitRuntime, profile_branch_not_taken) as i32;
     const PROFILE_BRANCH_TAKEN_SITES_OFFSET: i32 =
         std::mem::offset_of!(JitRuntime, profile_branch_taken_sites) as i32;
     const PROFILE_BRANCH_NOT_TAKEN_SITES_OFFSET: i32 =
@@ -2235,21 +2228,34 @@ mod x64 {
         }
 
         fn emit_inc_qword_at_r15_preserve_flags(&mut self, disp: i32) {
-            self.emit_u8(0x9C); // pushfq
-            self.emit_inc_qword_at_r15(disp);
-            self.emit_u8(0x9D); // popfq
+            // Preserve both condition flags and the scratch register without the
+            // serializing pushfq/popfq pair. MOV, LEA, PUSH and POP leave RFLAGS
+            // untouched, so chained JCCs can safely consume the original CMP flags.
+            self.emit(&[0x41, 0x53]); // push r11
+            if (-128..=127).contains(&disp) {
+                self.emit(&[0x4D, 0x8B, 0x5F, disp as u8]); // mov r11, [r15 + disp8]
+            } else {
+                self.emit(&[0x4D, 0x8B, 0x9F]); // mov r11, [r15 + disp32]
+                self.emit(&disp.to_le_bytes());
+            }
+            self.emit(&[0x4D, 0x8D, 0x5B, 0x01]); // lea r11, [r11 + 1]
+            if (-128..=127).contains(&disp) {
+                self.emit(&[0x4D, 0x89, 0x5F, disp as u8]); // mov [r15 + disp8], r11
+            } else {
+                self.emit(&[0x4D, 0x89, 0x9F]); // mov [r15 + disp32], r11
+                self.emit(&disp.to_le_bytes());
+            }
+            self.emit(&[0x41, 0x5B]); // pop r11
         }
 
         fn emit_inc_site_taken(&mut self, site_idx: usize) {
             let disp = PROFILE_BRANCH_TAKEN_SITES_OFFSET + (site_idx as i32) * 8;
             self.emit_inc_qword_at_r15_preserve_flags(disp);
-            self.emit_inc_qword_at_r15_preserve_flags(PROFILE_BRANCH_TAKEN_OFFSET);
         }
 
         fn emit_inc_site_not_taken(&mut self, site_idx: usize) {
             let disp = PROFILE_BRANCH_NOT_TAKEN_SITES_OFFSET + (site_idx as i32) * 8;
             self.emit_inc_qword_at_r15_preserve_flags(disp);
-            self.emit_inc_qword_at_r15_preserve_flags(PROFILE_BRANCH_NOT_TAKEN_OFFSET);
         }
 
         fn mark_branch_kind(&mut self, rel32_at: usize, kind: BranchKind) {
@@ -3099,7 +3105,7 @@ mod x64 {
     pub fn compile_trace_typed(
         ops: &[TraceOp],
         temp_list_sources: &[TempListSource],
-        _exit_target: usize,
+        tail_resume_ip: usize,
         profile_enabled: bool,
         promoted_locals: &[usize],
         merge_locals: &[(usize, usize)],
@@ -3133,6 +3139,10 @@ mod x64 {
         let mut exit_patches: Vec<usize> = Vec::new();
         let mut exit_jump_patches: Vec<usize> = Vec::new();
         let mut deopt_patches: Vec<usize> = Vec::new();
+        let mut tail_resume_patches: Vec<usize> = Vec::new();
+        let mut internal_labels: HashMap<usize, usize> = HashMap::new();
+        let mut internal_branch_patches: Vec<(usize, usize)> = Vec::new();
+        let mut internal_jump_patches: Vec<(usize, usize)> = Vec::new();
 
         let mut pre_idx = 0;
         while pre_idx < ops.len() {
@@ -3176,7 +3186,7 @@ mod x64 {
                     if let Some(exit_patch) =
                         emit_dot_square_avx2_loop_vectorized(&mut asm, &pattern, &promoted)
                     {
-                        exit_jump_patches.push(exit_patch);
+                        tail_resume_patches.push(exit_patch);
                         op_index = next_index;
                         continue;
                     }
@@ -3353,6 +3363,20 @@ mod x64 {
                 TraceOp::LeNum => emit_cmp(&mut asm, CmpKind::Le),
                 TraceOp::GtNum => emit_cmp(&mut asm, CmpKind::Gt),
                 TraceOp::GeNum => emit_cmp(&mut asm, CmpKind::Ge),
+                TraceOp::Label(label) => {
+                    if internal_labels.insert(*label, asm.pos()).is_some() {
+                        return Err(format!("duplicate internal trace label {label}"));
+                    }
+                }
+                TraceOp::BranchFalse(label) => {
+                    let at = emit_jump_if_false(&mut asm);
+                    asm.mark_branch_kind(at, BranchKind::Generic);
+                    internal_branch_patches.push((at, *label));
+                }
+                TraceOp::JumpTo(label) => {
+                    let at = asm.emit_jmp_placeholder();
+                    internal_jump_patches.push((at, *label));
+                }
                 TraceOp::JumpStart => {
                     if has_temp_allocs {
                         emit_call_reset_temps(&mut asm);
@@ -3378,7 +3402,7 @@ mod x64 {
                     let mut at = emit_guard_index_range_const(
                         &mut asm, *idx_idx, *limit, *inclusive, &promoted,
                     );
-                    exit_jump_patches.append(&mut at);
+                    tail_resume_patches.append(&mut at);
                 }
                 TraceOp::GuardListBounds(list_idx, idx_idx) => {
                     let mut at = emit_guard_list_bounds(&mut asm, *list_idx, *idx_idx);
@@ -3613,6 +3637,20 @@ mod x64 {
         for at in start_patches {
             asm.patch_rel32(at, trace_start);
         }
+        for (at, label) in internal_branch_patches {
+            let target = internal_labels
+                .get(&label)
+                .copied()
+                .ok_or_else(|| format!("missing internal trace label {label}"))?;
+            asm.patch_rel32(at, target);
+        }
+        for (at, label) in internal_jump_patches {
+            let target = internal_labels
+                .get(&label)
+                .copied()
+                .ok_or_else(|| format!("missing internal trace label {label}"))?;
+            asm.patch_rel32(at, target);
+        }
         let hot_code_len = asm.pos();
         let mut deopt_site_jmps: Vec<usize> = Vec::with_capacity(deopt_patches.len());
         for (site_id, at) in deopt_patches.into_iter().enumerate() {
@@ -3623,6 +3661,12 @@ mod x64 {
             asm.mark_branch_kind(at, BranchKind::Guard);
             asm.patch_rel32(at, site_stub_offset);
         }
+
+        let tail_resume_stub_offset = asm.pos();
+        emit_store_deopt_ip(&mut asm, tail_resume_ip);
+        emit_set_exit_flag(&mut asm, 3);
+        emit_store_deopt_sp(&mut asm);
+        let tail_resume_jmp = asm.emit_jmp_placeholder();
 
         let exit_stub_offset = asm.pos();
         emit_set_exit_flag(&mut asm, 1);
@@ -3650,10 +3694,15 @@ mod x64 {
         emit_exit(&mut asm, &mut exit_patches, exit_offset);
         asm.patch_rel32(stub_jmp, exit_offset);
         asm.patch_rel32(deopt_jmp, exit_offset);
+        asm.patch_rel32(tail_resume_jmp, exit_offset);
         for at in deopt_site_jmps {
             asm.patch_rel32(at, deopt_stub_offset);
         }
 
+        for at in tail_resume_patches {
+            asm.mark_branch_kind(at, BranchKind::Exit);
+            asm.patch_rel32(at, tail_resume_stub_offset);
+        }
         for at in exit_jump_patches {
             asm.mark_branch_kind(at, BranchKind::Exit);
             asm.patch_rel32(at, exit_stub_offset);
@@ -7761,7 +7810,7 @@ pub fn compile_trace(
 pub fn compile_trace_typed(
     _ops: &[TraceOp],
     _temp_list_sources: &[TempListSource],
-    _exit_target: usize,
+    _tail_resume_ip: usize,
     _profile_enabled: bool,
     _promoted_locals: &[usize],
     _merge_locals: &[(usize, usize)],

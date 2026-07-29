@@ -20,6 +20,7 @@ pub fn handle_help() -> Result<(), String> {
     println!("  run          Run the project");
     println!("  test         Run the tests");
     println!("  upgrade      Upgrade the naux CLI");
+    println!("  verify       Check, test, build, and benchmark the project");
     println!();
     println!("Examples:");
     println!("  naux run <file.nx>");
@@ -28,5 +29,6 @@ pub fn handle_help() -> Result<(), String> {
     println!("  naux dev bench <file.nx> --engine vm --iters 100");
     println!("  naux dev benchrt <file.nx> --engine jit --trace-only");
     println!("  naux doctor --json --out target/naux-doctor.json");
+    println!("  naux verify");
     Ok(())
 }

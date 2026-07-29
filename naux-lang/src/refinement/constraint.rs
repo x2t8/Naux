@@ -4,7 +4,7 @@
 //! attempts to discharge them. Undischarged constraints become type errors.
 
 use crate::ast::Span;
-use crate::refinement::{Refined, predicate::Predicate};
+use crate::refinement::{predicate::Predicate, Refined};
 
 /// A single refinement constraint.
 #[derive(Debug, Clone)]
@@ -18,10 +18,7 @@ pub enum Constraint {
         context: String,
     },
     /// Well-formedness: a predicate must be satisfiable.
-    WellFormed {
-        refined: Refined,
-        context: String,
-    },
+    WellFormed { refined: Refined, context: String },
     /// Implication under path constraints: `path_condition ⇒ predicate`.
     Guarded {
         guard: Predicate,
@@ -35,19 +32,19 @@ impl Constraint {
         match self {
             Self::Subtype { sub, sup, context } => {
                 format!(
-                    "{}: {{ {} | {} }} <: {{ {} | {} }}",
+                    "{}: {{ {:?} | {} }} <: {{ {:?} | {} }}",
                     context,
-                    format!("{:?}", sub.base),
+                    sub.base,
                     sub.pred.display(),
-                    format!("{:?}", sup.base),
+                    sup.base,
                     sup.pred.display(),
                 )
             }
             Self::WellFormed { refined, context } => {
                 format!(
-                    "{}: WF {{ {} | {} }}",
+                    "{}: WF {{ {:?} | {} }}",
                     context,
-                    format!("{:?}", refined.base),
+                    refined.base,
                     refined.pred.display(),
                 )
             }

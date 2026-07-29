@@ -40,6 +40,29 @@ cargo run -p naux -- doctor --json --out target/naux-doctor.json
 
 ## Build and test
 
+For a project created with `naux new`, run the complete project workflow:
+
+```bash
+naux verify
+```
+
+This stops on the first failure and executes:
+
+1. semantic check of `[build].entry`;
+2. project tests under `tests/`;
+3. project build;
+4. the configured runtime benchmark.
+
+The generated `naux.toml` contains:
+
+```toml
+[verify]
+benchmark = "bench.nx"
+engine = "vm"
+iters = 5
+warmup_ms = 0
+```
+
 Repo-root quality gate:
 
 ```bash
@@ -84,7 +107,7 @@ bash ./scripts/perf_contract_ci.sh
 Before trusting perf results, prefer:
 - pinned CPU via `taskset`
 - governor set to `performance`
-- turbo policy matching the current perf freeze policy
+- a declared and repeatable turbo policy
 - baseline fingerprint present in `benchmarks/perf_baseline_fingerprint.json`
 
-See `docs/benchmarks.md` and `PERF_FREEZE.md` for the stricter contract.
+See `docs/benchmarks.md` and `PERF_CONTRACT.md` for the stricter contract.

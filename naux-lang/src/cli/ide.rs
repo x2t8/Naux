@@ -178,8 +178,7 @@ fn load_file_lines(path: &Path) -> Result<Vec<String>, String> {
 fn save_file(path: &Path, buffer: &[String]) -> Result<(), String> {
     let mut content = buffer.join("\n");
     content.push('\n');
-    std::fs::write(path, content)
-        .map_err(|e| format!("Could not write {}: {}", path.display(), e))
+    std::fs::write(path, content).map_err(|e| format!("Could not write {}: {}", path.display(), e))
 }
 
 fn parse_engine(token: Option<&str>) -> DefaultEngine {
