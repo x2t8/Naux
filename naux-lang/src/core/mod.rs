@@ -210,8 +210,23 @@ pub use verify::{
     verify, VerificationCode, VerificationError, VerificationErrors, VerifiedArtifact,
 };
 pub use x64_native::{
-    execute_x64_native_r1_s7b, X64NativeExecution, X64NativeHashStage, X64NativeMappingState,
-    X64NativeRunnerError, X64_NATIVE_ENTRY_POLICY_VERSION, X64_NATIVE_RUNNER_POLICY_VERSION,
+    execute_x64_native_case_r1_s7b, execute_x64_native_r1_s7b,
+    seal_x64_native_correspondence_evidence, seal_x64_native_correspondence_record,
+    seal_x64_native_execution_record, verify_x64_native_correspondence_evidence,
+    verify_x64_native_correspondence_record, verify_x64_native_execution_record,
+    x64_native_canonical_abi_hash, x64_native_correspondence_record_hash,
+    x64_native_correspondence_results_hash, x64_native_execution_record_hash,
+    X64NativeCaseExecution, X64NativeCorrespondenceEffect, X64NativeCorrespondenceEvidence,
+    X64NativeCorrespondenceF64, X64NativeCorrespondenceObservation, X64NativeCorrespondenceOutcome,
+    X64NativeCorrespondenceRecord, X64NativeEvidenceError, X64NativeExecution,
+    X64NativeExecutionRecord, X64NativeHashStage, X64NativeLimits, X64NativeMappingState,
+    X64NativeRunnerError, X64_NATIVE_ENTRY_DISPATCH_POLICY_VERSION,
+    X64_NATIVE_ENTRY_POLICY_VERSION, X64_NATIVE_EVIDENCE_SCHEMA_VERSION,
+    X64_NATIVE_FIXED_LIGHTHOUSE_RECORDS, X64_NATIVE_MAPPING_STATE_EVENTS,
+    X64_NATIVE_MAX_BORROWED_F64_ARRAYS, X64_NATIVE_MAX_CODE_MAPPINGS,
+    X64_NATIVE_MAX_CORRESPONDENCE_RECORDS, X64_NATIVE_MAX_DIAGNOSTICS,
+    X64_NATIVE_MAX_EFFECTS_PER_ENGINE, X64_NATIVE_MAX_ENTRY_LANES, X64_NATIVE_MAX_MAPPING_BYTES,
+    X64_NATIVE_MAX_RECORD_BYTES, X64_NATIVE_OUTPUT_WORDS, X64_NATIVE_RUNNER_POLICY_VERSION,
     X64_NATIVE_RUNNER_SCHEMA_VERSION, X64_NATIVE_SYSCALL_POLICY_VERSION,
 };
 pub use x64_target::{
