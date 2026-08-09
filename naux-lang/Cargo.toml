@@ -3,6 +3,7 @@ name = "naux"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+default-run = "naux"
 
 [features]
 default = []
@@ -15,6 +16,24 @@ path = "src/lib.rs"
 [[bin]]
 name = "naux"
 path = "src/main.rs"
+
+[[bin]]
+name = "naux-r1-s7b-worker"
+path = "src/bin/naux_r1_s7b_worker.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "naux-policy15-candidate-worker"
+path = "src/bin/naux_policy15_candidate_worker.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "naux-tail-enveloped-worker"
+path = "src/bin/naux_tail_enveloped_worker.rs"
+test = false
+bench = false
 
 [dependencies]
 egg = "0.10"

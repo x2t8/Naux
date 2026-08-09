@@ -988,14 +988,14 @@ fn all_51_frozen_gate_a_cases_cross_machine_ir_and_target_plan() {
             target_operation_shape(&branch_target),
         ),
         (
-            "cbde812f2306c1aa7439b3440eae76628eed7b92f03cdd571574e86d2d4c0c60".to_owned(),
-            "1f36987672e999523ef1a701a763a8bb5571e11fd8ddd1c7130bd68984f6eb02".to_owned(),
-            "cb113b0700d5b5bc7fda42e2ead5baceb6bb23444c56f19878cf963914dac97b".to_owned(),
+            "a642bcc02f2ea3566b0d5f275780e5cbbefe007b46a0eaa5578f3f680f838e95".to_owned(),
+            "86bb51383c27517fa98ec8d58f3d2d77970b61a468ef31d66defa3352190c6bd".to_owned(),
+            "ef32051c5c7af81365eee82664636f0a82bef5b1de3a8e3dcc07c2c207d7ce54".to_owned(),
             34_742,
-            79_809,
-            43_124,
+            38_558,
+            3_097,
             142,
-            153,
+            51,
             naux::core::X64FrameLayout {
                 header_bytes: 32,
                 home_base: 32,
@@ -1025,14 +1025,14 @@ fn all_51_frozen_gate_a_cases_cross_machine_ir_and_target_plan() {
             target_operation_shape(&bounds_target),
         ),
         (
-            "86cb600ae30a5c211d3ece6cd981497cb102a73d3d8dbf65ae37b2884b90e67d".to_owned(),
-            "d1889577830314fe3bb62b139d910d81b75fc3a1d85b9b71a79c394ac89abf4f".to_owned(),
-            "8e5a276de3baad3fe2a4c0fbbf8d7a0546a00d793804602ddda864fe2a31d984".to_owned(),
+            "06e8a4cd6d1a7df57229180248c9f0040c9aa7781e1f38dea60e3f6a8f1c6251".to_owned(),
+            "ca769f57312c92eff2d3ae9339b890b5e595685cbcde8f012c0fcffc568aaf97".to_owned(),
+            "c80220666bc16c99bd2c2a0570e418cc47462e0cdf8c7483530a8c7c149fee19".to_owned(),
             1_653,
-            3_476,
-            1_548,
+            2_356,
+            488,
             12,
-            14,
+            9,
             naux::core::X64FrameLayout {
                 header_bytes: 32,
                 home_base: 32,
@@ -1176,7 +1176,7 @@ fn all_51_frozen_gate_a_cases_cross_machine_ir_and_target_plan() {
     assert_eq!(evidence.records.len(), 51);
     assert_eq!(
         evidence.results_hash.to_hex(),
-        "e04e6c508ba22ab052f71b2daec4692aa0572c4403ca26960cec191085551223"
+        "fe9cbcaf67798b502e8405eecb0228b7453d39427e97e4d404c7cd1356c8c49d"
     );
 
     let mut reordered = evidence.clone();

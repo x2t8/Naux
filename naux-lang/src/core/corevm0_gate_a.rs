@@ -801,22 +801,7 @@ struct BoundsPackage {
 }
 
 fn build_bounds_package() -> Result<BoundsPackage, CoreVmGateAError> {
-    let program = CoreVmProgram {
-        schema_version: COREVM0_SCHEMA_VERSION,
-        arguments: vec![CoreVmType::ArrayF64],
-        locals: vec![CoreVmType::F64],
-        max_stack: 2,
-        instructions: vec![
-            CoreVmInstruction::LoadArg(0),
-            CoreVmInstruction::ConstI64(0),
-            CoreVmInstruction::ArrayGetF64,
-            CoreVmInstruction::StoreLocal(0),
-            CoreVmInstruction::LoadArg(0),
-            CoreVmInstruction::ConstI64(1),
-            CoreVmInstruction::ArrayGetF64,
-            CoreVmInstruction::ReturnF64,
-        ],
-    };
+    let program = bounds_ordered_array_get_program();
     let bound = build_definitional_corevm0(&program)
         .map_err(|error| pipeline("Bounds definitional build", error))?;
     let binding = BindingTimeRequest::p1v0(
@@ -852,6 +837,25 @@ fn build_bounds_package() -> Result<BoundsPackage, CoreVmGateAError> {
         specialization,
         evidence,
     })
+}
+
+pub(super) fn bounds_ordered_array_get_program() -> CoreVmProgram {
+    CoreVmProgram {
+        schema_version: COREVM0_SCHEMA_VERSION,
+        arguments: vec![CoreVmType::ArrayF64],
+        locals: vec![CoreVmType::F64],
+        max_stack: 2,
+        instructions: vec![
+            CoreVmInstruction::LoadArg(0),
+            CoreVmInstruction::ConstI64(0),
+            CoreVmInstruction::ArrayGetF64,
+            CoreVmInstruction::StoreLocal(0),
+            CoreVmInstruction::LoadArg(0),
+            CoreVmInstruction::ConstI64(1),
+            CoreVmInstruction::ArrayGetF64,
+            CoreVmInstruction::ReturnF64,
+        ],
+    }
 }
 
 fn evaluate_three_way(

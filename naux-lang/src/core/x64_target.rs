@@ -17,18 +17,57 @@ use super::machine_ir::{
     MachineOperand, MachineTerminator, MachineType, SourceBoundMachineIrArtifact,
 };
 use super::schema::{CoreArtifact, ErrorKind, SemanticHash};
+use home_layout::{
+    allocate_canonical_home_layout, CanonicalHomeArgument, CanonicalHomeFunction,
+    CanonicalHomeLayoutError, CanonicalHomeLayoutLimits, CanonicalHomeLayoutPolicy,
+    CanonicalHomeProgram, CanonicalHomeTail,
+};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+pub(crate) mod candidate;
 mod eval;
+mod home_layout;
+mod profile;
+mod prospective_semantics;
 mod raw;
 
+pub(crate) use candidate::{
+    reconstruct_frozen_x64_target_policy15_candidate_for_process,
+    reconstruct_frozen_x64_target_policy15_candidate_for_standalone,
+    ProcessReconstructedX64TargetPolicy15Candidate,
+    StandaloneReconstructedX64TargetPolicy15Candidate,
+};
+pub use candidate::{
+    x64_target_policy15_accepted_candidate_capsule_hash,
+    x64_target_policy15_candidate_capsule_hash, VerifiedX64TargetPolicy15CandidateCapsule,
+    X64TargetPolicy15CandidateCapsule, X64TargetPolicy15CandidateError,
+    X64_TARGET_POLICY15_CANDIDATE_POLICY_VERSION, X64_TARGET_POLICY15_CANDIDATE_SCHEMA_VERSION,
+    X64_TARGET_POLICY15_ENCODER_POLICY_VERSION,
+};
+
 pub use eval::PlanExecutionError as X64TargetPlanEvaluatorError;
+pub use profile::{
+    profile_source_bound_x64_target_plan, profile_x64_target_plan,
+    x64_target_prospective_shared_join_realization_hash, X64TargetExecutionProfile,
+    X64TargetProfileBlockCount, X64TargetProfileClassTotal, X64TargetProfileControlCounts,
+    X64TargetProfileEdgeCount, X64TargetProfileError, X64TargetProfileEvent,
+    X64TargetProfileInstructionCounts, X64TargetProfileSite, X64TargetProfileTemplateClass,
+    X64TargetProfiledEvaluation, X64TargetProspectiveExecutionAuthority,
+    X64TargetProspectiveFixupReceipt, X64TargetProspectiveLabelDisposition,
+    X64TargetProspectiveLabelReceipt, X64TargetProspectiveMachineSemanticProof,
+    X64TargetProspectiveRealizationAtom, X64TargetProspectiveSharedJoinPartition,
+    X64TargetProspectiveSharedJoinRealization, X64TargetSharedJoinBranchArmCounts,
+    X64TargetSharedJoinComposition, X64TargetSharedJoinCompositionIngress,
+    X64TargetSharedJoinCompositionStep, X64TargetSharedJoinIngress, X64TargetSharedJoinKind,
+    X64TargetSharedJoinOpportunity, X64TargetSharedJoinRouteEvent,
+    X64_TARGET_PROFILE_POLICY_VERSION, X64_TARGET_PROFILE_SCHEMA_VERSION,
+};
 
 pub const X64_TARGET_SCHEMA_NAME: &str = "naux-x86-64-target";
 pub const X64_TARGET_SCHEMA_VERSION: (u16, u16, u16) = (0, 1, 0);
 pub const X64_TARGET_LOWERING_POLICY_VERSION: (u16, u16, u16) = (1, 0, 0);
-pub const X64_TARGET_ENCODER_POLICY_VERSION: (u16, u16, u16) = (1, 0, 0);
+pub const X64_TARGET_ENCODER_POLICY_VERSION: (u16, u16, u16) = (1, 4, 0);
 
 pub const X64_TARGET_MAX_SOURCE_FUNCTIONS: u64 = 16_384;
 pub const X64_TARGET_MAX_SOURCE_BLOCKS: u64 = 1_000_000;
@@ -43,6 +82,7 @@ pub const X64_TARGET_MAX_OUTGOING_BYTES: u32 = 4_096;
 pub const X64_TARGET_MAX_ENTRY_INPUT_LANES: u32 = 5;
 pub const X64_TARGET_MAX_LOWERING_WORK: u64 = 32_000_000;
 pub const X64_TARGET_MAX_PLAN_EVAL_WORK: u64 = 100_000_000;
+pub const X64_TARGET_MAX_PROFILE_EVAL_WORK: u64 = 2_600_000_000;
 pub const X64_TARGET_MAX_CFG_DEPTH: u32 = 512;
 pub const X64_TARGET_MAX_DIAGNOSTICS: usize = 256;
 pub const X64_TARGET_CORRESPONDENCE_SCHEMA_VERSION: (u16, u16, u16) = (1, 0, 0);
@@ -1657,32 +1697,42 @@ fn preflight_target_lowering(machine: &MachineIrArtifact) -> Result<(), X64Targe
     Ok(())
 }
 
-fn target_width(ty: MachineType) -> u32 {
-    match ty {
-        MachineType::F64Array => 16,
-        MachineType::Unit | MachineType::Bool | MachineType::I64 | MachineType::F64 => 8,
+const fn canonical_home_layout_limits() -> CanonicalHomeLayoutLimits {
+    CanonicalHomeLayoutLimits {
+        header_bytes: X64_FRAME_HEADER_BYTES,
+        outgoing_alignment: 8,
+        frame_alignment: X64_STACK_ALIGNMENT,
+        max_frame_bytes: X64_TARGET_MAX_FRAME_BYTES,
+        max_outgoing_bytes: X64_TARGET_MAX_OUTGOING_BYTES,
     }
-}
-
-fn align_up(value: u32, alignment: u32) -> Result<u32, X64TargetLowerError> {
-    let mask = alignment
-        .checked_sub(1)
-        .ok_or(X64TargetLowerError::ArithmeticOverflow { field: "alignment" })?;
-    value
-        .checked_add(mask)
-        .map(|sum| sum & !mask)
-        .ok_or(X64TargetLowerError::ArithmeticOverflow { field: "alignment" })
 }
 
 fn derive_machine_frame(
     machine: &MachineIrArtifact,
 ) -> Result<(Vec<Vec<X64Home>>, X64FrameLayout), X64TargetLowerError> {
-    let mut all_homes = Vec::with_capacity(machine.program.functions.len());
-    let mut max_home_bytes = 0_u32;
-    let mut max_outgoing_bytes = 0_u32;
+    let input = canonical_home_program_from_machine(machine)?;
+    let layout = allocate_canonical_home_layout(
+        &input,
+        CanonicalHomeLayoutPolicy::DefinitionOrderV1,
+        canonical_home_layout_limits(),
+    )
+    .map_err(map_home_layout_lower_error)?;
+    Ok((layout.homes, layout.frame))
+}
+
+fn canonical_home_program_from_machine(
+    machine: &MachineIrArtifact,
+) -> Result<CanonicalHomeProgram, X64TargetLowerError> {
+    let mut functions = Vec::with_capacity(machine.program.functions.len());
     for function in &machine.program.functions {
-        let mut homes = Vec::new();
-        let mut next_offset = X64_FRAME_HEADER_BYTES;
+        let parameter_count = u32::try_from(function.parameters.len()).map_err(|_| {
+            X64TargetLowerError::StructuralLimit {
+                field: "function parameters",
+                limit: u64::from(u32::MAX),
+                actual: function.parameters.len() as u64,
+            }
+        })?;
+        let mut value_types = Vec::new();
         for (register, ty) in function
             .parameters
             .iter()
@@ -1695,94 +1745,111 @@ fn derive_machine_frame(
                     .map(|instruction| (instruction.result, instruction.ty)),
             )
         {
-            if register.0 as usize != homes.len() {
+            if register.0 as usize != value_types.len() {
                 return Err(X64TargetLowerError::UnsupportedSource {
                     path: format!("functions[{}].registers", function.id.0),
                     message: format!(
                         "register {} is not dense at canonical position {}",
                         register.0,
-                        homes.len()
+                        value_types.len()
                     ),
                 });
             }
-            let width = target_width(ty);
-            let home = X64Home {
-                slot: X64HomeSlot(register.0),
-                offset: next_offset,
-                width: width as u8,
-                ty,
-            };
-            next_offset =
-                next_offset
-                    .checked_add(width)
-                    .ok_or(X64TargetLowerError::ArithmeticOverflow {
-                        field: "function home extent",
-                    })?;
-            homes.push(home);
+            value_types.push(ty);
         }
+
+        let mut tails = Vec::new();
         for block in &function.blocks {
-            if let MachineTerminator::TailCall { arguments, .. } = &block.terminator {
-                let mut extent = 0_u32;
-                for argument in arguments {
-                    let ty = machine_operand_type(argument, &homes)?;
-                    extent = extent.checked_add(target_width(ty)).ok_or(
-                        X64TargetLowerError::ArithmeticOverflow {
-                            field: "outgoing argument extent",
-                        },
-                    )?;
-                }
-                max_outgoing_bytes = max_outgoing_bytes.max(extent);
+            if let MachineTerminator::TailCall {
+                function: callee,
+                arguments,
+            } = &block.terminator
+            {
+                let arguments = arguments
+                    .iter()
+                    .enumerate()
+                    .map(|(argument_index, argument)| {
+                        canonical_home_argument_from_machine(
+                            argument,
+                            &value_types,
+                            &format!(
+                                "functions[{}].blocks[{}].terminator.arguments[{argument_index}]",
+                                function.id.0, block.id.0
+                            ),
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                tails.push(CanonicalHomeTail {
+                    block: block.id.0,
+                    callee: callee.0,
+                    arguments,
+                });
             }
         }
-        max_home_bytes =
-            max_home_bytes.max(next_offset.checked_sub(X64_FRAME_HEADER_BYTES).ok_or(
-                X64TargetLowerError::ArithmeticOverflow {
-                    field: "function home extent",
-                },
-            )?);
-        all_homes.push(homes);
-    }
-    if max_outgoing_bytes > X64_TARGET_MAX_OUTGOING_BYTES {
-        return Err(X64TargetLowerError::StructuralLimit {
-            field: "outgoing argument bytes",
-            limit: u64::from(X64_TARGET_MAX_OUTGOING_BYTES),
-            actual: u64::from(max_outgoing_bytes),
+
+        functions.push(CanonicalHomeFunction {
+            value_types,
+            parameter_count,
+            tails,
         });
     }
-    let outgoing_base = align_up(
-        X64_FRAME_HEADER_BYTES.checked_add(max_home_bytes).ok_or(
-            X64TargetLowerError::ArithmeticOverflow {
-                field: "outgoing base",
-            },
-        )?,
-        8,
-    )?;
-    let frame_bytes = align_up(
-        outgoing_base.checked_add(max_outgoing_bytes).ok_or(
-            X64TargetLowerError::ArithmeticOverflow {
-                field: "frame extent",
-            },
-        )?,
-        X64_STACK_ALIGNMENT,
-    )?;
-    if frame_bytes > X64_TARGET_MAX_FRAME_BYTES {
-        return Err(X64TargetLowerError::StructuralLimit {
-            field: "frame bytes",
-            limit: u64::from(X64_TARGET_MAX_FRAME_BYTES),
-            actual: u64::from(frame_bytes),
-        });
-    }
-    Ok((
-        all_homes,
-        X64FrameLayout {
-            header_bytes: X64_FRAME_HEADER_BYTES,
-            home_base: X64_FRAME_HEADER_BYTES,
-            max_home_bytes,
-            outgoing_base,
-            outgoing_bytes: max_outgoing_bytes,
-            frame_bytes,
+    Ok(CanonicalHomeProgram { functions })
+}
+
+fn canonical_home_argument_from_machine(
+    argument: &MachineOperand,
+    value_types: &[MachineType],
+    path: &str,
+) -> Result<CanonicalHomeArgument, X64TargetLowerError> {
+    Ok(match argument {
+        MachineOperand::Unit => CanonicalHomeArgument::Immediate(MachineType::Unit),
+        MachineOperand::Bool(_) => CanonicalHomeArgument::Immediate(MachineType::Bool),
+        MachineOperand::I64(_) => CanonicalHomeArgument::Immediate(MachineType::I64),
+        MachineOperand::F64Bits(_) => CanonicalHomeArgument::Immediate(MachineType::F64),
+        MachineOperand::Register(register) => {
+            let ty = value_types
+                .get(register.0 as usize)
+                .copied()
+                .ok_or_else(|| X64TargetLowerError::UnsupportedSource {
+                    path: path.to_owned(),
+                    message: format!("register {} has no target home", register.0),
+                })?;
+            CanonicalHomeArgument::Slot {
+                slot: register.0,
+                ty,
+            }
+        }
+    })
+}
+
+fn map_home_layout_lower_error(error: CanonicalHomeLayoutError) -> X64TargetLowerError {
+    match error {
+        CanonicalHomeLayoutError::StructuralLimit {
+            field,
+            limit,
+            actual,
+        } => X64TargetLowerError::StructuralLimit {
+            field,
+            limit,
+            actual,
         },
-    ))
+        CanonicalHomeLayoutError::ArithmeticOverflow { field } => {
+            X64TargetLowerError::ArithmeticOverflow { field }
+        }
+        CanonicalHomeLayoutError::ParameterCountExceedsValues { function, .. } => {
+            X64TargetLowerError::UnsupportedSource {
+                path: format!("functions[{function}].parameters"),
+                message: error.to_string(),
+            }
+        }
+        CanonicalHomeLayoutError::InvalidAlignment { .. }
+        | CanonicalHomeLayoutError::MisalignedHeader { .. } => {
+            X64TargetLowerError::UnsupportedSource {
+                path: "target.home_layout".to_owned(),
+                message: error.to_string(),
+            }
+        }
+    }
 }
 
 fn derive_entry_abi(
@@ -2090,25 +2157,64 @@ fn lower_target_operand(
     })
 }
 
-fn machine_operand_type(
-    operand: &MachineOperand,
-    homes: &[X64Home],
-) -> Result<MachineType, X64TargetLowerError> {
-    Ok(match operand {
-        MachineOperand::Unit => MachineType::Unit,
-        MachineOperand::Bool(_) => MachineType::Bool,
-        MachineOperand::I64(_) => MachineType::I64,
-        MachineOperand::F64Bits(_) => MachineType::F64,
-        MachineOperand::Register(register) => {
-            homes
-                .get(register.0 as usize)
-                .ok_or_else(|| X64TargetLowerError::UnsupportedSource {
-                    path: "operand".to_owned(),
-                    message: format!("register {} has no target home", register.0),
-                })?
-                .ty
-        }
-    })
+fn canonical_home_program_from_target(program: &X64TargetProgram) -> CanonicalHomeProgram {
+    let functions = program
+        .functions
+        .iter()
+        .map(|function| {
+            debug_assert!(u32::try_from(function.parameters.len()).is_ok());
+            let value_types = function
+                .parameters
+                .iter()
+                .map(|parameter| parameter.home.ty)
+                .chain(
+                    function
+                        .blocks
+                        .iter()
+                        .flat_map(|block| &block.instructions)
+                        .map(|instruction| instruction.result.ty),
+                )
+                .collect();
+            let tails = function
+                .blocks
+                .iter()
+                .filter_map(|block| {
+                    let X64Terminator::TailJumpRel32 {
+                        function: callee,
+                        arguments,
+                        ..
+                    } = &block.terminator
+                    else {
+                        return None;
+                    };
+                    Some(CanonicalHomeTail {
+                        block: block.id.0,
+                        callee: callee.0,
+                        arguments: arguments
+                            .iter()
+                            .map(canonical_home_argument_from_target)
+                            .collect(),
+                    })
+                })
+                .collect();
+            CanonicalHomeFunction {
+                value_types,
+                parameter_count: function.parameters.len() as u32,
+                tails,
+            }
+        })
+        .collect();
+    CanonicalHomeProgram { functions }
+}
+
+fn canonical_home_argument_from_target(argument: &X64Operand) -> CanonicalHomeArgument {
+    match argument {
+        X64Operand::Immediate { ty, .. } => CanonicalHomeArgument::Immediate(*ty),
+        X64Operand::Home(home) => CanonicalHomeArgument::Slot {
+            slot: home.slot.0,
+            ty: home.ty,
+        },
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -2269,7 +2375,12 @@ impl<'program> X64TargetVerifier<'program> {
             self.error(
                 X64TargetVerificationCode::InvalidPolicy,
                 "program.encoder_policy_version",
-                "target encoder policy must be exactly 1.0.0",
+                format!(
+                    "target encoder policy must be exactly {}.{}.{}",
+                    X64_TARGET_ENCODER_POLICY_VERSION.0,
+                    X64_TARGET_ENCODER_POLICY_VERSION.1,
+                    X64_TARGET_ENCODER_POLICY_VERSION.2,
+                ),
             );
         }
         if self.program.abi != X64TargetAbi::r1_s7a() {
@@ -2556,9 +2667,26 @@ impl<'program> X64TargetVerifier<'program> {
             );
         }
 
-        let mut max_home_bytes = 0_u32;
-        let mut max_outgoing_bytes = 0_u32;
-        for (function_index, function) in self.program.functions.iter().enumerate() {
+        let layout_input = canonical_home_program_from_target(self.program);
+        let canonical_layout = match allocate_canonical_home_layout(
+            &layout_input,
+            CanonicalHomeLayoutPolicy::DefinitionOrderV1,
+            canonical_home_layout_limits(),
+        ) {
+            Ok(layout) => layout,
+            Err(error) => {
+                self.home_layout_error(error);
+                return;
+            }
+        };
+
+        for (function_index, (function, homes)) in self
+            .program
+            .functions
+            .iter()
+            .zip(&canonical_layout.homes)
+            .enumerate()
+        {
             if self.full() {
                 return;
             }
@@ -2580,66 +2708,16 @@ impl<'program> X64TargetVerifier<'program> {
                     "each canonical target function must enter dense block 0",
                 );
             }
-            let (homes, extent) = self.derive_function_homes(function, &path);
-            max_home_bytes = max_home_bytes.max(extent);
-            for block in &function.blocks {
-                if let X64Terminator::TailJumpRel32 { arguments, .. } = &block.terminator {
-                    let mut extent = 0_u32;
-                    for argument in arguments {
-                        match extent.checked_add(target_width(argument.ty())) {
-                            Some(value) => extent = value,
-                            None => self.error(
-                                X64TargetVerificationCode::ArithmeticOverflow,
-                                format!("{path}.blocks[{}].terminator", block.id.0),
-                                "outgoing argument extent overflow",
-                            ),
-                        }
-                    }
-                    max_outgoing_bytes = max_outgoing_bytes.max(extent);
-                }
-            }
-            self.verify_function(function, &homes, &path);
+            self.verify_declared_function_homes(function, homes, &path);
+            self.verify_function(function, homes, &path);
         }
-        let expected_outgoing_base = match X64_FRAME_HEADER_BYTES.checked_add(max_home_bytes) {
-            Some(value) => (value.saturating_add(7)) & !7,
-            None => {
-                self.error(
-                    X64TargetVerificationCode::ArithmeticOverflow,
-                    "program.frame",
-                    "outgoing-base calculation overflow",
-                );
-                return;
-            }
-        };
-        let expected_frame_bytes = match expected_outgoing_base.checked_add(max_outgoing_bytes) {
-            Some(value) => (value.saturating_add(15)) & !15,
-            None => {
-                self.error(
-                    X64TargetVerificationCode::ArithmeticOverflow,
-                    "program.frame",
-                    "frame calculation overflow",
-                );
-                return;
-            }
-        };
-        let expected_frame = X64FrameLayout {
-            header_bytes: X64_FRAME_HEADER_BYTES,
-            home_base: X64_FRAME_HEADER_BYTES,
-            max_home_bytes,
-            outgoing_base: expected_outgoing_base,
-            outgoing_bytes: max_outgoing_bytes,
-            frame_bytes: expected_frame_bytes,
-        };
-        if self.program.frame != expected_frame
-            || expected_frame.frame_bytes > X64_TARGET_MAX_FRAME_BYTES
-            || expected_frame.outgoing_bytes > X64_TARGET_MAX_OUTGOING_BYTES
-        {
+        if self.program.frame != canonical_layout.frame {
             self.error(
                 X64TargetVerificationCode::InvalidFrame,
                 "program.frame",
                 format!(
                     "frame must equal canonical derived layout {:?}",
-                    expected_frame
+                    canonical_layout.frame
                 ),
             );
         }
@@ -2660,10 +2738,33 @@ impl<'program> X64TargetVerifier<'program> {
         self.verify_labels();
     }
 
-    fn derive_function_homes(&mut self, function: &X64Function, path: &str) -> (Vec<X64Home>, u32) {
-        let mut homes = Vec::new();
-        let mut next_offset = X64_FRAME_HEADER_BYTES;
-        for (location, home) in function
+    fn home_layout_error(&mut self, error: CanonicalHomeLayoutError) {
+        let (code, path) = match error {
+            CanonicalHomeLayoutError::StructuralLimit { .. } => {
+                (X64TargetVerificationCode::InvalidFrame, "program.frame")
+            }
+            CanonicalHomeLayoutError::ArithmeticOverflow { .. } => (
+                X64TargetVerificationCode::ArithmeticOverflow,
+                "program.frame",
+            ),
+            CanonicalHomeLayoutError::ParameterCountExceedsValues { .. } => {
+                (X64TargetVerificationCode::InvalidHome, "program.functions")
+            }
+            CanonicalHomeLayoutError::InvalidAlignment { .. }
+            | CanonicalHomeLayoutError::MisalignedHeader { .. } => {
+                (X64TargetVerificationCode::InvalidLimits, "program.limits")
+            }
+        };
+        self.error(code, path, error.to_string());
+    }
+
+    fn verify_declared_function_homes(
+        &mut self,
+        function: &X64Function,
+        canonical_homes: &[X64Home],
+        path: &str,
+    ) {
+        let declared_homes = function
             .parameters
             .iter()
             .map(|parameter| ("parameter", parameter.home))
@@ -2673,35 +2774,16 @@ impl<'program> X64TargetVerifier<'program> {
                     .iter()
                     .flat_map(|block| &block.instructions)
                     .map(|instruction| ("instruction", instruction.result)),
-            )
-        {
-            let expected = X64Home {
-                slot: X64HomeSlot(homes.len() as u32),
-                offset: next_offset,
-                width: target_width(home.ty) as u8,
-                ty: home.ty,
-            };
-            if home != expected {
+            );
+        for ((location, declared), canonical) in declared_homes.zip(canonical_homes) {
+            if declared != *canonical {
                 self.error(
                     X64TargetVerificationCode::InvalidHome,
                     format!("{path}.{location}.home"),
-                    format!("home {home:?} must equal canonical {expected:?}"),
+                    format!("home {declared:?} must equal canonical {canonical:?}"),
                 );
             }
-            next_offset = match next_offset.checked_add(target_width(home.ty)) {
-                Some(value) => value,
-                None => {
-                    self.error(
-                        X64TargetVerificationCode::ArithmeticOverflow,
-                        format!("{path}.{location}.home"),
-                        "home extent overflow",
-                    );
-                    u32::MAX
-                }
-            };
-            homes.push(expected);
         }
-        (homes, next_offset.saturating_sub(X64_FRAME_HEADER_BYTES))
     }
 
     fn verify_function(&mut self, function: &X64Function, homes: &[X64Home], path: &str) {

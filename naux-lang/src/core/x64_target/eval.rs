@@ -36,6 +36,9 @@ pub enum PlanExecutionError {
     StepBudgetExceeded {
         limit: u64,
     },
+    ProfileCounterOverflow {
+        field: &'static str,
+    },
     InternalInvariant(String),
 }
 
@@ -64,6 +67,12 @@ impl fmt::Display for PlanExecutionError {
                 formatter,
                 "x86-64 target-plan evaluation exceeded {limit} execution work units"
             ),
+            Self::ProfileCounterOverflow { field } => {
+                write!(
+                    formatter,
+                    "x86-64 target profile counter overflowed {field}"
+                )
+            }
             Self::InternalInvariant(message) => {
                 write!(
                     formatter,
@@ -85,7 +94,72 @@ pub(super) fn evaluate_program(
     arguments: Vec<CoreValue>,
     budget: EvaluationBudget,
 ) -> Result<Evaluation, PlanExecutionError> {
-    PlanEvaluator::new(program, budget)?.evaluate(arguments)
+    evaluate_program_with_observer(
+        program,
+        arguments,
+        budget,
+        X64_TARGET_MAX_PLAN_EVAL_WORK,
+        NoopObserver,
+    )
+    .map(|(result, _)| result)
+}
+
+pub(super) fn evaluate_program_with_observer<Observer>(
+    program: &X64TargetProgram,
+    arguments: Vec<CoreValue>,
+    budget: EvaluationBudget,
+    hard_limit: u64,
+    observer: Observer,
+) -> Result<(Evaluation, Observer), PlanExecutionError>
+where
+    Observer: PlanExecutionObserver,
+{
+    PlanEvaluator::new(program, budget, hard_limit, observer)?.evaluate(arguments)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(super) enum PlanExecutionEvent {
+    Entry {
+        label: X64LabelId,
+    },
+    Instruction {
+        label: X64LabelId,
+        index: u32,
+    },
+    Return {
+        label: X64LabelId,
+    },
+    BranchThen {
+        label: X64LabelId,
+        target: X64LabelId,
+    },
+    BranchElse {
+        label: X64LabelId,
+        target: X64LabelId,
+    },
+    Tail {
+        label: X64LabelId,
+        target: X64LabelId,
+        argument_count: u32,
+        argument_words: u32,
+    },
+    Bounds {
+        label: X64LabelId,
+        instruction: u32,
+    },
+}
+
+pub(super) trait PlanExecutionObserver {
+    fn observe(&mut self, event: PlanExecutionEvent) -> Result<(), PlanExecutionError>;
+}
+
+struct NoopObserver;
+
+impl PlanExecutionObserver for NoopObserver {
+    #[inline]
+    fn observe(&mut self, _event: PlanExecutionEvent) -> Result<(), PlanExecutionError> {
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -121,21 +195,27 @@ enum PlanComputation {
     Bounds,
 }
 
-struct PlanEvaluator<'program> {
+struct PlanEvaluator<'program, Observer> {
     program: &'program X64TargetProgram,
     budget: EvaluationBudget,
     steps: u64,
     effect_trace: Vec<EffectEvent>,
+    observer: Observer,
 }
 
-impl<'program> PlanEvaluator<'program> {
+impl<'program, Observer> PlanEvaluator<'program, Observer>
+where
+    Observer: PlanExecutionObserver,
+{
     fn new(
         program: &'program X64TargetProgram,
         budget: EvaluationBudget,
+        hard_limit: u64,
+        observer: Observer,
     ) -> Result<Self, PlanExecutionError> {
-        if budget.max_steps > X64_TARGET_MAX_PLAN_EVAL_WORK {
+        if budget.max_steps > hard_limit {
             return Err(PlanExecutionError::InvalidBudget {
-                limit: X64_TARGET_MAX_PLAN_EVAL_WORK,
+                limit: hard_limit,
                 requested: budget.max_steps,
             });
         }
@@ -144,10 +224,14 @@ impl<'program> PlanEvaluator<'program> {
             budget,
             steps: 0,
             effect_trace: Vec::new(),
+            observer,
         })
     }
 
-    fn evaluate(mut self, arguments: Vec<CoreValue>) -> Result<Evaluation, PlanExecutionError> {
+    fn evaluate(
+        mut self,
+        arguments: Vec<CoreValue>,
+    ) -> Result<(Evaluation, Observer), PlanExecutionError> {
         let _strict_f64 = StrictF64Guard::enter()?;
         let entry = self.find_function(self.program.entry).ok_or_else(|| {
             Self::invariant(format!(
@@ -161,10 +245,17 @@ impl<'program> PlanEvaluator<'program> {
         self.charge(frame_transfer_work(arguments.len())?)?;
 
         let mut frame = self.new_frame(entry_id, entry_block, arguments)?;
+        let entry_label = self.current_block(&frame)?.label;
+        self.observer
+            .observe(PlanExecutionEvent::Entry { label: entry_label })?;
         let outcome = loop {
-            let instruction = {
+            let (block_label, instruction_index, instruction) = {
                 let block = self.current_block(&frame)?;
-                block.instructions.get(frame.next_instruction).cloned()
+                (
+                    block.label,
+                    frame.next_instruction,
+                    block.instructions.get(frame.next_instruction).cloned(),
+                )
             };
 
             if let Some(instruction) = instruction {
@@ -177,8 +268,17 @@ impl<'program> PlanEvaluator<'program> {
                 match computation {
                     PlanComputation::Value(value) => {
                         assign_home(&mut frame.homes, instruction.result, value)?;
+                        self.observe_instruction(block_label, instruction_index)?;
                     }
                     PlanComputation::Bounds => {
+                        self.observe_instruction(block_label, instruction_index)?;
+                        let instruction = u32::try_from(instruction_index).map_err(|_| {
+                            Self::invariant("instruction index does not fit profile event")
+                        })?;
+                        self.observer.observe(PlanExecutionEvent::Bounds {
+                            label: block_label,
+                            instruction,
+                        })?;
                         self.effect_trace
                             .push(EffectEvent::Error(ErrorKind::Bounds));
                         break EvaluationOutcome::Error(ErrorKind::Bounds);
@@ -188,6 +288,7 @@ impl<'program> PlanEvaluator<'program> {
             }
 
             let terminator = self.current_block(&frame)?.terminator.clone();
+            let source_label = self.current_block(&frame)?.label;
             match terminator {
                 X64Terminator::Return { value, .. } => {
                     self.charge(1)?;
@@ -204,6 +305,9 @@ impl<'program> PlanEvaluator<'program> {
                             function.id.0, function.result
                         )));
                     }
+                    self.observer.observe(PlanExecutionEvent::Return {
+                        label: source_label,
+                    })?;
                     break EvaluationOutcome::Return(canonicalize_observable(value));
                 }
                 X64Terminator::BranchRel32 {
@@ -227,6 +331,17 @@ impl<'program> PlanEvaluator<'program> {
                             label.0, frame.function.0, function.0
                         )));
                     }
+                    self.observer.observe(if condition {
+                        PlanExecutionEvent::BranchThen {
+                            label: source_label,
+                            target: label,
+                        }
+                    } else {
+                        PlanExecutionEvent::BranchElse {
+                            label: source_label,
+                            target: label,
+                        }
+                    })?;
                     frame.block = block;
                     frame.next_instruction = 0;
                 }
@@ -267,6 +382,20 @@ impl<'program> PlanEvaluator<'program> {
                     // logical frame in one step. No host stack or
                     // continuation is retained.
                     let homes = parameter_homes(target, staged)?;
+                    let argument_words = arguments.iter().try_fold(0_u32, |words, argument| {
+                        words
+                            .checked_add(u32::from(argument_words(argument.ty())))
+                            .ok_or_else(|| Self::invariant("tail argument word count overflow"))
+                    })?;
+                    let argument_count = u32::try_from(arguments.len()).map_err(|_| {
+                        Self::invariant("tail argument count does not fit profile event")
+                    })?;
+                    self.observer.observe(PlanExecutionEvent::Tail {
+                        label: source_label,
+                        target: target_label,
+                        argument_count,
+                        argument_words,
+                    })?;
                     frame = LogicalFrame {
                         function,
                         block: label_block,
@@ -277,11 +406,25 @@ impl<'program> PlanEvaluator<'program> {
             }
         };
 
-        Ok(Evaluation {
-            outcome,
-            steps: self.steps,
-            effect_trace: self.effect_trace,
-        })
+        Ok((
+            Evaluation {
+                outcome,
+                steps: self.steps,
+                effect_trace: self.effect_trace,
+            },
+            self.observer,
+        ))
+    }
+
+    fn observe_instruction(
+        &mut self,
+        label: X64LabelId,
+        instruction: usize,
+    ) -> Result<(), PlanExecutionError> {
+        let index = u32::try_from(instruction)
+            .map_err(|_| Self::invariant("instruction index does not fit profile event"))?;
+        self.observer
+            .observe(PlanExecutionEvent::Instruction { label, index })
     }
 
     fn evaluate_instruction(
@@ -533,12 +676,20 @@ impl StrictF64Guard {
 }
 
 fn frame_transfer_work(argument_count: usize) -> Result<u64, PlanExecutionError> {
-    let argument_count = u64::try_from(argument_count)
-        .map_err(|_| PlanEvaluator::invariant("argument count does not fit u64"))?;
+    let argument_count =
+        u64::try_from(argument_count).map_err(|_| invariant("argument count does not fit u64"))?;
     argument_count
         .checked_mul(2)
         .and_then(|work| work.checked_add(1))
-        .ok_or_else(|| PlanEvaluator::invariant("frame-transfer work overflow"))
+        .ok_or_else(|| invariant("frame-transfer work overflow"))
+}
+
+const fn argument_words(ty: MachineType) -> u8 {
+    match ty {
+        MachineType::Unit => 0,
+        MachineType::Bool | MachineType::I64 | MachineType::F64 => 1,
+        MachineType::F64Array => 2,
+    }
 }
 
 fn find_block(function: &X64Function, id: X64BlockId) -> Option<&X64Block> {
@@ -554,7 +705,7 @@ fn parameter_homes(
     arguments: Vec<CoreValue>,
 ) -> Result<BTreeMap<HomeKey, StoredHome>, PlanExecutionError> {
     if !arguments_match_parameters(&arguments, function) {
-        return Err(PlanEvaluator::invariant(format!(
+        return Err(invariant(format!(
             "function {} parameter commit has invalid arguments",
             function.id.0
         )));
@@ -572,7 +723,7 @@ fn assign_home(
     value: CoreValue,
 ) -> Result<(), PlanExecutionError> {
     if !value_matches_type(&value, home.ty) {
-        return Err(PlanEvaluator::invariant(format!(
+        return Err(invariant(format!(
             "home slot {} offset {} cannot store {:?} as {:?}",
             home.slot.0,
             home.offset,
@@ -582,7 +733,7 @@ fn assign_home(
     }
     let expected_width = type_width(home.ty);
     if home.width != expected_width {
-        return Err(PlanEvaluator::invariant(format!(
+        return Err(invariant(format!(
             "home slot {} offset {} has width {}; expected {} for {:?}",
             home.slot.0, home.offset, home.width, expected_width, home.ty
         )));
@@ -590,7 +741,7 @@ fn assign_home(
     let key = HomeKey::from(home);
     if let Some(existing) = homes.get(&key) {
         if existing.descriptor != home {
-            return Err(PlanEvaluator::invariant(format!(
+            return Err(invariant(format!(
                 "home slot {} offset {} changed descriptor",
                 home.slot.0, home.offset
             )));
@@ -619,7 +770,7 @@ fn evaluate_operand(
                 X64Immediate::F64Bits(bits) => CoreValue::F64(f64::from_bits(*bits)),
             };
             if !value_matches_type(&value, *ty) {
-                return Err(PlanEvaluator::invariant(format!(
+                return Err(invariant(format!(
                     "target immediate {:?} does not match declared type {ty:?}",
                     value_kind(&value)
                 )));
@@ -628,13 +779,13 @@ fn evaluate_operand(
         }
         X64Operand::Home(home) => {
             let stored = homes.get(&HomeKey::from(*home)).ok_or_else(|| {
-                PlanEvaluator::invariant(format!(
+                invariant(format!(
                     "home slot {} offset {} is unavailable",
                     home.slot.0, home.offset
                 ))
             })?;
             if stored.descriptor != *home {
-                return Err(PlanEvaluator::invariant(format!(
+                return Err(invariant(format!(
                     "home slot {} offset {} descriptor mismatch",
                     home.slot.0, home.offset
                 )));
@@ -646,16 +797,20 @@ fn evaluate_operand(
 
 fn expect_i64(value: CoreValue) -> Result<i64, PlanExecutionError> {
     let CoreValue::I64(value) = value else {
-        return Err(PlanEvaluator::invariant("expected canonical I64 value"));
+        return Err(invariant("expected canonical I64 value"));
     };
     Ok(value)
 }
 
 fn expect_f64(value: CoreValue) -> Result<f64, PlanExecutionError> {
     let CoreValue::F64(value) = value else {
-        return Err(PlanEvaluator::invariant("expected canonical F64 value"));
+        return Err(invariant("expected canonical F64 value"));
     };
     Ok(value)
+}
+
+fn invariant(message: impl Into<String>) -> PlanExecutionError {
+    PlanExecutionError::InternalInvariant(message.into())
 }
 
 fn arguments_match_parameters(arguments: &[CoreValue], function: &X64Function) -> bool {

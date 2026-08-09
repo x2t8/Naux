@@ -569,6 +569,57 @@ fn all_51_frozen_cases_seal_canonical_s7b_b_evidence_in_process() {
             .expect("canonical invocation must seal an execution record");
         verify_x64_native_execution_record(&execution_record)
             .expect("sealed native execution record must verify");
+        if case.ordinal == 0 {
+            let mut wrong_abi = execution_record.clone();
+            wrong_abi.canonical_abi_hash = SemanticHash([0x5a; 32]);
+            wrong_abi.record_hash = x64_native_execution_record_hash(&wrong_abi)
+                .expect("a locally resealed wrong ABI remains structurally valid");
+            assert!(matches!(
+                seal_x64_native_correspondence_record(
+                    &case,
+                    target,
+                    &machine_evaluation,
+                    wrong_abi
+                ),
+                Err(X64NativeEvidenceError::IdentityMismatch {
+                    field: "canonical ABI"
+                })
+            ));
+
+            let mut wrong_lanes = execution_record.clone();
+            wrong_lanes.input_lanes = 0;
+            wrong_lanes.record_hash = x64_native_execution_record_hash(&wrong_lanes)
+                .expect("a locally resealed wrong lane count remains structurally valid");
+            assert!(matches!(
+                seal_x64_native_correspondence_record(
+                    &case,
+                    target,
+                    &machine_evaluation,
+                    wrong_lanes
+                ),
+                Err(X64NativeEvidenceError::IdentityMismatch {
+                    field: "entry lane count"
+                })
+            ));
+
+            let mut wrong_entry = execution_record.clone();
+            wrong_entry.entry_offset = 1;
+            assert!(matches!(
+                x64_native_execution_record_hash(&wrong_entry),
+                Err(X64NativeEvidenceError::IdentityMismatch { field: "entry ABI" })
+            ));
+            assert!(matches!(
+                seal_x64_native_correspondence_record(
+                    &case,
+                    target,
+                    &machine_evaluation,
+                    wrong_entry
+                ),
+                Err(X64NativeEvidenceError::IdentityMismatch {
+                    field: "entry offset"
+                })
+            ));
+        }
         let correspondence = seal_x64_native_correspondence_record(
             &case,
             target,
@@ -597,11 +648,11 @@ fn all_51_frozen_cases_seal_canonical_s7b_b_evidence_in_process() {
     );
     assert_eq!(
         evidence.records[0].native_execution.record_hash.to_hex(),
-        "bf8966d5a915f6c6012f1e268d3ab8adf62fbe0bd624ef95a27f851a9ad3b2c4"
+        "f1cb4fe7dd9ebcb68a9e074600dca0ed30df7e922fdabfdeb74077f83a39d960"
     );
     assert_eq!(
         evidence.records[0].record_hash.to_hex(),
-        "ce3ec26894ac74e163c6268223090952db5e415566094f089c39e86d30e785fd"
+        "7e930116fc944609f60a353c7a8765804a355e4f38d495a39203f04dbc55fed2"
     );
     assert_eq!(
         evidence.records[46]
@@ -612,15 +663,15 @@ fn all_51_frozen_cases_seal_canonical_s7b_b_evidence_in_process() {
     );
     assert_eq!(
         evidence.records[46].native_execution.record_hash.to_hex(),
-        "972930615ce0470e1d0f6a52421a310167fd66300b13b1a0a2c4c59e17665df8"
+        "0d77cc2def6e1479ddb1d9fb8a7e5a0c55a15e565c3f31867ba08bbe94fd6a2f"
     );
     assert_eq!(
         evidence.records[46].record_hash.to_hex(),
-        "15e951604a67624c58589179463fe83d3483f94215ce7c3f716e5671795f005c"
+        "1bf46e6d2bf164197e5999b71f4101ad9d2d1e80853af7208feb6c9a825dbc49"
     );
     assert_eq!(
         evidence.results_hash.to_hex(),
-        "5b55f00ad40bb3f30514742aa9f4c0739de187090f609a1fdf43806bd3b615b3"
+        "73ecf90e2fff7a36a6011e447c0982ca317f591aea45486f55c330d8dc12d22c"
     );
 
     let mut reordered = evidence.clone();

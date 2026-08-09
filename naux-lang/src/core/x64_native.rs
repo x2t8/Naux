@@ -19,8 +19,10 @@ use super::interpret::{CoreValue, EffectEvent, Evaluation, EvaluationOutcome};
 use super::machine_ir::MachineType;
 use super::schema::{ErrorKind, SemanticHash};
 use super::x64_target::{
-    x64_target_code_hash, SourceBoundX64TargetArtifact, X64AbiRegister, X64EntryAbi, X64TargetAbi,
-    X64TargetEncodeError, X64_TARGET_MAX_CODE_BYTES,
+    x64_target_code_hash, ProcessReconstructedX64TargetPolicy15Candidate,
+    SourceBoundX64TargetArtifact, VerifiedX64TargetPolicy15CandidateCapsule, X64AbiRegister,
+    X64EntryAbi, X64TargetAbi, X64TargetArtifact, X64TargetEncodeError, X64_TARGET_MAX_CODE_BYTES,
+    X64_TARGET_POLICY15_ENCODER_POLICY_VERSION,
 };
 use std::fmt;
 
@@ -627,13 +629,104 @@ pub fn execute_x64_native_r1_s7b(
 ) -> Result<X64NativeExecution, X64NativeRunnerError> {
     #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
     {
-        execute_supported(target, arguments)
+        execute_supported_artifact(target.artifact(), arguments)
     }
 
     #[cfg(not(all(target_arch = "x86_64", target_os = "linux")))]
     {
         let _ = (target, arguments);
         Err(X64NativeRunnerError::UnsupportedHost)
+    }
+}
+
+/// Candidate-only seam owned by ADR-0052.
+///
+/// This is deliberately crate-private and accepts neither raw bytes nor an
+/// unverified capsule. The finite Gate B correctness orchestrator is its sole
+/// consumer; public native, process, standalone, and measurement paths remain
+/// source-bound to encoder policy 1.4.
+pub(super) fn execute_x64_native_policy15_candidate(
+    candidate: VerifiedX64TargetPolicy15CandidateCapsule<'_>,
+    arguments: &[CoreValue],
+) -> Result<X64NativeExecution, X64NativeRunnerError> {
+    let artifact = candidate.candidate().candidate_artifact();
+    if artifact.program.encoder_policy_version != X64_TARGET_POLICY15_ENCODER_POLICY_VERSION {
+        return Err(X64NativeRunnerError::InvalidRunnerEnvelope {
+            message: "candidate encoder policy is not the frozen policy 1.5",
+        });
+    }
+
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    {
+        let _claim_mxcsr = CandidateClaimMxcsrGuard::establish();
+        execute_supported_artifact(artifact, arguments)
+    }
+
+    #[cfg(not(all(target_arch = "x86_64", target_os = "linux")))]
+    {
+        let _ = (artifact, arguments);
+        Err(X64NativeRunnerError::UnsupportedHost)
+    }
+}
+
+/// ADR-0053 child-only execution seam for the exact source-reconstructed
+/// candidate. It is type-distinct from full profile verification and remains
+/// owned by the finite correctness module rather than any general runner.
+pub(super) fn execute_x64_native_policy15_process_reconstruction(
+    candidate: &ProcessReconstructedX64TargetPolicy15Candidate,
+    arguments: &[CoreValue],
+) -> Result<X64NativeExecution, X64NativeRunnerError> {
+    let artifact = candidate.candidate().candidate_artifact();
+    if artifact.program.encoder_policy_version != X64_TARGET_POLICY15_ENCODER_POLICY_VERSION {
+        return Err(X64NativeRunnerError::InvalidRunnerEnvelope {
+            message: "process-reconstructed candidate is not frozen policy 1.5",
+        });
+    }
+
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    {
+        let _claim_mxcsr = CandidateClaimMxcsrGuard::establish();
+        execute_supported_artifact(artifact, arguments)
+    }
+
+    #[cfg(not(all(target_arch = "x86_64", target_os = "linux")))]
+    {
+        let _ = (artifact, arguments);
+        Err(X64NativeRunnerError::UnsupportedHost)
+    }
+}
+
+/// Exact policy-1.4 Bounds fallback for ADR-0052's finite selection table.
+/// The ordinary source-bound case entry remains the execution authority; this
+/// wrapper only establishes and restores the canonical claim MXCSR state.
+pub(super) fn execute_x64_native_policy14_candidate_fallback(
+    target: SourceBoundX64TargetArtifact<'_, '_, '_, '_>,
+    case: &CoreVmGateACase,
+) -> Result<X64NativeCaseExecution, X64NativeEvidenceError> {
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    let _claim_mxcsr = CandidateClaimMxcsrGuard::establish();
+    execute_x64_native_case_r1_s7b(target, case)
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+struct CandidateClaimMxcsrGuard {
+    previous: u32,
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+impl CandidateClaimMxcsrGuard {
+    #[must_use]
+    fn establish() -> Self {
+        let previous = platform::read_mxcsr();
+        platform::write_mxcsr(X64TargetAbi::r1_s7a().canonical_mxcsr);
+        Self { previous }
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+impl Drop for CandidateClaimMxcsrGuard {
+    fn drop(&mut self) {
+        platform::write_mxcsr(self.previous);
     }
 }
 
@@ -682,11 +775,10 @@ pub fn execute_x64_native_case_r1_s7b(
 }
 
 #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
-fn execute_supported(
-    target: SourceBoundX64TargetArtifact<'_, '_, '_, '_>,
+fn execute_supported_artifact(
+    artifact: &X64TargetArtifact,
     arguments: &[CoreValue],
 ) -> Result<X64NativeExecution, X64NativeRunnerError> {
-    let artifact = target.artifact();
     let program = &artifact.program;
     if program.abi != X64TargetAbi::r1_s7a() {
         return Err(X64NativeRunnerError::InvalidRunnerEnvelope {
@@ -1078,8 +1170,8 @@ pub fn seal_x64_native_correspondence_record(
             actual: case_ordinal,
         });
     }
-    verify_x64_native_execution_record(&native_execution)?;
     let artifact = target.artifact();
+    let canonical_abi_hash = x64_native_canonical_abi_hash(target)?;
     if native_execution.input_hash != input_hash {
         return Err(X64NativeEvidenceError::InputHashMismatch { case_ordinal });
     }
@@ -1104,11 +1196,29 @@ pub fn seal_x64_native_correspondence_record(
             native_execution.source_machine_ir_hash,
             target.source_machine_ir().semantic_hash,
         ),
+        (
+            "canonical ABI",
+            native_execution.canonical_abi_hash,
+            canonical_abi_hash,
+        ),
     ] {
         if actual != expected {
             return Err(X64NativeEvidenceError::IdentityMismatch { field });
         }
     }
+    if native_execution.entry_offset != artifact.program.entry_offset {
+        return Err(X64NativeEvidenceError::IdentityMismatch {
+            field: "entry offset",
+        });
+    }
+    let expected_input_lanes = u8::try_from(artifact.program.entry_abi.input_lanes.len())
+        .map_err(|_| X64NativeEvidenceError::MetricOverflow)?;
+    if native_execution.input_lanes != expected_input_lanes {
+        return Err(X64NativeEvidenceError::IdentityMismatch {
+            field: "entry lane count",
+        });
+    }
+    verify_x64_native_execution_record(&native_execution)?;
     let machine_ir = normalize_native_observation(
         "Machine IR",
         case_ordinal,
@@ -1530,7 +1640,7 @@ fn validate_fixed_correspondence_records(
     Ok(manifest.manifest_hash)
 }
 
-fn normalize_native_observation(
+pub(super) fn normalize_native_observation(
     engine: &'static str,
     case_ordinal: u32,
     outcome: &EvaluationOutcome,
@@ -1581,7 +1691,7 @@ fn normalize_native_observation(
     Ok(observation)
 }
 
-fn validate_native_observation(
+pub(super) fn validate_native_observation(
     engine: &'static str,
     case_ordinal: u32,
     observation: &X64NativeCorrespondenceObservation,
@@ -1964,6 +2074,18 @@ mod platform {
             );
         }
         value
+    }
+
+    pub(super) fn write_mxcsr(value: u32) {
+        // SAFETY: the value was either captured by `stmxcsr` on this thread
+        // or is the frozen architecturally valid R1-S7a claim state.
+        unsafe {
+            asm!(
+                "ldmxcsr [{pointer}]",
+                pointer = in(reg) &value,
+                options(nostack, preserves_flags),
+            );
+        }
     }
 
     pub(super) unsafe fn call_entry(entry: *const u8, lanes: &[u64], output: *mut u64) -> u32 {
