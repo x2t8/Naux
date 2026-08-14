@@ -102,6 +102,11 @@ const LINUX_REQUIRED_FILES: &[RequiredFile] = &[
         max_bytes: 16 * 1024 * 1024,
     },
     RequiredFile {
+        path: "bin/nauxup",
+        mode: 0o755,
+        max_bytes: 16 * 1024 * 1024,
+    },
+    RequiredFile {
         path: "docs/LIMITATIONS.md",
         mode: 0o644,
         max_bytes: 256 * 1024,

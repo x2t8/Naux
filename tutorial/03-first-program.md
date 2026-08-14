@@ -10,8 +10,7 @@ Complete one host installation guide first.
 Linux:
 
 ```sh
-NAUX_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/naux-learn/0.1.0"
-NAUX="$NAUX_HOME/bin/naux"
+NAUX=naux
 ```
 
 Windows PowerShell:

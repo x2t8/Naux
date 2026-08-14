@@ -10,6 +10,8 @@ pub mod install_locale;
 pub mod learn;
 pub mod learn_bundle;
 pub mod lexer;
+#[cfg(unix)]
+pub mod linux_distribution;
 pub mod logic;
 pub mod parser;
 pub mod refinement;

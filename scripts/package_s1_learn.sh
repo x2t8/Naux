@@ -131,42 +131,58 @@ fi
         CARGO_TARGET_DIR="$repo_root/target" \
         cargo build --locked --release -p naux \
             --bin naux \
-            --bin naux-learn-setup
+            --bin naux-learn-setup \
+            --bin nauxup
 )
 
 binary="$repo_root/target/release/naux"
 setup_binary="$repo_root/target/release/naux-learn-setup"
+nauxup_binary="$repo_root/target/release/nauxup"
 binary_version=$("$binary" --version)
 setup_version=$("$setup_binary" --help | sed -n '1p')
+nauxup_version=$("$nauxup_binary" --version)
 interpreter=$(readelf -l -- "$binary" | sed -n 's/.*Requesting program interpreter: \([^]]*\).*/\1/p')
 setup_interpreter=$(readelf -l -- "$setup_binary" | sed -n 's/.*Requesting program interpreter: \([^]]*\).*/\1/p')
+nauxup_interpreter=$(readelf -l -- "$nauxup_binary" | sed -n 's/.*Requesting program interpreter: \([^]]*\).*/\1/p')
 needed=$(readelf -d -- "$binary" | sed -n 's/.*Shared library: \[\([^]]*\)\].*/\1/p' | sort)
 setup_needed=$(readelf -d -- "$setup_binary" | sed -n 's/.*Shared library: \[\([^]]*\)\].*/\1/p' | sort)
+nauxup_needed=$(readelf -d -- "$nauxup_binary" | sed -n 's/.*Shared library: \[\([^]]*\)\].*/\1/p' | sort)
 expected_needed=$'ld-linux-x86-64.so.2\nlibc.so.6\nlibgcc_s.so.1\nlibm.so.6'
 expected_setup_needed=$'ld-linux-x86-64.so.2\nlibc.so.6\nlibgcc_s.so.1'
 max_glibc=$(readelf --version-info -- "$binary" | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -n 1)
 max_gcc=$(readelf --version-info -- "$binary" | grep -o 'GCC_[0-9.]*' | sort -Vu | tail -n 1)
 setup_max_glibc=$(readelf --version-info -- "$setup_binary" | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -n 1)
 setup_max_gcc=$(readelf --version-info -- "$setup_binary" | grep -o 'GCC_[0-9.]*' | sort -Vu | tail -n 1)
+nauxup_max_glibc=$(readelf --version-info -- "$nauxup_binary" | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -n 1)
+nauxup_max_gcc=$(readelf --version-info -- "$nauxup_binary" | grep -o 'GCC_[0-9.]*' | sort -Vu | tail -n 1)
 machine=$(readelf -h -- "$binary" | sed -n 's/^  Machine:[[:space:]]*//p')
 elf_type=$(readelf -h -- "$binary" | sed -n 's/^  Type:[[:space:]]*\([^ ]*\).*/\1/p')
 setup_machine=$(readelf -h -- "$setup_binary" | sed -n 's/^  Machine:[[:space:]]*//p')
 setup_elf_type=$(readelf -h -- "$setup_binary" | sed -n 's/^  Type:[[:space:]]*\([^ ]*\).*/\1/p')
+nauxup_machine=$(readelf -h -- "$nauxup_binary" | sed -n 's/^  Machine:[[:space:]]*//p')
+nauxup_elf_type=$(readelf -h -- "$nauxup_binary" | sed -n 's/^  Type:[[:space:]]*\([^ ]*\).*/\1/p')
 
 if [[ "$interpreter" != "/lib64/ld-linux-x86-64.so.2" \
     || "$setup_interpreter" != "/lib64/ld-linux-x86-64.so.2" \
+    || "$nauxup_interpreter" != "/lib64/ld-linux-x86-64.so.2" \
     || "$binary_version" != "naux $version" \
     || "$setup_version" != "NAUX Learn Setup $version" \
+    || "$nauxup_version" != "nauxup $version" \
     || "$needed" != "$expected_needed" \
     || "$setup_needed" != "$expected_setup_needed" \
+    || "$nauxup_needed" != "$expected_setup_needed" \
     || "$max_glibc" != "GLIBC_2.39" \
     || "$max_gcc" != "GCC_4.2.0" \
     || "$setup_max_glibc" != "GLIBC_2.34" \
     || "$setup_max_gcc" != "GCC_4.2.0" \
+    || "$nauxup_max_glibc" != "GLIBC_2.34" \
+    || "$nauxup_max_gcc" != "GCC_4.2.0" \
     || "$machine" != "Advanced Micro Devices X86-64" \
     || "$setup_machine" != "Advanced Micro Devices X86-64" \
+    || "$nauxup_machine" != "Advanced Micro Devices X86-64" \
     || "$elf_type" != "DYN" \
-    || "$setup_elf_type" != "DYN" ]]; then
+    || "$setup_elf_type" != "DYN" \
+    || "$nauxup_elf_type" != "DYN" ]]; then
     echo "release binary dynamic host boundary differs from HOST-DEPENDENCIES.tsv" >&2
     exit 1
 fi
@@ -182,6 +198,7 @@ chmod 0644 -- "$staging/README.md"
 install -m 0755 -- "$setup_binary" "$staging/naux-learn-setup"
 install -m 0644 -- "$repo_root/assets/langnaux-learn.png" "$staging/assets/langnaux-learn.png"
 install -m 0755 -- "$binary" "$staging/bin/naux"
+install -m 0755 -- "$nauxup_binary" "$staging/bin/nauxup"
 install -m 0644 -- "$source_dir/LIMITATIONS.md" "$staging/docs/LIMITATIONS.md"
 install -m 0644 -- "$source_dir/RELEASE_DISCLOSURE.md" "$staging/docs/RELEASE_DISCLOSURE.md"
 install -m 0644 -- "$repo_root/docs/s1_learn_batch_io.md" "$staging/docs/s1_learn_batch_io.md"
@@ -202,6 +219,7 @@ files=(
     naux-learn-setup
     assets/langnaux-learn.png
     bin/naux
+    bin/nauxup
     docs/LIMITATIONS.md
     docs/RELEASE_DISCLOSURE.md
     docs/s1_learn_batch_io.md
@@ -221,7 +239,7 @@ files=(
     locales/vi-VN.tsv
     locales/zh-CN.tsv
 )
-modes=(0644 0644 0644 0644 0755 0644 0755 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644)
+modes=(0644 0644 0644 0644 0755 0644 0755 0755 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644)
 
 {
     printf 'NAUX-S1-LEARN-BUNDLE\t1\n'

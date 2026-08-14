@@ -178,31 +178,31 @@ claim is implied by this bundle.
 
 ## 9. Acceptance evidence
 
-The release-sealed producer generated the same 26-file artifact in distinct
-output directories. The accepted resealed artifact contains 5,357,110 bytes
+The release-sealed producer generated the same 27-file artifact in distinct
+output directories. The accepted resealed artifact contains 6,537,062 bytes
 including its manifest and has manifest seal
-`99e4ab2ee05d00615d00b3d6b8f7f87067289b8c11c4ba1957d57a9620390bb1`.
-Its executable is 4,082,552 bytes with SHA-256
-`dd12495211efcdb890cdf821476bf6386a19c738d2e7588d042f35ca881147da`
+`02d3e1f9299f39e1166aa8802509c2e20b5b07cad3bbd3a7094c43cd2842dc4a`.
+Its executable is 4,096,880 bytes with SHA-256
+`00be9ca9f18345b26806f23e6535ce8c2448835c3d3e2f76c3fc1a48c8d0c696`
 and reports exactly `naux 0.1.1`. The canonical 500-by-500 RGBA project logo
 is installed at `assets/langnaux-learn.png`, is sealed as an ordinary bundle
 member, and has SHA-256
 `8818d089bc3a11394082080d7291fe9bafecaf698db66f17af40cc1900db1408`. The
 bundle-local Markdown link audit has no broken target.
 
-The native console Setup carrier is 1,112,856 bytes with SHA-256
-`b13a03710035b8af098581f5a5f966df7969979be8951aeaf428e4efd7ad6af1`.
-It presents the nine-language selector, localized disclosure and consent before
-installation, then repeats the disclosure and prints the sealed receipt after
-success.
+The native console Setup carrier is 1,171,008 bytes with SHA-256
+`128851bebe4929eb277133afb623f8e87764a7a9d1b436c2a2fcf3cc4a2b4df0`.
+It detects one of nine supported locales, prints one concise plan, asks for one
+confirmation, creates missing user-local directories, and publishes exact
+stable launchers. The 1,106,328-byte `nauxup` manager has SHA-256
+`920065975e4b429ff3715bffc7ba71d928e6d4cfc6390d4db459f8b05bd4d3f0`.
 
-The no-toolchain carrier passes with `cargo` and `rustc` poison sentinels as
-the complete `PATH`; verify, receipt-backed staged install, installed
-first-program output, dry-run, exact uninstall, and existing-prefix refusal all
-pass. The focused default and all-feature S1 groups each pass 30 tests plus two
-native Setup tests,
-including nine bundle/lifecycle mutation tests and three release-identity
-tests.
+The no-toolchain carrier passes with `cargo` and `rustc` poison sentinels ahead
+of the complete tool path. Starting from a HOME without `.local`, bundle
+verification, receipt-backed staged installation, stable command launch,
+first-program output, `nauxup doctor`, dry-run, exact uninstall, and
+existing-launcher refusal all pass. Bundle/lifecycle mutation tests and the
+three release-identity tests also pass.
 
 The 0.1.1 focused bundle/lifecycle group passes nine mutation and ownership
 tests, and the release-identity group passes three tests. Strict shell syntax,

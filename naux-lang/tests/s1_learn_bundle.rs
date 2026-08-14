@@ -11,6 +11,9 @@ use naux::install_lifecycle::{
     execute_uninstall, install_with_receipt, plan_uninstall, read_installation_receipt,
 };
 use naux::learn_bundle::{install_learn_bundle, verify_learn_bundle};
+use naux::linux_distribution::{
+    execute_linux_uninstall, install_linux_distribution, plan_linux_uninstall, LinuxInstallLayout,
+};
 
 const FILES: &[(&str, u32)] = &[
     ("BUILD-SEED.tsv", 0o644),
@@ -20,6 +23,7 @@ const FILES: &[(&str, u32)] = &[
     ("naux-learn-setup", 0o755),
     ("assets/langnaux-learn.png", 0o644),
     ("bin/naux", 0o755),
+    ("bin/nauxup", 0o755),
     ("docs/LIMITATIONS.md", 0o644),
     ("docs/RELEASE_DISCLOSURE.md", 0o644),
     ("docs/s1_learn_batch_io.md", 0o644),
@@ -211,7 +215,7 @@ fn verifies_and_installs_exact_inventory_into_a_new_prefix() {
     let temp = make_bundle("install");
     let bundle = temp.bundle();
     let verified = verify_learn_bundle(&bundle).unwrap();
-    assert_eq!(verified.file_count(), 26);
+    assert_eq!(verified.file_count(), 27);
     assert_eq!(verified.manifest_seal_hex().len(), 64);
 
     let prefix = temp.root.join("installed");
@@ -324,7 +328,7 @@ fn lifecycle_receipt_binds_locale_prefix_and_exact_owned_paths() {
 
     assert_eq!(receipt.locale(), "vi-VN");
     assert_eq!(receipt.prefix(), prefix);
-    assert_eq!(receipt.file_count(), 26);
+    assert_eq!(receipt.file_count(), 27);
     assert_eq!(receipt.installation_id().len(), 64);
     assert_eq!(
         read_installation_receipt(receipt.receipt_path()).unwrap(),
@@ -332,7 +336,7 @@ fn lifecycle_receipt_binds_locale_prefix_and_exact_owned_paths() {
     );
 
     let plan = plan_uninstall(receipt.receipt_path()).unwrap();
-    assert_eq!(plan.files().len(), 26);
+    assert_eq!(plan.files().len(), 27);
     assert_eq!(plan.directories().len(), 6);
     assert!(plan.files().iter().all(|path| path.starts_with(&prefix)));
     assert!(
@@ -437,4 +441,78 @@ fn lifecycle_receipt_collision_rolls_back_new_exact_payload() {
         "failed ledger publication must roll back payload"
     );
     assert!(first.receipt_path().is_file());
+}
+
+#[test]
+fn linux_distribution_installs_on_a_clean_home_and_uninstalls_exactly() {
+    let temp = make_bundle("linux-clean-home");
+    let home = temp.root.join("clean-home");
+    let prefix = home.join(".local/share/naux/toolchains/learn/0.1.1");
+    let state = home.join(".local/state/naux/receipts");
+    let bin = home.join(".local/bin");
+    let layout = LinuxInstallLayout::new(prefix.clone(), state, bin.clone());
+    let unrelated = temp.root.join("student-work.nx");
+    fs::write(&unrelated, b"~ rite\n    !say 7\n").unwrap();
+
+    let receipt = install_linux_distribution(&temp.bundle(), &layout, "en-US").unwrap();
+    assert_eq!(
+        fs::read_link(bin.join("naux")).unwrap(),
+        prefix.join("bin/naux")
+    );
+    assert_eq!(
+        fs::read_link(bin.join("nauxup")).unwrap(),
+        prefix.join("bin/nauxup")
+    );
+    assert!(receipt.receipt_path().is_file());
+    assert!(!receipt.created_directories().is_empty());
+
+    let plan = plan_linux_uninstall(receipt.receipt_path()).unwrap();
+    assert_eq!(plan.core().files().len(), 27);
+    execute_linux_uninstall(receipt.receipt_path()).unwrap();
+
+    assert!(!prefix.exists());
+    assert!(!bin.join("naux").exists());
+    assert!(!bin.join("nauxup").exists());
+    assert!(!receipt.receipt_path().exists());
+    assert!(unrelated.is_file());
+    assert!(
+        !home.exists(),
+        "empty directories created by Setup must be retired"
+    );
+}
+
+#[test]
+fn linux_distribution_refuses_launcher_collision_and_changed_activation() {
+    let collision = make_bundle("linux-launcher-collision");
+    let home = collision.root.join("home");
+    let bin = home.join(".local/bin");
+    fs::create_dir_all(&bin).unwrap();
+    fs::write(bin.join("naux"), b"user-owned\n").unwrap();
+    let prefix = home.join(".local/share/naux/toolchains/learn/0.1.1");
+    let layout =
+        LinuxInstallLayout::new(prefix.clone(), home.join(".local/state/naux/receipts"), bin);
+    let error = install_linux_distribution(&collision.bundle(), &layout, "en-US")
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("refusing to overwrite"));
+    assert!(!prefix.exists());
+
+    let changed = make_bundle("linux-changed-launcher");
+    let home = changed.root.join("home");
+    let layout = LinuxInstallLayout::new(
+        home.join(".local/share/naux/toolchains/learn/0.1.1"),
+        home.join(".local/state/naux/receipts"),
+        home.join(".local/bin"),
+    );
+    let receipt = install_linux_distribution(&changed.bundle(), &layout, "vi-VN").unwrap();
+    fs::remove_file(receipt.naux_launcher()).unwrap();
+    symlink("/bin/false", receipt.naux_launcher()).unwrap();
+    let error = plan_linux_uninstall(receipt.receipt_path())
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("no longer targets"));
+    assert!(
+        receipt.prefix().exists(),
+        "fail-closed planning must not mutate payload"
+    );
 }

@@ -25,8 +25,10 @@ Rust or Cargo.
   `ja-JP`, `ko-KR`, `es`, `pt-BR`, `fr`, and `de`);
 - a sealed prebuilt directory bundle with independent verification and staged
   installation;
-- a fail-closed ownership receipt and exact, no-scan uninstall lifecycle.
-- version-pinned one-command bootstrap assets for Linux and Windows; each
+- a fail-closed bundle receipt plus a Linux activation receipt that binds
+  stable `naux` and `nauxup` launchers;
+- exact, no-scan `nauxup doctor`, dry-run, and uninstall lifecycle;
+- a version-pinned one-command bootstrap for Linux; it
   validates the archive byte length, outer SHA-256, executable version, and
   sealed inner manifest before Setup runs.
 
@@ -38,56 +40,53 @@ Linux x86-64 GNU:
 curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.sh | sh
 ```
 
-Windows x86-64 from PowerShell:
-
-```powershell
-irm https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.ps1 | iex
-```
-
-The Windows artifact remains an unsigned release candidate until its 0.1.1
-Wine and declared real-Windows gates pass.
-
-These commands are intentionally pinned to `v0.1.1-learn`. NAUX Learn is a
+For unattended installation, append `| sh -s -- --yes`. The command is
+intentionally pinned to `v0.1.1-learn`. NAUX Learn is a
 prerelease, so GitHub's `/releases/latest/` route is not its version selector.
 The bootstrap files are integrity carriers, not publisher signatures.
+
+Windows packaging and GUI/IDE integration are outside this Linux release
+slice and are not claimed by these notes.
 
 ## Manual install from the release archive
 
 Verify the downloaded archive first:
 
 ```bash
-sha256sum --check naux-learn-0.1.1-linux-x86_64-gnu.tar.gz.sha256
+sha256sum --check SHA256SUMS
 tar -xzf naux-learn-0.1.1-linux-x86_64-gnu.tar.gz
 cd naux-learn-0.1.1-linux-x86_64-gnu
 ./bin/naux bundle verify .
 ./naux-learn-setup
 ```
 
-Setup first asks for one of nine languages, displays the localized experimental
-disclosure, asks for consent, installs, and displays the same disclosure after
-success. The install report prints the sealed receipt path. Preview exact uninstallation
-with `naux installation uninstall --receipt <receipt.tsv> --dry-run`, then run
-the same command without `--dry-run`. Only manifest-owned paths are removed;
-learner `.nx` projects outside the prefix are never scanned.
+Setup detects one of nine supported locales, displays a concise experimental
+plan, and asks for one confirmation. It creates clean-machine user-local
+directories, installs the immutable versioned bundle, and publishes stable
+`~/.local/bin/naux` and `~/.local/bin/nauxup` launchers without editing shell
+startup files. Existing launchers are never overwritten.
+
+Preview exact removal with `nauxup uninstall --dry-run`, inspect integrity
+with `nauxup doctor`, then run `nauxup uninstall`. Bundle, receipt, and launcher
+identity are re-verified; learner `.nx` projects are never scanned.
 
 Run the installed first program:
 
 ```bash
-"$HOME/.local/share/naux-learn/0.1.1/bin/naux" run \
-  "$HOME/.local/share/naux-learn/0.1.1/examples/hello.nx"
+naux run "$HOME/.local/share/naux/toolchains/learn/0.1.1/examples/hello.nx"
 ```
 
 ## Identity and verification
 
 The executable reports exactly `naux 0.1.1`. The internal bundle manifest
-binds every member path, mode, length, and SHA-256. The outer `.sha256` file
+binds every member path, mode, length, and SHA-256. The outer `SHA256SUMS` file
 binds the deterministic release archive. Neither mechanism is a publisher
 signature.
 
-The accepted local gate includes 30/30 exercises, VM/interpreter reference
-parity, mutation rejection, a no-Rust/Cargo install-and-run replay, strict
-Clippy, formatting, documentation links, and the complete existing workspace
-regression suite.
+The accepted local evidence includes the existing 30/30 exercise gate,
+VM/interpreter reference parity, release mutation rejection, a clean-HOME
+no-Rust/Cargo install-and-run replay, strict Clippy, formatting, bundle and
+release identity tests, and the relevant native/core regression gates.
 
 ## Important limitations
 

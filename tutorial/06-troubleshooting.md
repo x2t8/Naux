@@ -5,13 +5,14 @@
 
 ## `naux: command not found`
 
-NAUX Learn 0.1.0 deliberately does not modify `PATH`.
+NAUX Learn 0.1.1 creates launchers in `~/.local/bin` but deliberately does not
+modify shell profiles.
 
 Linux:
 
 ```sh
-NAUX_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/naux-learn/0.1.0"
-"$NAUX_HOME/bin/naux" --version
+export PATH="$HOME/.local/bin:$PATH"
+naux --version
 ```
 
 Windows PowerShell:

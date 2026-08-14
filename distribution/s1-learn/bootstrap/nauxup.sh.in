@@ -36,14 +36,14 @@ case "$(uname -m)" in
     *) fail 'this installer supports x86-64 only' ;;
 esac
 
-for naux_command in curl mkdir mktemp rm sha256sum tar uname wc; do
+for naux_command in curl grep mkdir mktemp rm sha256sum tar uname wc; do
     need "$naux_command"
 done
 
 naux_temp_root=$(mktemp -d "${TMPDIR:-/tmp}/nauxup.XXXXXXXX") || \
     fail 'cannot create a private temporary directory'
 naux_archive_path="$naux_temp_root/$NAUX_ARCHIVE"
-naux_checksum_path="$naux_archive_path.sha256"
+naux_checksum_path="$naux_temp_root/SHA256SUMS"
 naux_extract_path="$naux_temp_root/extract"
 mkdir -m 0700 -- "$naux_extract_path"
 
@@ -55,21 +55,19 @@ curl --fail --silent --show-error --location \
 curl --fail --silent --show-error --location \
     --proto '=https' --tlsv1.2 --retry 3 --retry-delay 1 \
     --output "$naux_checksum_path" \
-    "$NAUX_RELEASE_BASE/$NAUX_TAG/$NAUX_ARCHIVE.sha256"
+    "$NAUX_RELEASE_BASE/$NAUX_TAG/SHA256SUMS"
 
 naux_actual_bytes=$(wc -c < "$naux_archive_path")
 [ "$naux_actual_bytes" = "$NAUX_ARCHIVE_BYTES" ] || \
     fail 'downloaded archive size differs from the sealed release identity'
 
 naux_expected_line="$NAUX_ARCHIVE_SHA256  $NAUX_ARCHIVE"
-naux_expected_checksum_bytes=$((${#naux_expected_line} + 1))
 naux_actual_checksum_bytes=$(wc -c < "$naux_checksum_path")
-[ "$naux_actual_checksum_bytes" = "$naux_expected_checksum_bytes" ] || \
-    fail 'downloaded checksum file is not canonical'
-IFS= read -r naux_checksum_line < "$naux_checksum_path" || \
-    fail 'cannot read the downloaded checksum file'
-[ "$naux_checksum_line" = "$naux_expected_line" ] || \
-    fail 'downloaded checksum identity differs from this installer'
+[ "$naux_actual_checksum_bytes" -gt 0 ] && [ "$naux_actual_checksum_bytes" -le 65536 ] || \
+    fail 'downloaded SHA256SUMS is empty or oversized'
+naux_checksum_matches=$(grep -Fxc -- "$naux_expected_line" "$naux_checksum_path" || true)
+[ "$naux_checksum_matches" = 1 ] || \
+    fail 'SHA256SUMS does not contain exactly one pinned archive identity'
 
 naux_actual_hash=$(sha256sum -- "$naux_archive_path")
 naux_actual_hash=${naux_actual_hash%% *}
@@ -80,8 +78,10 @@ tar --extract --gzip --file "$naux_archive_path" \
     --directory "$naux_extract_path" --no-same-owner --same-permissions
 naux_bundle="$naux_extract_path/naux-learn-$NAUX_VERSION-linux-x86_64-gnu"
 naux_binary="$naux_bundle/bin/naux"
+naux_manager="$naux_bundle/bin/nauxup"
 naux_setup="$naux_bundle/naux-learn-setup"
 [ -x "$naux_binary" ] || fail 'verified archive is missing bin/naux'
+[ -x "$naux_manager" ] || fail 'verified archive is missing bin/nauxup'
 [ -x "$naux_setup" ] || fail 'verified archive is missing naux-learn-setup'
 
 "$naux_binary" bundle verify "$naux_bundle" >/dev/null || \
@@ -94,6 +94,6 @@ if [ "$#" -gt 0 ]; then
     "$naux_setup" "$@"
 else
     [ -r /dev/tty ] || fail \
-        'interactive Setup needs a terminal; pass --yes --language <locale>'
+        'interactive Setup needs a terminal; pass --yes for unattended installation'
     "$naux_setup" </dev/tty
 fi

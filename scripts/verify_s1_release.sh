@@ -4,7 +4,7 @@ set -euo pipefail
 export LC_ALL=C
 
 if [[ $# -ne 2 ]]; then
-    echo "usage: scripts/verify_s1_release.sh <archive.tar.gz> <archive.tar.gz.sha256>" >&2
+    echo "usage: scripts/verify_s1_release.sh <archive.tar.gz> <SHA256SUMS>" >&2
     exit 2
 fi
 
@@ -21,8 +21,8 @@ if [[ ! "$archive_base" =~ ^naux-learn-([0-9]+\.[0-9]+\.[0-9]+)-linux-x86_64-gnu
 fi
 version=${BASH_REMATCH[1]}
 root_name=${archive_base%.tar.gz}
-if [[ "$checksum_base" != "$archive_base.sha256" || "$archive_dir" != "$checksum_dir" ]]; then
-    echo "release checksum must be the adjacent canonical .sha256 file" >&2
+if [[ "$checksum_base" != "SHA256SUMS" || "$archive_dir" != "$checksum_dir" ]]; then
+    echo "release checksum must be the adjacent canonical SHA256SUMS file" >&2
     exit 1
 fi
 if [[ $(stat -c %s -- "$archive") -gt 20971520 ]]; then
@@ -64,6 +64,7 @@ $root_name/assets/
 $root_name/assets/langnaux-learn.png
 $root_name/bin/
 $root_name/bin/naux
+$root_name/bin/nauxup
 $root_name/docs/
 $root_name/docs/LIMITATIONS.md
 $root_name/docs/RELEASE_DISCLOSURE.md
@@ -126,6 +127,11 @@ bundle="$extract/$root_name"
 version_output=$("$bundle/bin/naux" --version)
 if [[ "$version_output" != "naux $version" ]]; then
     echo "release binary version does not match archive identity" >&2
+    exit 1
+fi
+nauxup_version_output=$("$bundle/bin/nauxup" --version)
+if [[ "$nauxup_version_output" != "nauxup $version" ]]; then
+    echo "release manager version does not match archive identity" >&2
     exit 1
 fi
 "$bundle/bin/naux" bundle verify "$bundle" > /dev/null

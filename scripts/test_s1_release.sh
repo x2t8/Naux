@@ -12,8 +12,8 @@ release_a="$temp_root/release-a"
 release_b="$temp_root/release-b"
 poison="$temp_root/no-toolchain"
 extract="$temp_root/extract"
-prefix="$temp_root/installed"
-state="$temp_root/state"
+home="$temp_root/home"
+bad_home="$temp_root/bad-home"
 
 cleanup() {
     rm -rf -- "$temp_root"
@@ -24,13 +24,12 @@ trap cleanup EXIT
 "$script_dir/package_s1_release.sh" "$release_b"
 
 archive_name="naux-learn-$version-linux-x86_64-gnu.tar.gz"
-checksum_name="$archive_name.sha256"
+checksum_name="SHA256SUMS"
 cmp -- "$release_a/$archive_name" "$release_b/$archive_name"
 cmp -- "$release_a/$checksum_name" "$release_b/$checksum_name"
-cmp -- "$release_a/RELEASE_NOTES.md" "$release_b/RELEASE_NOTES.md"
 cmp -- "$release_a/nauxup.sh" "$release_b/nauxup.sh"
 actual_inventory=$(find "$release_a" -mindepth 1 -maxdepth 1 -type f -printf '%f\n' | sort)
-expected_inventory=$(printf '%s\n' RELEASE_NOTES.md nauxup.sh "$archive_name" "$checksum_name" | sort)
+expected_inventory=$(printf '%s\n' nauxup.sh "$archive_name" "$checksum_name" | sort)
 if [[ "$actual_inventory" != "$expected_inventory" ]]; then
     echo "release output inventory is not canonical" >&2
     exit 1
@@ -66,7 +65,7 @@ if "$script_dir/verify_s1_release.sh" \
     exit 1
 fi
 
-mkdir -m 0755 -- "$poison" "$extract" "$state"
+mkdir -m 0755 -- "$poison" "$extract" "$home" "$bad_home"
 install -m 0755 /bin/false "$poison/cargo"
 install -m 0755 /bin/false "$poison/rustc"
 cat > "$poison/curl" <<'EOF'
@@ -88,7 +87,7 @@ done
 [ -n "$output" ] && [ -n "$url" ] || exit 2
 asset=${url##*/}
 case "$asset" in
-    naux-learn-*.tar.gz|naux-learn-*.tar.gz.sha256) ;;
+    naux-learn-*.tar.gz|SHA256SUMS) ;;
     *) exit 2 ;;
 esac
 [ "$url" = "https://github.com/x2t8/Naux/releases/download/$NAUX_TEST_RELEASE_TAG/$asset" ] \
@@ -102,31 +101,42 @@ mkdir -m 0755 -- "$bad_release"
 cp -- "$release_a/$archive_name" "$bad_release/$archive_name"
 cp -- "$release_a/$checksum_name" "$bad_release/$checksum_name"
 printf '\000' | dd of="$bad_release/$archive_name" bs=1 seek=0 conv=notrunc status=none
-if env PATH="$poison:/usr/bin:/bin" NAUX_TEST_RELEASE_DIR="$bad_release" \
+if env HOME="$bad_home" PATH="$poison:/usr/bin:/bin" NAUX_TEST_RELEASE_DIR="$bad_release" \
     NAUX_TEST_RELEASE_TAG="v$version-learn" \
-    sh "$release_a/nauxup.sh" --yes --language en-US --prefix "$prefix" \
-    --state-directory "$state" > /dev/null 2>&1; then
+    sh "$release_a/nauxup.sh" --yes --language en-US > /dev/null 2>&1; then
     echo "pinned bootstrap accepted a mutated archive" >&2
     exit 1
 fi
-test ! -e "$prefix"
+test ! -e "$bad_home/.local/share/naux/toolchains/learn/$version"
 
-env PATH="$poison:/usr/bin:/bin" NAUX_TEST_RELEASE_DIR="$release_a" \
+env HOME="$home" PATH="$poison:/usr/bin:/bin" NAUX_TEST_RELEASE_DIR="$release_a" \
     NAUX_TEST_RELEASE_TAG="v$version-learn" \
-    sh "$release_a/nauxup.sh" --yes --language en-US --prefix "$prefix" \
-    --state-directory "$state" > "$temp_root/install.txt"
-receipt=$(sed -n 's/^receipt: //p' "$temp_root/install.txt")
-env PATH="$poison:/usr/bin:/bin" \
-    "$prefix/bin/naux" run "$prefix/examples/hello.nx" > "$temp_root/hello.actual"
+    sh "$release_a/nauxup.sh" --yes --language en-US > "$temp_root/install.txt"
+prefix="$home/.local/share/naux/toolchains/learn/$version"
+launcher_bin="$home/.local/bin"
+activation="$home/.local/state/naux/receipts/learn-$version.tsv"
+test -L "$launcher_bin/naux"
+test -L "$launcher_bin/nauxup"
+test -f "$activation"
+env HOME="$home" PATH="$launcher_bin:$poison:/usr/bin:/bin" \
+    naux --version > "$temp_root/version.actual"
+printf 'naux %s\n' "$version" > "$temp_root/version.expected"
+cmp -- "$temp_root/version.expected" "$temp_root/version.actual"
+env HOME="$home" PATH="$launcher_bin:$poison:/usr/bin:/bin" \
+    naux run "$prefix/examples/hello.nx" > "$temp_root/hello.actual"
 cmp -- "$prefix/examples/hello.out" "$temp_root/hello.actual"
-env PATH="$poison:/usr/bin:/bin" \
-    "$prefix/bin/naux" installation uninstall --receipt "$receipt" --dry-run > /dev/null
-env PATH="$poison:/usr/bin:/bin" \
-    "$prefix/bin/naux" installation uninstall --receipt "$receipt" > /dev/null
+env HOME="$home" PATH="$launcher_bin:$poison:/usr/bin:/bin" \
+    nauxup doctor > /dev/null
+env HOME="$home" PATH="$launcher_bin:$poison:/usr/bin:/bin" \
+    nauxup uninstall --dry-run > /dev/null
+env HOME="$home" PATH="$launcher_bin:$poison:/usr/bin:/bin" \
+    nauxup uninstall --yes > /dev/null
 test ! -e "$prefix"
-test ! -e "$receipt"
+test ! -e "$launcher_bin/naux"
+test ! -e "$launcher_bin/nauxup"
+test ! -e "$activation"
 
 printf 'S1 release byte-reproducibility: PASS\n'
 printf 'S1 release outer mutation rejection: PASS\n'
 printf 'S1 release pinned-bootstrap mutation rejection: PASS\n'
-printf 'S1 release pinned-bootstrap/no-toolchain setup/run/uninstall: PASS\n'
+printf 'S1 release clean-home/no-toolchain setup/launch/doctor/uninstall: PASS\n'

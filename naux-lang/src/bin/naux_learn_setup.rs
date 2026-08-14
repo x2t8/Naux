@@ -6,11 +6,20 @@
 
 use std::env;
 use std::ffi::OsString;
-use std::io::{self, IsTerminal, Write};
+#[cfg(windows)]
+use std::io::IsTerminal;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
+#[cfg(windows)]
 use naux::install_lifecycle::install_with_receipt;
-use naux::install_locale::{catalog_for, InstallerCatalog, SUPPORTED_LOCALES};
+#[cfg(unix)]
+use naux::install_locale::selected_catalog;
+use naux::install_locale::InstallerCatalog;
+#[cfg(windows)]
+use naux::install_locale::{catalog_for, SUPPORTED_LOCALES};
+#[cfg(unix)]
+use naux::linux_distribution::{install_linux_distribution, LinuxInstallLayout};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -19,6 +28,7 @@ struct Options {
     language: Option<String>,
     prefix: Option<PathBuf>,
     state_directory: Option<PathBuf>,
+    bin_directory: Option<PathBuf>,
     assume_yes: bool,
     show_help: bool,
 }
@@ -36,11 +46,27 @@ fn run() -> Result<(), String> {
         print_help();
         return Ok(());
     }
+    #[cfg(windows)]
     if options.assume_yes && options.language.is_none() {
         return Err("--yes requires an explicit --language".into());
     }
 
+    #[cfg(windows)]
     let catalog = select_catalog(options.language.as_deref())?;
+    #[cfg(unix)]
+    let catalog =
+        selected_catalog(options.language.as_deref()).map_err(|error| error.to_string())?;
+
+    #[cfg(windows)]
+    return run_windows(options, catalog);
+    #[cfg(unix)]
+    return run_linux(options, catalog);
+    #[allow(unreachable_code)]
+    Err("NAUX Learn Setup is unsupported on this host".into())
+}
+
+#[cfg(windows)]
+fn run_windows(options: Options, catalog: InstallerCatalog) -> Result<(), String> {
     println!("\n{}\n", catalog.render_release_disclosure(VERSION));
     if !options.assume_yes && !confirm_install(&catalog)? {
         println!("{}", catalog.text("action_cancel"));
@@ -52,7 +78,7 @@ fn run() -> Result<(), String> {
     let bundle = executable
         .parent()
         .ok_or_else(|| "Setup executable has no bundle directory".to_string())?;
-    let (default_prefix, default_state) = default_installation_paths()?;
+    let (default_prefix, default_state, _) = default_installation_paths()?;
     let prefix = absolute_path(options.prefix.as_deref().unwrap_or(&default_prefix))?;
     let state_directory =
         absolute_path(options.state_directory.as_deref().unwrap_or(&default_state))?;
@@ -72,11 +98,58 @@ fn run() -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(unix)]
+fn run_linux(options: Options, catalog: InstallerCatalog) -> Result<(), String> {
+    let executable = env::current_exe()
+        .map_err(|error| format!("cannot locate the Setup executable: {error}"))?;
+    let bundle = executable
+        .parent()
+        .ok_or_else(|| "Setup executable has no bundle directory".to_string())?;
+    let (default_prefix, default_state, default_bin) = default_installation_paths()?;
+    let prefix = absolute_path(options.prefix.as_deref().unwrap_or(&default_prefix))?;
+    let state_directory =
+        absolute_path(options.state_directory.as_deref().unwrap_or(&default_state))?;
+    let bin_directory = absolute_path(options.bin_directory.as_deref().unwrap_or(&default_bin))?;
+    let layout = LinuxInstallLayout::new(prefix, state_directory, bin_directory);
+
+    print_linux_plan(&layout, &catalog);
+    if !options.assume_yes && !confirm_linux_install()? {
+        println!("{}", catalog.text("action_cancel"));
+        return Ok(());
+    }
+
+    let receipt = install_linux_distribution(bundle, &layout, catalog.locale())
+        .map_err(|error| error.to_string())?;
+    println!(
+        "\n✓ {}: NAUX Learn {VERSION}",
+        catalog.text("action_finish")
+    );
+    println!("  naux   -> {}", receipt.naux_launcher().display());
+    println!("  nauxup -> {}", receipt.nauxup_launcher().display());
+    println!("  trust  -> SHA-256 + sealed bundle + sealed ownership receipts");
+    if !path_contains(layout.bin_directory()) {
+        println!(
+            "\nNote: `{}` is not in this shell's PATH.",
+            layout.bin_directory().display()
+        );
+        println!(
+            "Setup did not edit shell profiles. Enable it in the current shell with:\n  export PATH=\"{}:$PATH\"",
+            layout.bin_directory().display()
+        );
+    }
+    println!(
+        "\nRun:\n  naux --version\n  naux run {}",
+        layout.prefix().join("examples/hello.nx").display()
+    );
+    println!("\nManage:\n  nauxup status\n  nauxup doctor\n  nauxup uninstall");
+    Ok(())
+}
+
 fn parse_options(arguments: impl Iterator<Item = OsString>) -> Result<Options, String> {
     let mut options = Options::default();
     let mut arguments = arguments.peekable();
     while let Some(argument) = arguments.next() {
-        if argument == "--yes" {
+        if argument == "--yes" || argument == "-y" {
             if options.assume_yes {
                 return Err("--yes may be specified only once".into());
             }
@@ -105,6 +178,15 @@ fn parse_options(arguments: impl Iterator<Item = OsString>) -> Result<Options, S
                 PathBuf::from(value),
                 "state-directory",
             )?;
+        } else if argument == "--bin-directory" {
+            let value = arguments
+                .next()
+                .ok_or_else(|| "--bin-directory requires a path".to_string())?;
+            set_once(
+                &mut options.bin_directory,
+                PathBuf::from(value),
+                "bin-directory",
+            )?;
         } else {
             return Err(format!(
                 "unknown argument `{}`; use --help",
@@ -116,6 +198,7 @@ fn parse_options(arguments: impl Iterator<Item = OsString>) -> Result<Options, S
         && (options.language.is_some()
             || options.prefix.is_some()
             || options.state_directory.is_some()
+            || options.bin_directory.is_some()
             || options.assume_yes)
     {
         return Err("--help cannot be combined with installation options".into());
@@ -130,6 +213,7 @@ fn set_once<T>(slot: &mut Option<T>, value: T, label: &str) -> Result<(), String
     Ok(())
 }
 
+#[cfg(windows)]
 fn select_catalog(explicit: Option<&str>) -> Result<InstallerCatalog, String> {
     if let Some(locale) = explicit {
         return catalog_for(locale).map_err(|error| error.to_string());
@@ -169,6 +253,20 @@ fn select_catalog(explicit: Option<&str>) -> Result<InstallerCatalog, String> {
     catalog_for(locale).map_err(|error| error.to_string())
 }
 
+#[cfg(unix)]
+fn confirm_linux_install() -> Result<bool, String> {
+    print!("\nInstall NAUX Learn? [Y/n] ");
+    io::stdout()
+        .flush()
+        .map_err(|error| format!("cannot flush the installation prompt: {error}"))?;
+    match read_answer()?.to_ascii_lowercase().as_str() {
+        "" | "y" | "yes" => Ok(true),
+        "n" | "no" => Ok(false),
+        _ => Err("answer must be Y or N".into()),
+    }
+}
+
+#[cfg(windows)]
 fn confirm_install(catalog: &InstallerCatalog) -> Result<bool, String> {
     println!("[1] {}", catalog.text("action_install"));
     println!("[2] {}", catalog.text("action_cancel"));
@@ -194,7 +292,7 @@ fn read_answer() -> Result<String, String> {
     Ok(answer.trim().to_string())
 }
 
-fn default_installation_paths() -> Result<(PathBuf, PathBuf), String> {
+fn default_installation_paths() -> Result<(PathBuf, PathBuf, PathBuf), String> {
     #[cfg(windows)]
     {
         let local = env::var_os("LOCALAPPDATA")
@@ -203,6 +301,7 @@ fn default_installation_paths() -> Result<(PathBuf, PathBuf), String> {
         Ok((
             local.join("Programs/NAUX/Learn").join(VERSION),
             local.join("NAUX/state"),
+            local.join("NAUX/bin"),
         ))
     }
     #[cfg(not(windows))]
@@ -217,8 +316,9 @@ fn default_installation_paths() -> Result<(PathBuf, PathBuf), String> {
             .map(PathBuf::from)
             .unwrap_or_else(|| home.join(".local/state"));
         Ok((
-            data.join("naux-learn").join(VERSION),
-            state.join("naux-learn"),
+            data.join("naux/toolchains/learn").join(VERSION),
+            state.join("naux/receipts"),
+            home.join(".local/bin"),
         ))
     }
 }
@@ -232,6 +332,7 @@ fn absolute_path(path: &Path) -> Result<PathBuf, String> {
         .map_err(|error| format!("cannot resolve relative Setup path: {error}"))
 }
 
+#[cfg(windows)]
 fn create_state_directory(path: &Path) -> Result<(), String> {
     std::fs::create_dir_all(path).map_err(|error| {
         format!(
@@ -241,6 +342,29 @@ fn create_state_directory(path: &Path) -> Result<(), String> {
     })
 }
 
+#[cfg(unix)]
+fn print_linux_plan(layout: &LinuxInstallLayout, catalog: &InstallerCatalog) {
+    println!("\nNAUX Learn {VERSION} — {}", catalog.text("release_badge"));
+    println!("{}", catalog.text("summary"));
+    println!("{}", catalog.text("sandbox_warning"));
+    println!("\nPlan:");
+    println!("  toolchain : {}", layout.prefix().display());
+    println!("  commands  : {}", layout.bin_directory().display());
+    println!(
+        "  receipt   : {}",
+        layout.activation_receipt_path().display()
+    );
+    println!("  language  : {}", catalog.locale());
+}
+
+#[cfg(unix)]
+fn path_contains(directory: &Path) -> bool {
+    env::var_os("PATH")
+        .map(|value| env::split_paths(&value).any(|entry| entry == directory))
+        .unwrap_or(false)
+}
+
+#[cfg(windows)]
 fn print_first_program(prefix: &Path, catalog: &InstallerCatalog) {
     let executable = if cfg!(windows) {
         prefix.join("bin/naux.exe")
@@ -255,6 +379,7 @@ fn print_first_program(prefix: &Path, catalog: &InstallerCatalog) {
     );
 }
 
+#[cfg(windows)]
 fn wait_before_close(noninteractive: bool) -> Result<(), String> {
     if noninteractive || !io::stdin().is_terminal() {
         return Ok(());
@@ -267,13 +392,17 @@ fn wait_before_close(noninteractive: bool) -> Result<(), String> {
 fn print_help() {
     println!("NAUX Learn Setup {VERSION}");
     println!("Usage: naux-learn-setup [--language <locale>] [--prefix <path>] \\");
-    println!("  [--state-directory <path>] [--yes]");
+    println!("  [--state-directory <path>] [--bin-directory <path>] [--yes]");
+    #[cfg(unix)]
+    println!("Linux detects the locale and asks for one installation confirmation.");
+    #[cfg(windows)]
     println!("Without options, Setup presents an interactive language and consent flow.");
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_options, SUPPORTED_LOCALES};
+    use super::parse_options;
+    use naux::install_locale::SUPPORTED_LOCALES;
     use std::ffi::OsString;
     use std::path::Path;
 
@@ -294,6 +423,8 @@ mod tests {
             "/tmp/naux",
             "--state-directory",
             "/tmp/state",
+            "--bin-directory",
+            "/tmp/bin",
             "--yes",
         ]))
         .unwrap();
@@ -302,6 +433,10 @@ mod tests {
         assert_eq!(
             options.state_directory.as_deref(),
             Some(Path::new("/tmp/state"))
+        );
+        assert_eq!(
+            options.bin_directory.as_deref(),
+            Some(Path::new("/tmp/bin"))
         );
         assert!(options.assume_yes);
         assert_eq!(SUPPORTED_LOCALES.len(), 9);

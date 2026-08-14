@@ -23,7 +23,7 @@ fi
 target=linux-x86_64-gnu
 root_name="naux-learn-$version-$target"
 archive_name="$root_name.tar.gz"
-checksum_name="$archive_name.sha256"
+checksum_name="SHA256SUMS"
 output=${1:-"$repo_root/target/releases/naux-learn-$version"}
 output_parent=$(dirname -- "$output")
 output_leaf=$(basename -- "$output")
@@ -80,8 +80,6 @@ chmod 0644 -- "$result/$archive_name"
 archive_hash=$(sha256sum -- "$result/$archive_name" | awk '{print $1}')
 printf '%s  %s\n' "$archive_hash" "$archive_name" > "$result/$checksum_name"
 chmod 0644 -- "$result/$checksum_name"
-install -m 0644 -- "$release_notes" "$result/RELEASE_NOTES.md"
-
 "$script_dir/render_s1_bootstrap.sh" linux \
     "$result/$archive_name" \
     "$result/$checksum_name" \

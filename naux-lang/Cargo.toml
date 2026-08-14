@@ -23,6 +23,10 @@ name = "naux-learn-setup"
 path = "src/bin/naux_learn_setup.rs"
 
 [[bin]]
+name = "nauxup"
+path = "src/bin/nauxup.rs"
+
+[[bin]]
 name = "naux-r1-s7b-worker"
 path = "src/bin/naux_r1_s7b_worker.rs"
 test = false

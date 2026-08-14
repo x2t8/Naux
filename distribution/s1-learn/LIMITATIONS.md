@@ -36,9 +36,11 @@ exercises on the one declared Linux x86-64 GNU host boundary.
 
 ## Operational limits
 
-- Installation accepts only a new prefix and publishes a sealed receipt in an
-  existing user-local state directory. Uninstall removes only a re-verified
-  manifest-owned prefix and receipt; repair and upgrade remain unavailable.
+- Installation accepts only a new prefix, creates missing user-local
+  directories, and refuses to overwrite existing `naux` or `nauxup`
+  launchers. Sealed bundle and activation receipts bind exact ownership.
+  Uninstall re-verifies the bundle, receipts, and launcher targets before
+  removal; non-empty user directories are retained.
 - There is no package registry, auto-update, rollback manager, release
   signature, vulnerability-response SLA, or production support commitment.
 - The verifier checks the exact bounded directory artifact; it is not a

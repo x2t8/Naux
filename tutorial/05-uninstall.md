@@ -8,29 +8,31 @@ machine or guess which files belong to NAUX.
 
 ## Linux
 
-Setup prints a receipt path after installation. Preview the removal first:
+Preview exact removal first:
 
 ```sh
-"$NAUX" installation uninstall --receipt "/exact/path/from/setup.tsv" --dry-run
+nauxup uninstall --dry-run
 ```
 
 Review the listed files and directories, then execute exact removal:
 
 ```sh
-"$NAUX" installation uninstall --receipt "/exact/path/from/setup.tsv"
+nauxup uninstall
 ```
 
-Uninstall re-verifies the receipt and installed bundle before mutation.
+`nauxup` re-verifies the activation receipt, immutable bundle receipt, every
+bundle member, and both launcher targets before mutation. Run `nauxup doctor`
+for the same admission checks without removal.
 
 If the original Setup output was lost, receipts are confined to the dedicated
 state directory. Listing this directory is not a machine-wide scan:
 
 ```sh
-ls "${XDG_STATE_HOME:-$HOME/.local/state}/naux-learn"
+ls "${XDG_STATE_HOME:-$HOME/.local/state}/naux/receipts"
 ```
 
-Choose the receipt whose contents name the installed 0.1.0 prefix. Do not use
-a receipt from a different installation.
+The current activation receipt is named `learn-0.1.1.tsv`; users normally do
+not need to pass it manually.
 
 ## Windows candidate
 

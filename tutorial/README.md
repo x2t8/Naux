@@ -3,7 +3,8 @@
 Start here if you want to install NAUX Learn and write ordinary programming or
 algorithm exercises without building the compiler from source.
 
-Current public release: **NAUX Learn 0.1.0 (Experimental)**.
+Current public Linux release: **NAUX Learn 0.1.1 (Experimental)**. The separate
+Windows candidate remains at 0.1.0.
 
 ## Learning path
 
@@ -48,9 +49,9 @@ naux check solution.nx
 naux run solution.nx < input.txt
 ```
 
-The installer deliberately does not edit shell profiles or `PATH`. Each host
-guide shows the exact executable path and an optional session-local `naux`
-function.
+Linux Setup publishes `naux` and `nauxup` under `~/.local/bin` but deliberately
+does not edit shell profiles. The host guides explain the fallback when that
+standard directory is not already on `PATH`.
 
 For the exact admitted language surface, see the
 [NAUX Learn quick reference](../docs/s1_learn_quick_reference_v0_1.md).

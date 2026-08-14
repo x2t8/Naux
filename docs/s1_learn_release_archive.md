@@ -20,13 +20,12 @@ The producer emits one new directory containing exactly:
 
 ```text
 naux-learn-0.1.1-linux-x86_64-gnu.tar.gz
-naux-learn-0.1.1-linux-x86_64-gnu.tar.gz.sha256
-RELEASE_NOTES.md
 nauxup.sh
+SHA256SUMS
 ```
 
 `Cargo.toml` package version `0.1.1` is the sole compiled version source. The
-CLI, internal bundle grammar, seed identity, archive name, checksum name, and
+CLI, internal bundle grammar, seed identity, archive name, checksum row, and
 release notes must all agree. Both `naux --version` and `naux -V` emit exactly
 `naux 0.1.1` plus LF and no stderr. Version flags are argument-exclusive.
 
@@ -38,7 +37,7 @@ mtime, numeric owner/group zero, and the canonical root directory name. GNU
 gzip runs with `--no-name --best`, suppressing original filename and timestamp
 metadata. The output file mode is `0644`.
 
-The archive contains the exact accepted bundle root and its 31 total directory
+The archive contains the exact accepted bundle root and its 33 total directory
 and regular-file entries. There are no archive links, devices, FIFOs, sockets,
 PAX extensions, absolute paths, traversal components, or extra members.
 
@@ -49,7 +48,7 @@ image or universal reproducible-build claim.
 
 ## 4. Outer checksum
 
-The adjacent checksum file contains exactly one canonical line:
+`SHA256SUMS` contains one canonical Linux row in this release slice:
 
 ```text
 <64 lowercase SHA-256 hex><two spaces><archive basename><LF>
@@ -68,10 +67,11 @@ extracts into a private temporary tree, invokes the inner `bundle verify`,
 checks the executable version, and only then hands control to localized Setup.
 The temporary tree is removed on every exit.
 
-The bootstrap does not edit shell profiles or create an external launcher:
-persistent ownership remains entirely inside Setup's sealed receipt. The
-bootstrap and digest travel through the same GitHub release channel, so this
-is corruption and substitution detection, not publisher authentication.
+The bootstrap does not edit shell profiles. Setup creates stable
+`~/.local/bin/naux` and `~/.local/bin/nauxup` symlinks and seals their exact
+paths and targets in a separate activation receipt. The bootstrap and digest
+travel through the same GitHub release channel, so this is corruption and
+substitution detection, not publisher authentication.
 
 ## 5. Independent verifier
 
@@ -79,7 +79,7 @@ is corruption and substitution detection, not publisher authentication.
 
 1. validate the canonical archive/checksum names and 20 MiB compressed cap;
 2. validate and replay the exact checksum line;
-3. list the compressed archive and byte-compare all 32 ordered member paths;
+3. list the compressed archive and byte-compare all 33 ordered member paths;
 4. reject member types other than regular files/directories;
 5. enforce 40-entry and 32 MiB expanded-byte caps;
 6. extract into a fresh temporary directory without restoring ownership;
@@ -95,12 +95,13 @@ does not install into a user prefix.
 ## 6. Release acceptance carrier
 
 `scripts/test_s1_release.sh` produces two releases in distinct temporary
-directories and byte-compares their archives, checksum files, release notes,
-and rendered `nauxup.sh`. It rejects a corrupted checksum, a coherently
+directories and byte-compares their archives, checksum files, and rendered
+`nauxup.sh`. It rejects a corrupted checksum, a coherently
 rechecksummed archive containing an extra member, and a mutated bootstrap
 download. It then places executable `cargo` and `rustc` poison sentinels first
 on `PATH`, replays the pinned bootstrap through a local transport double,
-installs with a sealed lifecycle receipt, runs the installed first program,
+starts from a HOME without `.local`, installs with sealed bundle and activation
+receipts, invokes `naux` through the stable launcher, runs `nauxup doctor`,
 dry-runs exact removal, uninstalls, and byte-compares output.
 
 `naux-lang/tests/s1_release_identity.rs` independently locks the executable,
@@ -117,20 +118,21 @@ or compiler-generation claim.
 ## 8. Acceptance evidence
 
 Two fresh release builds produced byte-identical archives, checksum files, and
-release notes. The accepted local candidate is
-`naux-learn-0.1.1-linux-x86_64-gnu.tar.gz`: 2,191,819 compressed bytes,
-32 exact archive entries, and SHA-256
-`6fc528dfd518f260aea1c95cda87063f53abe1b466d5cf35c5572f279bdade42`.
-Its admitted internal 26-file bundle contains 5,357,110 bytes and seals as
-`99e4ab2ee05d00615d00b3d6b8f7f87067289b8c11c4ba1957d57a9620390bb1`.
-The 3,748-byte `nauxup.sh` has SHA-256
-`d97021e63af93c3bd45498316ca264dd6bf1b04d7478eab89b49ed20300e692d`.
+bootstrap scripts. The accepted local candidate is
+`naux-learn-0.1.1-linux-x86_64-gnu.tar.gz`: 2,688,379 compressed bytes,
+33 exact archive entries, and SHA-256
+`ad8bc57db6527bc22286492bcf4147f1bfb620a9341aaaf3bf7d2b2bc542b6d6`.
+Its admitted internal 27-file bundle contains 6,537,062 bytes and seals as
+`02d3e1f9299f39e1166aa8802509c2e20b5b07cad3bbd3a7094c43cd2842dc4a`.
+The 3,790-byte `nauxup.sh` has SHA-256
+`d642d74f6f35b5d7e89cf49c5097d44ea86efd9d5d45d4f0c51d949d6122b6ff`.
 
-The release carrier passes byte reproducibility, exact four-file output
+The release carrier passes byte reproducibility, exact three-file output
 inventory, corrupted-checksum rejection, coherently rechecksummed extra-member
 rejection, bootstrap download mutation rejection, canonical-stream
 reconstruction, no-toolchain bootstrap installation, and byte-exact
-first-program execution, dry-run, and exact uninstall.
+first-program execution through the stable launcher, `nauxup doctor`, dry-run,
+and exact uninstall from a clean HOME.
 
 Acceptance is local evidence only and does not itself constitute a tag, hosted
 release, or external publication.

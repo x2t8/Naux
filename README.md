@@ -19,7 +19,7 @@
     ·
     <a href="tutorial/02-install-windows.md"><strong>Install on Windows</strong></a>
     ·
-    <a href="https://github.com/x2t8/Naux/releases/tag/v0.1.0-learn"><strong>Current prerelease</strong></a>
+    <a href="https://github.com/x2t8/Naux/releases/tag/v0.1.1-learn"><strong>Current Linux prerelease</strong></a>
   </p>
 </div>
 
@@ -52,7 +52,7 @@ production-readiness or performance claim.
 
 ## Quick start
 
-### Current public prerelease: NAUX Learn 0.1.0
+### Current public Linux prerelease: NAUX Learn 0.1.1
 
 The public experimental release bundle supports Linux x86-64 GNU and does
 not require Rust or Cargo for installation or normal learner execution. The
@@ -61,10 +61,10 @@ checks its byte length and SHA-256, verifies its inner manifest, then opens the
 localized Setup flow:
 
 ```bash
-curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.0-learn/nauxup.sh | sh
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.sh | sh
 ```
 
-Windows PowerShell has an unsigned experimental candidate:
+Windows PowerShell remains on the separate unsigned 0.1.0 candidate:
 
 ```powershell
 irm https://github.com/x2t8/Naux/releases/download/v0.1.0-learn/nauxup.ps1 | iex
@@ -73,9 +73,8 @@ irm https://github.com/x2t8/Naux/releases/download/v0.1.0-learn/nauxup.ps1 | iex
 Start with the ordered [NAUX Learn tutorial](tutorial/README.md), which keeps
 Linux installation, Windows installation, the first program, algorithms,
 uninstall, and troubleshooting in one public folder. The Windows artifact
-remains a candidate until its declared real-Windows gate passes. The `main`
-branch is preparing 0.1.1; commands above deliberately point to the latest
-artifact that is actually public. The bundles are dynamically linked,
+remains a candidate until its declared real-Windows gate passes; the Linux
+0.1.1 release makes no Windows claim. The bundles are dynamically linked,
 Rust-seeded experimental artifacts. A checksum is integrity evidence, not a
 publisher signature.
 
