@@ -1,4 +1,4 @@
-~ rite main
+~ rite
     $n = 123456
     $factors = pollard_rho($n)
 

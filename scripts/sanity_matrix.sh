@@ -7,7 +7,7 @@ BIN=(cargo run --manifest-path "$MANIFEST_PATH" -- run)
 
 CORPUS=(
   "naux-lang/examples/hello.nx"
-  "tests/smoke_runtime_test.nx"
+  "naux-lang/examples/smoke/runtime_loop.nx"
   "naux-lang/examples/graph_bfs.nx"
   "naux-lang/examples/jit_numeric.nx"
 )

@@ -1,7 +1,0 @@
-DIGEST b4afd04922cd3131857ecf6bc3691c78
-FNauxCore.NauxCore
-R92:97 NauxCore.Syntax <> <> lib
-R99:104 NauxCore.Typing <> <> lib
-R106:114 NauxCore.Smallstep <> <> lib
-R116:124 NauxCore.Soundness <> <> lib
-R126:133 NauxCore.DataAlgo <> <> lib

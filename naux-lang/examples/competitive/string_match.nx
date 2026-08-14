@@ -1,4 +1,4 @@
-~ rite main
+~ rite
     $text = "ababcababa"
     $pattern = "aba"
 

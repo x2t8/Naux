@@ -1,0 +1,29 @@
+~ rite
+    $g = graph_new(false)
+
+    graph_add_edge($g, "S", "A", 4)
+    graph_add_edge($g, "S", "B", 2)
+    graph_add_edge($g, "A", "C", 3)
+    graph_add_edge($g, "B", "A", 1)
+    graph_add_edge($g, "B", "D", 4)
+    graph_add_edge($g, "C", "D", 1)
+    graph_add_edge($g, "C", "E", 6)
+    graph_add_edge($g, "D", "E", 2)
+
+    $bfs = graph_bfs($g, "S")
+    $dj_path = graph_dijkstra($g, "S", "E")
+    $fw = graph_floyd_warshall($g)
+
+    !say "Graph shortest-path demo"
+    !say "input nodes: S,A,B,C,D,E"
+    !say "expected bfs from S: [S, A, B, C, D, E]"
+    !say "bfs order:"
+    !say $bfs
+
+    !say "expected dijkstra S->E path: [S, B, D, E]"
+    !say "dijkstra path to E:"
+    !say $dj_path
+
+    !say "floyd-warshall S->E:"
+    !say $fw["S"]["E"]
+~ end

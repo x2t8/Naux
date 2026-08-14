@@ -1,0 +1,10 @@
+# Coq build products; proof source is the tracked authority.
+.*.aux
+.lia.cache
+.coq-native/
+*.glob
+*.vo
+*.vok
+*.vos
+Makefile.coq
+Makefile.coq.conf

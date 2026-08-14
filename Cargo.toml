@@ -4,6 +4,3 @@ members = [
     "naux-lang",
     "tools/perf-gates",
 ]
-exclude = [
-    "naux-rs",
-]

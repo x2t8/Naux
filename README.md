@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/langnaux-learn.png" alt="NAUX Learn" width="220" />
+  <img src="assets/nauxlang.png" alt="NAUX" width="220" />
 
 # Naux
 
@@ -254,12 +254,15 @@ cargo run -p naux -- dev disasm naux-lang/examples/bench_sum_dense.nx
 ```text
 .
 |-- naux-lang/          Compiler, runtime, VM, CLI, tests, and examples
+|-- distribution/       Reusable scope-owned packaging inputs
+|-- archive/releases/   Withdrawn release notes and acceptance evidence
 |-- benchmarks/         Cross-language benchmark sources
 |-- scripts/            Benchmark, validation, and reporting tools
 |-- tools/perf-gates/   Rust performance-gate utilities
 |-- naux-meta-coq/      Separate formal-model workspace
 |-- vscode/             VS Code language support
-|-- docs/               Public language and benchmark documentation
+|-- docs/               Active public language and benchmark documentation
+|-- tutorial/           Current learner-facing guides
 |-- assets/             Public project assets
 ```
 
@@ -296,8 +299,7 @@ naux-lang/tests/             Integration and parity evidence
 - [NAUX Learn quick reference v0.1](docs/s1_learn_quick_reference_v0_1.md)
 - [NAUX Learn bounded execution envelope](docs/s1_learn_execution_envelope.md)
 - [NAUX Learn supported-host bundle](docs/s1_learn_binary_bundle.md)
-- [NAUX Learn deterministic release archive](docs/s1_learn_release_archive.md)
-- [NAUX Learn Windows release candidate](docs/s1_learn_windows_release.md)
+- [Withdrawn release evidence](archive/README.md)
 - [Compiler IR specification](naux-lang/docs/IR_SPEC.md)
 
 Internal planning and unpublished research strategy are intentionally not part

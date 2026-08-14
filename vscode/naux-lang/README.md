@@ -3,7 +3,7 @@
 This is a local VS Code extension that provides:
 - `.nx` language registration
 - basic syntax highlighting
-- a custom file icon using `NauxLang.png`
+- the project-wide NAUX icon from `nauxlang.png`
 
 ## Install (Local)
 1. Open VS Code.

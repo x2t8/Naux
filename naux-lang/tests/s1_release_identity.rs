@@ -34,7 +34,7 @@ fn executable_bundle_seed_and_notes_share_one_release_identity() {
     assert!(seed
         .lines()
         .any(|line| line == format!("package\tnaux@{VERSION}")));
-    let notes = read("RELEASE_NOTES.md");
+    let notes = read("archive/releases/0.1.1/RELEASE_NOTES.linux.md");
     assert!(notes.starts_with(&format!("# NAUX Learn {VERSION}\n")));
     assert!(notes.contains("Status: experimental release"));
     assert!(notes.contains("It is not dependency closure"));

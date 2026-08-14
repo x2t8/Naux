@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ICON_SRC="$ROOT_DIR/assets/NauxLang.png"
+ICON_SRC="$ROOT_DIR/assets/nauxlang.png"
 DESKTOP_SRC="$ROOT_DIR/assets/naux.desktop"
 MIME_SRC="$ROOT_DIR/assets/naux-mime.xml"
 
@@ -28,7 +28,7 @@ Type=Fixed
 EOF
 fi
 
-cp "$ICON_SRC" "$ICON_DIR/NauxLang.png"
+cp "$ICON_SRC" "$ICON_DIR/nauxlang.png"
 cp "$ICON_SRC" "$ICON_DIR/application-x-naux.png"
 cp "$DESKTOP_SRC" "$APP_DIR/naux.desktop"
 cp "$MIME_SRC" "$MIME_DIR/naux.xml"
