@@ -11,6 +11,14 @@
     <img alt="CLI" src="https://img.shields.io/badge/CLI-naux-1f6feb" />
     <img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
   </p>
+
+  <p>
+    <a href="INSTALL.md"><strong>Install NAUX Learn</strong></a>
+    ·
+    <a href="LEARN.md"><strong>Write your first program</strong></a>
+    ·
+    <a href="https://github.com/x2t8/Naux/releases/tag/v0.1.0-learn"><strong>Current prerelease</strong></a>
+  </p>
 </div>
 
 Naux is a hands-on language implementation covering the path from `.nx`
@@ -42,52 +50,31 @@ production-readiness or performance claim.
 
 ## Quick start
 
-### Prebuilt NAUX Learn 0.1.1
+### Current public prerelease: NAUX Learn 0.1.0
 
-The accepted experimental release bundle supports Linux x86-64 GNU and does
+The public experimental release bundle supports Linux x86-64 GNU and does
 not require Rust or Cargo for installation or normal learner execution. The
 version-pinned one-command installer downloads the exact sealed archive,
 checks its byte length and SHA-256, verifies its inner manifest, then opens the
 localized Setup flow:
 
 ```bash
-curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.sh | sh
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.0-learn/nauxup.sh | sh
 ```
 
-For manual verification and installation:
-
-```bash
-sha256sum --check naux-learn-0.1.1-linux-x86_64-gnu.tar.gz.sha256
-tar -xzf naux-learn-0.1.1-linux-x86_64-gnu.tar.gz
-cd naux-learn-0.1.1-linux-x86_64-gnu
-./bin/naux bundle verify .
-./naux-learn-setup
-```
-
-This is a dynamically linked, Rust-seeded experimental artifact. Read the
-[0.1.1 release notes](RELEASE_NOTES.md) and the limitations inside the bundle
-before use. The checksum is integrity evidence, not a publisher signature.
-
-The repository also contains a deterministic **Windows x86-64 release
-candidate**. Its version-pinned PowerShell bootstrap is:
+Windows PowerShell has an unsigned experimental candidate:
 
 ```powershell
-irm https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.ps1 | iex
+irm https://github.com/x2t8/Naux/releases/download/v0.1.0-learn/nauxup.ps1 | iex
 ```
 
-For manual extraction:
-
-```powershell
-Expand-Archive .\naux-learn-0.1.1-windows-x86_64-gnu.zip -DestinationPath .
-cd .\naux-learn-0.1.1-windows-x86_64-gnu
-.\bin\naux.exe bundle verify .
-.\NAUX-Learn-Setup.exe
-```
-
-Its cross-build, deterministic ZIP, and mutation gates pass. Wine and real
-Windows 10/11 replays remain mandatory for the 0.1.1 executable before it may
-be called a supported Windows release. See the
-[Windows release candidate contract](docs/s1_learn_windows_release.md).
+Start with the step-by-step [installation and uninstall guide](INSTALL.md),
+then [write the first NAUX program](LEARN.md). The Windows artifact remains a
+candidate until its declared real-Windows gate passes. The `main` branch is
+preparing 0.1.1; commands above deliberately point to the latest artifact that
+is actually public. The bundles are dynamically linked, Rust-seeded
+experimental artifacts. A checksum is integrity evidence, not a publisher
+signature.
 
 ### Build from source
 
@@ -306,6 +293,8 @@ naux-lang/tests/             Integration and parity evidence
 
 ## Public documentation
 
+- [Install, verify, locate, and uninstall NAUX Learn](INSTALL.md)
+- [Write the first program and practice algorithms](LEARN.md)
 - [Usage and local workflow](USAGE.md)
 - [Language behavior](docs/language_spec.md)
 - [Memory model](MEMORY_MODEL.md)
@@ -319,7 +308,7 @@ naux-lang/tests/             Integration and parity evidence
 - [NAUX Learn supported-host bundle](docs/s1_learn_binary_bundle.md)
 - [NAUX Learn deterministic release archive](docs/s1_learn_release_archive.md)
 - [NAUX Learn Windows release candidate](docs/s1_learn_windows_release.md)
-- [NAUX Learn 0.1.1 release notes](RELEASE_NOTES.md)
+- [Upcoming NAUX Learn 0.1.1 release notes](RELEASE_NOTES.md)
 - [Compiler IR specification](naux-lang/docs/IR_SPEC.md)
 
 Internal planning and unpublished research strategy are intentionally not part
