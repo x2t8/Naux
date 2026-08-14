@@ -29,15 +29,15 @@ The cross build clears ambient Cargo/Rust overrides, disables incremental
 compilation, sets `SOURCE_DATE_EPOCH=0`, and passes linker policy
 `--no-insert-timestamp`. It also compiles the canonical multi-size icon with
 the pinned MinGW `windres` and links it as a native PE resource. The accepted
-candidate executable is 11,678,395 bytes, has a zero PE timestamp, and has
+candidate executable is 11,670,352 bytes, has a zero PE timestamp, and has
 SHA-256
-`729798f0b1a8be7878fd96f178c72bbc97b9780e64f02984ff59c311658ae9cf`.
+`558bdc8c9c6f0c06925de4ef9ed8f6e1cc5317a62feda661ca16f367f60ac242`.
 Two builds with distinct Cargo target directories are byte-identical.
 
 The same producer emits the native console `NAUX-Learn-Setup.exe` with the
 identical PE timestamp, import, mitigation, and icon boundary. It is
-11,704,554 bytes with SHA-256
-`74a1b02193f222225e032bacc4acefe83c894ebcb7d3c570a8bc071c2d818ba6`.
+11,696,511 bytes with SHA-256
+`b467ff1132e4aac46af83f08863585b1131b2da76be90101fc5de5f49c1c58ef`.
 
 ## 3. Host boundary
 
@@ -74,11 +74,11 @@ RELEASE_NOTES.md
 
 Info-ZIP 3.0 runs with `-X -9` over an exact ordered 33-entry list after every
 member timestamp is normalized to the ZIP epoch. The accepted ZIP is
-8,352,967 bytes with SHA-256
-`1927f480765ce1b0889d86e7f22a304c5b70e6ff4c72da659160c67ca738b4bb`.
-Its expanded 27-file bundle total is 23,831,912 bytes and its internal
+8,342,831 bytes with SHA-256
+`fa8d33eeaba941f5c9076a72769d13d5e8be7b9e7398643994ae02aeac64b699`.
+Its expanded 27-file bundle total is 23,815,826 bytes and its internal
 manifest seal is
-`19464f11ee1cb3dc30013d05c476290c7c599716b0ae639fbd6f25a9f155cf71`.
+`c57f1ac023d130f7029dd737ccb6f2efbde610640cf91b56201a54f0980a31ee`.
 The installed `assets/langnaux-learn.png` is a separately sealed 500-by-500
 RGBA source asset with SHA-256
 `8818d089bc3a11394082080d7291fe9bafecaf698db66f17af40cc1900db1408`.

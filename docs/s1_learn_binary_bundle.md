@@ -179,19 +179,19 @@ claim is implied by this bundle.
 ## 9. Acceptance evidence
 
 The release-sealed producer generated the same 26-file artifact in distinct
-output directories. The accepted resealed artifact contains 5,357,382 bytes
+output directories. The accepted resealed artifact contains 5,357,302 bytes
 including its manifest and has manifest seal
-`e3b7c154a04077f3bded4d70eb35a10d55a3618868bf9dbbde1ac8467ae009ff`.
-Its executable is 4,082,616 bytes with SHA-256
-`bf34ade5d654bc510ab3a6bf89b5e25391bf830206176d86667250a3c58f2e61`
+`67a65e1080f0ffb9bc55f36041c1f1af9fe61af55f8872b990f4994a9d1dfa2e`.
+Its executable is 4,082,544 bytes with SHA-256
+`9e85076204039755f5db3ae2355ac56cae5cf703ce0bf10cd3acb1e598291ff5`
 and reports exactly `naux 0.1.0`. The canonical 500-by-500 RGBA project logo
 is installed at `assets/langnaux-learn.png`, is sealed as an ordinary bundle
 member, and has SHA-256
 `8818d089bc3a11394082080d7291fe9bafecaf698db66f17af40cc1900db1408`. The
 bundle-local Markdown link audit has no broken target.
 
-The native console Setup carrier is 1,113,064 bytes with SHA-256
-`bdb74f005790f5f524673408d9bd0a6aadf3b156e214b062ed91d3bc095dfaa8`.
+The native console Setup carrier is 1,113,056 bytes with SHA-256
+`0a509bf1a5fcca1210fb304dbf1fdf8206ffece755afbbefdded7c9262884078`.
 It presents the nine-language selector, localized disclosure and consent before
 installation, then repeats the disclosure and prints the sealed receipt after
 success.

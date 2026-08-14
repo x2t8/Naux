@@ -1450,6 +1450,9 @@ fn is_supported_code(code: &[Instr], functions: &HashMap<String, FunctionBytecod
 }
 
 pub fn run_typed_with_trace(prog: &Program) -> VmResult<(Value, Vec<RuntimeEvent>)> {
+    if !cfg!(all(target_arch = "x86_64", not(windows))) {
+        return Err("typed JIT runtime requires an x86-64 non-Windows host".into());
+    }
     if !is_supported_program(prog) {
         return Err("typed VM only supports numeric/list/text/map subset".into());
     }

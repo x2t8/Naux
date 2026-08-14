@@ -101,11 +101,11 @@ or compiler-generation claim.
 
 Two fresh release builds produced byte-identical archives, checksum files, and
 release notes. The accepted local candidate is
-`naux-learn-0.1.0-linux-x86_64-gnu.tar.gz`: 2,192,220 compressed bytes,
+`naux-learn-0.1.0-linux-x86_64-gnu.tar.gz`: 2,192,134 compressed bytes,
 32 exact archive entries, and SHA-256
-`87850e4348b101d7316db68ae4349959ec18cfb9e6649515a4f38285d90777b4`.
-Its admitted internal 26-file bundle contains 5,357,382 bytes and seals as
-`e3b7c154a04077f3bded4d70eb35a10d55a3618868bf9dbbde1ac8467ae009ff`.
+`fe227cb8b20064dcca02f6274bdcbc421c60c3b7c278c9f22acc4ac81790914b`.
+Its admitted internal 26-file bundle contains 5,357,302 bytes and seals as
+`67a65e1080f0ffb9bc55f36041c1f1af9fe61af55f8872b990f4994a9d1dfa2e`.
 
 The release carrier passes byte reproducibility, exact three-file output
 inventory, corrupted-checksum rejection, coherently rechecksummed extra-member
@@ -119,5 +119,5 @@ failures, and six intentionally ignored tests. Strict workspace
 all-target/all-feature Clippy, formatting, shell syntax, reproducibility,
 mutation, and local-link gates pass.
 
-Acceptance is local evidence only. No commit, tag, push, hosted release, or
-external publication was performed.
+Acceptance is local evidence only and does not itself constitute a tag, hosted
+release, or external publication.
