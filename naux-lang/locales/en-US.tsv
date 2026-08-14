@@ -1,0 +1,31 @@
+NAUX-INSTALLER-LOCALE	1
+locale	en-US
+language-name	English
+catalog-version	1
+text	installer_title	Install NAUX Learn
+text	action_install	Install
+text	action_cancel	Cancel
+text	action_finish	Finish
+text	welcome_title	Welcome to NAUX Learn {version}
+text	release_badge	Experimental Learning Release
+text	summary	NAUX Learn is a deliberately small profile for learning programming and practicing algorithms.
+text	intended_heading	This release is intended for
+text	intended_1	Learning programming syntax and problem-solving.
+text	intended_2	Practicing data structures and algorithms.
+text	intended_3	Writing and running experimental .nx programs.
+text	excluded_heading	This release is not intended for
+text	excluded_1	Production, security-critical, or safety-critical systems.
+text	excluded_2	Stable API or long-term compatibility requirements.
+text	excluded_3	Native-performance or C/C++ leadership claims.
+text	change_warning	Syntax, semantics, libraries, project formats, and installation behavior may change substantially in future releases.
+text	sandbox_warning	Execution limits reduce accidental runaway computation; they are not a security sandbox.
+text	seed_warning	Learners do not need Rust or Cargo, but this artifact is still produced by a Rust/Cargo seed and includes egg seed debt.
+text	future_warning	Future NAUX will have a broader scope; research directions are not delivery or schedule promises.
+text	warranty_warning	This experimental software is provided under the bundled license without warranty. Read LICENSE and LIMITATIONS before use.
+text	action_start	Start First Program
+text	action_limitations	Read Limitations
+text	action_release_notes	View Release Notes
+text	action_close	Close
+text	uninstall_title	Uninstall NAUX Learn
+text	repair_title	Repair NAUX Learn
+text	rollback_title	Roll back NAUX Learn

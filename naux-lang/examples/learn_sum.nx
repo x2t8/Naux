@@ -1,0 +1,8 @@
+~ rite
+    $count = read_int()
+    $sum = 0
+    ~ loop $count
+        $sum = $sum + read_int()
+    ~ end
+    !say $sum
+~ end

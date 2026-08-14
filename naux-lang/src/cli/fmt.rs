@@ -16,13 +16,9 @@ pub fn handle_fmt(
     }
     let mut needs_format = Vec::new();
     for file in files {
-        match format_file(&file, check, indent_width) {
-            Ok(changed) => {
-                if changed && check {
-                    needs_format.push(file);
-                }
-            }
-            Err(err) => return Err(err),
+        let changed = format_file(&file, check, indent_width)?;
+        if changed && check {
+            needs_format.push(file);
         }
     }
     if check && !needs_format.is_empty() {

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/NauxLang.png" alt="Naux" width="220" />
+  <img src="assets/langnaux-learn.png" alt="NAUX Learn" width="220" />
 
 # Naux
 
@@ -42,6 +42,41 @@ production-readiness or performance claim.
 
 ## Quick start
 
+### Prebuilt NAUX Learn 0.1.0
+
+The accepted experimental release bundle supports Linux x86-64 GNU and does
+not require Rust or Cargo for installation or normal learner execution. Keep
+the archive and adjacent checksum in one directory, then run:
+
+```bash
+sha256sum --check naux-learn-0.1.0-linux-x86_64-gnu.tar.gz.sha256
+tar -xzf naux-learn-0.1.0-linux-x86_64-gnu.tar.gz
+cd naux-learn-0.1.0-linux-x86_64-gnu
+./bin/naux bundle verify .
+./naux-learn-setup
+```
+
+This is a dynamically linked, Rust-seeded experimental artifact. Read the
+[0.1.0 release notes](RELEASE_NOTES.md) and the limitations inside the bundle
+before use. The checksum is integrity evidence, not a publisher signature.
+
+The repository also contains a deterministic **Windows x86-64 release
+candidate**. From PowerShell after checking the adjacent SHA-256 file:
+
+```powershell
+Expand-Archive .\naux-learn-0.1.0-windows-x86_64-gnu.zip -DestinationPath .
+cd .\naux-learn-0.1.0-windows-x86_64-gnu
+.\bin\naux.exe bundle verify .
+.\NAUX-Learn-Setup.exe
+```
+
+Its cross-build, deterministic ZIP, mutation gates, and Wine smoke pass. A
+real Windows 10/11 replay remains mandatory before it may be called a supported
+Windows release. See the
+[Windows release candidate contract](docs/s1_learn_windows_release.md).
+
+### Build from source
+
 Requirements:
 
 - a recent stable Rust toolchain;
@@ -54,6 +89,7 @@ From the repository root:
 ```bash
 cargo run -p naux -- run naux-lang/examples/hello.nx
 cargo run -p naux -- run naux-lang/examples/graph_bfs.nx
+printf '4 10 -3 5 30\n' | cargo run -p naux -- run naux-lang/examples/learn_sum.nx
 cargo run -p naux -- doctor
 ```
 
@@ -131,7 +167,7 @@ as a bug.
 Common commands:
 
 ```text
-naux run <file.nx> [--engine vm|interp|jit]
+naux run <file.nx> [--engine vm|interp|jit] [--mode plain|cli|html|json]
 naux check <file.nx>
 naux fmt <path-or-dir>
 naux test
@@ -139,6 +175,29 @@ naux verify
 naux doctor [--json --out <file>]
 naux ide [file.nx]
 ```
+
+`naux run` uses plain `!say` output by default and accepts bounded UTF-8 batch
+input through `read_int()`, `read_token()`, and `read_line()`. See the
+[NAUX Learn batch-I/O contract](docs/s1_learn_batch_io.md) for exact EOF,
+cursor, size, and fallback semantics. Use `--mode cli` for the ritual event
+renderer. Common lexer, parser, type, and runtime failures use the bounded
+[NAUX Learn source-diagnostic contract](docs/s1_learn_diagnostics.md) across
+normal `run` and `check` paths.
+
+The versioned [NAUX Learn exercise corpus](docs/s1_learn_corpus.md) contains 30
+deterministic cases spanning introductory programming, search, sorting, graph,
+greedy, and dynamic programming. Its acceptance carrier executes every
+solution through the normal `naux run` command.
+The [NAUX Learn quick reference v0.1](docs/s1_learn_quick_reference_v0_1.md)
+defines the smaller learner-facing compatibility profile and carries executed
+VM/interpreter examples. Normal learner execution is fail-closed under the
+[bounded execution envelope](docs/s1_learn_execution_envelope.md), whose work
+units are source-semantic checkpoints rather than backend instructions.
+The [supported-host bundle contract](docs/s1_learn_binary_bundle.md) defines a
+sealed Linux x86-64 GNU directory artifact whose prebuilt binary can verify,
+install, and run the first learner program without Rust or Cargo. This remains
+a dynamically linked, Rust-seeded experimental boundary, not sovereignty or a
+production release.
 
 Compiler and runtime inspection:
 
@@ -240,6 +299,13 @@ naux-lang/tests/             Integration and parity evidence
 - [Benchmark methodology](docs/benchmarks.md)
 - [Performance-claim contract](PERF_CONTRACT.md)
 - [Standard algorithm surface](docs/stdlib_algo.md)
+- [NAUX Learn exercise corpus](docs/s1_learn_corpus.md)
+- [NAUX Learn quick reference v0.1](docs/s1_learn_quick_reference_v0_1.md)
+- [NAUX Learn bounded execution envelope](docs/s1_learn_execution_envelope.md)
+- [NAUX Learn supported-host bundle](docs/s1_learn_binary_bundle.md)
+- [NAUX Learn deterministic release archive](docs/s1_learn_release_archive.md)
+- [NAUX Learn Windows release candidate](docs/s1_learn_windows_release.md)
+- [NAUX Learn 0.1.0 release notes](RELEASE_NOTES.md)
 - [Compiler IR specification](naux-lang/docs/IR_SPEC.md)
 
 Internal planning and unpublished research strategy are intentionally not part

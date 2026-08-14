@@ -1,0 +1,18 @@
+~ rite
+    $count = read_int()
+    $coins = []
+    ~ loop $count
+        $coins = queue_push($coins, read_int())
+    ~ end
+    $amount = read_int()
+    $used = 0
+    $i = 0
+    ~ while $i < $count
+        ~ while $amount >= $coins[$i]
+            $amount = $amount - $coins[$i]
+            $used = $used + 1
+        ~ end
+        $i = $i + 1
+    ~ end
+    !say $used
+~ end

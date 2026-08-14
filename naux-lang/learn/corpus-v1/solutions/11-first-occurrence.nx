@@ -1,0 +1,24 @@
+~ rite
+    $n = read_int()
+    $values = []
+    ~ loop $n
+        $values = queue_push($values, read_int())
+    ~ end
+    $target = read_int()
+    $left = 0
+    $right = $n - 1
+    $answer = -1
+    ~ while $left <= $right
+        $span = $right - $left
+        $middle = $left + ($span - ($span % 2)) / 2
+        ~ if $values[$middle] >= $target
+            ~ if $values[$middle] == $target
+                $answer = $middle
+            ~ end
+            $right = $middle - 1
+        ~ else
+            $left = $middle + 1
+        ~ end
+    ~ end
+    !say $answer
+~ end

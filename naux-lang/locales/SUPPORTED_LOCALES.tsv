@@ -1,0 +1,11 @@
+NAUX-SUPPORTED-LOCALES	1
+default	en-US
+locale	en-US	English
+locale	vi-VN	Tiếng Việt
+locale	zh-CN	简体中文
+locale	ja-JP	日本語
+locale	ko-KR	한국어
+locale	es	Español
+locale	pt-BR	Português do Brasil
+locale	fr	Français
+locale	de	Deutsch

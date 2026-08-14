@@ -1,0 +1,31 @@
+NAUX-INSTALLER-LOCALE	1
+locale	es
+language-name	Español
+catalog-version	1
+text	installer_title	Instalar NAUX Learn
+text	action_install	Instalar
+text	action_cancel	Cancelar
+text	action_finish	Finalizar
+text	welcome_title	Te damos la bienvenida a NAUX Learn {version}
+text	release_badge	Versión experimental para aprendizaje
+text	summary	NAUX Learn es un perfil deliberadamente pequeño para aprender programación y practicar algoritmos.
+text	intended_heading	Esta versión está destinada a
+text	intended_1	Aprender sintaxis de programación y resolución de problemas.
+text	intended_2	Practicar estructuras de datos y algoritmos.
+text	intended_3	Escribir y ejecutar programas .nx experimentales.
+text	excluded_heading	Esta versión no está destinada a
+text	excluded_1	Sistemas de producción, críticos para la seguridad o la integridad física.
+text	excluded_2	Usos que requieran una API estable o compatibilidad a largo plazo.
+text	excluded_3	Afirmaciones de liderazgo en rendimiento nativo o frente a C/C++.
+text	change_warning	La sintaxis, la semántica, las bibliotecas, los formatos de proyecto y la instalación pueden cambiar considerablemente en versiones futuras.
+text	sandbox_warning	Los límites de ejecución reducen cálculos descontrolados accidentales; no son un entorno aislado de seguridad.
+text	seed_warning	El estudiante no necesita Rust ni Cargo, pero este artefacto aún se produce con una semilla Rust/Cargo e incluye deuda de semilla de egg.
+text	future_warning	El NAUX futuro tendrá un alcance mayor; las líneas de investigación no son promesas de funciones ni de fechas.
+text	warranty_warning	Este software experimental se proporciona bajo la licencia incluida y sin garantía. Lee LICENSE y LIMITATIONS antes de usarlo.
+text	action_start	Iniciar el primer programa
+text	action_limitations	Leer las limitaciones
+text	action_release_notes	Ver las notas de la versión
+text	action_close	Cerrar
+text	uninstall_title	Desinstalar NAUX Learn
+text	repair_title	Reparar NAUX Learn
+text	rollback_title	Revertir NAUX Learn

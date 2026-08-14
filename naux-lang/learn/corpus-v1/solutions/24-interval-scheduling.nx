@@ -1,0 +1,20 @@
+~ rite
+    $n = read_int()
+    $starts = []
+    $ends = []
+    ~ loop $n
+        $starts = queue_push($starts, read_int())
+        $ends = queue_push($ends, read_int())
+    ~ end
+    $selected = 0
+    $last_end = -1000000000
+    $i = 0
+    ~ while $i < $n
+        ~ if $starts[$i] >= $last_end
+            $selected = $selected + 1
+            $last_end = $ends[$i]
+        ~ end
+        $i = $i + 1
+    ~ end
+    !say $selected
+~ end

@@ -1,4 +1,5 @@
 use crate::ast::Stmt;
+use crate::diagnostic::{format_source_diagnostic, DiagnosticStage};
 use crate::lexer::lex;
 use crate::parser::error::format_parse_error;
 use crate::parser::parser::Parser;
@@ -7,10 +8,13 @@ use crate::runtime::eval_script;
 use crate::runtime::events::RuntimeEvent;
 
 pub fn parse_script_wrapper(src: &str, filename: &str) -> Result<Vec<Stmt>, String> {
-    let tokens = lex(src).map_err(|e| {
-        format!(
-            "Lex error at {}:{}:{}: {}",
-            filename, e.span.line, e.span.column, e.message
+    let tokens = lex(src).map_err(|error| {
+        format_source_diagnostic(
+            DiagnosticStage::Lex,
+            &error.message,
+            src,
+            filename,
+            Some(&error.span),
         )
     })?;
     let ast = Parser::from_tokens(&tokens).map_err(|e| format_parse_error(src, &e, filename))?;

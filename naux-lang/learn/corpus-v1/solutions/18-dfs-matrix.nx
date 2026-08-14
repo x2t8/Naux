@@ -1,0 +1,25 @@
+~ fn dfs($node, $n, $adjacency, $seen)
+    $seen[$node] = 1
+    !say $node
+    $next = 0
+    ~ while $next < $n
+        ~ if $adjacency[$node * $n + $next] != 0 && $seen[$next] == 0
+            dfs($next, $n, $adjacency, $seen)
+        ~ end
+        $next = $next + 1
+    ~ end
+~ end
+
+~ rite
+    $n = read_int()
+    $start = read_int()
+    $adjacency = []
+    ~ loop $n * $n
+        $adjacency = queue_push($adjacency, read_int())
+    ~ end
+    $seen = []
+    ~ loop $n
+        $seen = queue_push($seen, 0)
+    ~ end
+    dfs($start, $n, $adjacency, $seen)
+~ end

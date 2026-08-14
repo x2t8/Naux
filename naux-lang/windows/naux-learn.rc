@@ -1,0 +1,5 @@
+#include <windows.h>
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+1 ICON "langnaux-learn.ico"

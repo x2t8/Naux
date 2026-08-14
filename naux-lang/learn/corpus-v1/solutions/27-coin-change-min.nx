@@ -1,0 +1,29 @@
+~ rite
+    $amount = read_int()
+    $count = read_int()
+    $coins = []
+    ~ loop $count
+        $coins = queue_push($coins, read_int())
+    ~ end
+    $infinity = 1000000000
+    $minimum = []
+    ~ loop $amount + 1
+        $minimum = queue_push($minimum, $infinity)
+    ~ end
+    $minimum[0] = 0
+    $sum = 1
+    ~ while $sum <= $amount
+        $coin = 0
+        ~ while $coin < $count
+            ~ if $coins[$coin] <= $sum
+                $candidate = $minimum[$sum - $coins[$coin]] + 1
+                ~ if $candidate < $minimum[$sum]
+                    $minimum[$sum] = $candidate
+                ~ end
+            ~ end
+            $coin = $coin + 1
+        ~ end
+        $sum = $sum + 1
+    ~ end
+    !say $minimum[$amount]
+~ end

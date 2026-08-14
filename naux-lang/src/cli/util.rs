@@ -5,17 +5,27 @@ use std::path::{Path, PathBuf};
 
 use crate::ast::Stmt;
 use crate::cli::DefaultEngine;
+use crate::diagnostic::{format_source_diagnostic, DiagnosticStage};
 use crate::lexer;
 use crate::parser;
 use crate::parser::error::format_parse_error;
 use crate::runtime;
+use crate::runtime::budget::ExecutionLimits;
 use crate::runtime::error::format_runtime_error_with_file;
-use crate::vm::run::{run_jit, run_vm};
+use crate::vm::run::{run_jit_with_input_and_limits, run_vm_with_input_and_limits};
 
 pub fn load_ast(path: &Path) -> Result<(String, Vec<Stmt>), String> {
     let src = fs::read_to_string(path)
         .map_err(|e| format!("Không đọc được {}: {}", path.display(), e))?;
-    let tokens = lexer::lex(&src).map_err(|e| format!("Lex error: {}", e.message))?;
+    let tokens = lexer::lex(&src).map_err(|error| {
+        format_source_diagnostic(
+            DiagnosticStage::Lex,
+            &error.message,
+            &src,
+            &path.to_string_lossy(),
+            Some(&error.span),
+        )
+    })?;
     let stmts = parser::Parser::from_tokens(&tokens)
         .map_err(|err| format_parse_error(&src, &err, &path.to_string_lossy()))?;
     Ok((src, stmts))
@@ -34,12 +44,43 @@ pub fn execute_ast(
     ),
     String,
 > {
+    execute_ast_with_input(
+        engine,
+        ast,
+        src,
+        path,
+        "",
+        print_engine,
+        ExecutionLimits::default(),
+    )
+}
+
+pub fn execute_ast_with_input(
+    engine: DefaultEngine,
+    ast: &[Stmt],
+    src: &str,
+    path: &Path,
+    input: &str,
+    print_engine: bool,
+    limits: ExecutionLimits,
+) -> Result<
+    (
+        Vec<runtime::events::RuntimeEvent>,
+        Option<crate::runtime::value::Value>,
+    ),
+    String,
+> {
     match engine {
         DefaultEngine::Interp => {
             if print_engine {
                 eprintln!("[engine] interp");
             }
-            let (_env, events, errors) = runtime::eval_script_with_base_dir(ast, path.parent());
+            let (_env, events, errors) = runtime::eval_script_with_base_dir_input_and_limits(
+                ast,
+                path.parent(),
+                input,
+                limits,
+            );
             if let Some(err) = errors.first() {
                 Err(format_runtime_error_with_file(
                     src,
@@ -54,11 +95,13 @@ pub fn execute_ast(
             if print_engine {
                 eprintln!("[engine] vm");
             }
-            let (events, val) = run_vm(ast, src, &path.to_string_lossy())?;
+            let (events, val) =
+                run_vm_with_input_and_limits(ast, src, &path.to_string_lossy(), input, limits)?;
             Ok((events, Some(val)))
         }
         DefaultEngine::Jit => {
-            let (events, val, used_jit) = run_jit(ast, src, &path.to_string_lossy())?;
+            let (events, val, used_jit) =
+                run_jit_with_input_and_limits(ast, src, &path.to_string_lossy(), input, limits)?;
             if print_engine {
                 if used_jit {
                     eprintln!("[engine] jit");

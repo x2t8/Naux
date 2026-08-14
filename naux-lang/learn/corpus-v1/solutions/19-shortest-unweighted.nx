@@ -1,0 +1,33 @@
+~ rite
+    $n = read_int()
+    $start = read_int()
+    $target = read_int()
+    $adjacency = []
+    ~ loop $n * $n
+        $adjacency = queue_push($adjacency, read_int())
+    ~ end
+    $distance = []
+    $queue = []
+    ~ loop $n
+        $distance = queue_push($distance, -1)
+        $queue = queue_push($queue, 0)
+    ~ end
+    $head = 0
+    $tail = 1
+    $queue[0] = $start
+    $distance[$start] = 0
+    ~ while $head < $tail
+        $node = $queue[$head]
+        $head = $head + 1
+        $next = 0
+        ~ while $next < $n
+            ~ if $adjacency[$node * $n + $next] != 0 && $distance[$next] == -1
+                $distance[$next] = $distance[$node] + 1
+                $queue[$tail] = $next
+                $tail = $tail + 1
+            ~ end
+            $next = $next + 1
+        ~ end
+    ~ end
+    !say $distance[$target]
+~ end

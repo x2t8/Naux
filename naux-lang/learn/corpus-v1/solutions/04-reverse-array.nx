@@ -1,0 +1,12 @@
+~ rite
+    $n = read_int()
+    $values = []
+    ~ loop $n
+        $values = queue_push($values, read_int())
+    ~ end
+    $i = $n - 1
+    ~ while $i >= 0
+        !say $values[$i]
+        $i = $i - 1
+    ~ end
+~ end

@@ -1,0 +1,31 @@
+NAUX-INSTALLER-LOCALE	1
+locale	de
+language-name	Deutsch
+catalog-version	1
+text	installer_title	NAUX Learn installieren
+text	action_install	Installieren
+text	action_cancel	Abbrechen
+text	action_finish	Fertigstellen
+text	welcome_title	Willkommen bei NAUX Learn {version}
+text	release_badge	Experimentelle Lernversion
+text	summary	NAUX Learn ist ein bewusst kleines Profil zum Erlernen der Programmierung und zum Üben von Algorithmen.
+text	intended_heading	Diese Version ist vorgesehen für
+text	intended_1	Das Erlernen von Programmiersyntax und Problemlösung.
+text	intended_2	Das Üben von Datenstrukturen und Algorithmen.
+text	intended_3	Das Schreiben und Ausführen experimenteller .nx-Programme.
+text	excluded_heading	Diese Version ist nicht vorgesehen für
+text	excluded_1	Produktions-, sicherheitskritische oder sicherheitsrelevante Systeme.
+text	excluded_2	Anwendungen, die stabile APIs oder langfristige Kompatibilität benötigen.
+text	excluded_3	Aussagen über führende native Leistung oder Überlegenheit gegenüber C/C++.
+text	change_warning	Syntax, Semantik, Bibliotheken, Projektformate und Installationsverhalten können sich in künftigen Versionen erheblich ändern.
+text	sandbox_warning	Ausführungslimits verringern unbeabsichtigt ausufernde Berechnungen; sie sind keine Sicherheits-Sandbox.
+text	seed_warning	Lernende benötigen weder Rust noch Cargo, doch dieses Artefakt wird weiterhin mit einem Rust/Cargo-Seed erzeugt und enthält egg-Seed-Schulden.
+text	future_warning	Das künftige NAUX wird einen größeren Umfang haben; Forschungsrichtungen sind keine Zusagen für Funktionen oder Termine.
+text	warranty_warning	Diese experimentelle Software wird unter der beiliegenden Lizenz und ohne Gewährleistung bereitgestellt. Lesen Sie vor der Nutzung LICENSE und LIMITATIONS.
+text	action_start	Erstes Programm starten
+text	action_limitations	Einschränkungen lesen
+text	action_release_notes	Versionshinweise anzeigen
+text	action_close	Schließen
+text	uninstall_title	NAUX Learn deinstallieren
+text	repair_title	NAUX Learn reparieren
+text	rollback_title	NAUX Learn zurücksetzen

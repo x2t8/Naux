@@ -24,6 +24,10 @@ pub const X64_TAIL_WORKER_ELF_MAX_DYNAMIC_ENTRIES: u16 = 4_096;
 pub const X64_TAIL_WORKER_ELF_MAX_DEPENDENCIES: u16 = 64;
 pub const X64_TAIL_WORKER_ELF_MAX_STRING_TABLE_BYTES: u64 = 1024 * 1024;
 pub const X64_TAIL_WORKER_ELF_MAX_NAME_BYTES: u64 = 256;
+pub const X64_TAIL_WORKER_ELF_POLICY_ROOT: SemanticHash = SemanticHash([
+    0x1a, 0x6c, 0x96, 0xc8, 0xb4, 0x7a, 0x20, 0x01, 0xd9, 0x96, 0x94, 0x88, 0x78, 0x5c, 0x6b, 0xb2,
+    0xb8, 0x46, 0xc3, 0x78, 0x28, 0x0b, 0x04, 0x98, 0xf2, 0xc1, 0x6b, 0x0f, 0x14, 0xfd, 0x3b, 0xbf,
+]);
 
 const POLICY_DOMAIN: &[u8] = b"NAUX:x86-64:tail-worker-elf-policy:v1\0";
 const EVIDENCE_DOMAIN: &[u8] = b"NAUX:x86-64:tail-worker-elf-evidence:v1\0";
@@ -111,8 +115,16 @@ impl X64TailWorkerElfSegment {
         self.file_offset
     }
 
+    pub const fn virtual_address(&self) -> u64 {
+        self.virtual_address
+    }
+
     pub const fn file_size(&self) -> u64 {
         self.file_size
+    }
+
+    pub const fn memory_size(&self) -> u64 {
+        self.memory_size
     }
 }
 

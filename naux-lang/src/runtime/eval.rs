@@ -9,9 +9,13 @@ use crate::ast::{ActionKind, BinaryOp, Expr, ExprKind, Stmt, UnaryOp};
 use crate::lexer::lex;
 use crate::parser::error::format_parse_error;
 use crate::parser::parser::Parser;
+use crate::runtime::budget::{
+    install_execution_budget, ExecutionLimits, CALL_DEPTH_BUILTIN, WORK_CHECKPOINT_BUILTIN,
+};
 use crate::runtime::env::Env;
 use crate::runtime::error::{Frame, RuntimeError};
 use crate::runtime::events::RuntimeEvent;
+use crate::runtime::input::register_standard_input;
 use crate::runtime::value::{NauxObj, Value};
 use crate::stdlib::register_all;
 
@@ -42,23 +46,48 @@ pub fn eval_script_with_bindings(
     stmts: &[Stmt],
     bindings: &[(String, Value)],
 ) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
-    eval_script_with_base_dir_and_bindings(stmts, None, bindings)
+    eval_script_with_context(stmts, None, bindings, None, None)
 }
 
 pub fn eval_script_with_base_dir(
     stmts: &[Stmt],
     base_dir: Option<&Path>,
 ) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
-    eval_script_with_base_dir_and_bindings(stmts, base_dir, &[])
+    eval_script_with_context(stmts, base_dir, &[], None, None)
 }
 
-fn eval_script_with_base_dir_and_bindings(
+pub fn eval_script_with_base_dir_and_input(
+    stmts: &[Stmt],
+    base_dir: Option<&Path>,
+    input: &str,
+) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
+    eval_script_with_context(stmts, base_dir, &[], Some(input), None)
+}
+
+pub fn eval_script_with_base_dir_input_and_limits(
+    stmts: &[Stmt],
+    base_dir: Option<&Path>,
+    input: &str,
+    limits: ExecutionLimits,
+) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
+    eval_script_with_context(stmts, base_dir, &[], Some(input), Some(limits))
+}
+
+fn eval_script_with_context(
     stmts: &[Stmt],
     base_dir: Option<&Path>,
     bindings: &[(String, Value)],
+    input: Option<&str>,
+    limits: Option<ExecutionLimits>,
 ) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
     let mut env = Env::new();
     register_all(&mut env);
+    if let Some(limits) = limits {
+        install_execution_budget(&mut env, limits);
+    }
+    if let Some(input) = input {
+        register_standard_input(&mut env, input.to_string());
+    }
     for (name, value) in bindings {
         env.set(name, value.clone());
     }
@@ -141,6 +170,18 @@ fn eval_stmt(
     current_dir: Option<&Path>,
 ) -> Control {
     if should_halt(errors) {
+        return Control::None;
+    }
+    if is_executable_statement(stmt)
+        && !admit_budget_builtin(
+            env,
+            WORK_CHECKPOINT_BUILTIN,
+            Vec::new(),
+            statement_span(stmt),
+            errors,
+            call_stack,
+        )
+    {
         return Control::None;
     }
     match stmt {
@@ -300,6 +341,16 @@ fn eval_stmt(
                 if should_halt(errors) {
                     break;
                 }
+                if !admit_budget_builtin(
+                    env,
+                    WORK_CHECKPOINT_BUILTIN,
+                    Vec::new(),
+                    span.clone(),
+                    errors,
+                    call_stack,
+                ) {
+                    break;
+                }
                 let control = eval_block(
                     body,
                     env,
@@ -338,6 +389,16 @@ fn eval_stmt(
             if let Value::RcObj(rc) = it {
                 if let NauxObj::List(items) = rc.as_ref() {
                     for v in items.borrow().iter() {
+                        if !admit_budget_builtin(
+                            env,
+                            WORK_CHECKPOINT_BUILTIN,
+                            Vec::new(),
+                            span.clone(),
+                            errors,
+                            call_stack,
+                        ) {
+                            break;
+                        }
                         env.push_scope();
                         env.set(var, v.clone());
                         let control = eval_block(
@@ -369,7 +430,7 @@ fn eval_stmt(
             );
             Control::None
         }
-        Stmt::While { cond, body, .. } => {
+        Stmt::While { cond, body, span } => {
             loop {
                 let c = eval_expr(
                     cond,
@@ -382,6 +443,16 @@ fn eval_stmt(
                     current_dir,
                 );
                 if !c.truthy() {
+                    break;
+                }
+                if !admit_budget_builtin(
+                    env,
+                    WORK_CHECKPOINT_BUILTIN,
+                    Vec::new(),
+                    span.clone(),
+                    errors,
+                    call_stack,
+                ) {
                     break;
                 }
                 let control = eval_block(
@@ -518,6 +589,32 @@ fn call_function(
             );
             return Value::Null;
         }
+        if !admit_budget_builtin(
+            env,
+            WORK_CHECKPOINT_BUILTIN,
+            Vec::new(),
+            expr_span.clone().or(fn_span.clone()),
+            errors,
+            call_stack,
+        ) {
+            return Value::Null;
+        }
+        let next_depth = call_stack
+            .iter()
+            .filter(|frame| frame.name != "rite")
+            .count()
+            .saturating_add(1);
+        let next_depth = i64::try_from(next_depth).unwrap_or(i64::MAX);
+        if !admit_budget_builtin(
+            env,
+            CALL_DEPTH_BUILTIN,
+            vec![Value::SmallInt(next_depth)],
+            expr_span.clone().or(fn_span.clone()),
+            errors,
+            call_stack,
+        ) {
+            return Value::Null;
+        }
         call_stack.push(Frame {
             name: name.clone(),
             span: expr_span.clone().or(fn_span.clone()),
@@ -562,6 +659,9 @@ fn call_function(
         return match res {
             Ok(v) => v,
             Err(mut e) => {
+                if e.span.is_none() {
+                    e.span = expr_span;
+                }
                 e.trace = call_stack.clone();
                 if should_halt(errors) {
                     return Value::Null;
@@ -909,25 +1009,21 @@ fn eval_expr(
                     let idx_opt = match idx_val {
                         Value::SmallInt(n) => {
                             if n < 0 {
-                                push_error(
-                                    errors,
-                                    "Index cannot be negative.",
-                                    expr.span.clone(),
-                                    call_stack,
-                                );
                                 None
                             } else {
                                 Some(n as usize)
                             }
                         }
                         Value::Float(n) => {
-                            if n.fract() != 0.0 || n < 0.0 {
+                            if !n.is_finite() || n.fract() != 0.0 {
                                 push_error(
                                     errors,
-                                    "Index must be a non-negative integer.",
+                                    "index must be an integer",
                                     expr.span.clone(),
                                     call_stack,
                                 );
+                                None
+                            } else if n < 0.0 {
                                 None
                             } else {
                                 Some(n as usize)
@@ -936,7 +1032,7 @@ fn eval_expr(
                         _ => {
                             push_error(
                                 errors,
-                                "Index must be an integer.",
+                                "index must be an integer",
                                 expr.span.clone(),
                                 call_stack,
                             );
@@ -1309,6 +1405,47 @@ fn module_cache_key(path: &Path) -> String {
 
 fn format_value(v: &Value) -> String {
     v.to_display_text()
+}
+
+fn is_executable_statement(stmt: &Stmt) -> bool {
+    !matches!(
+        stmt,
+        Stmt::Rite { .. } | Stmt::Unsafe { .. } | Stmt::FnDef { .. }
+    )
+}
+
+fn statement_span(stmt: &Stmt) -> Option<crate::ast::Span> {
+    match stmt {
+        Stmt::Rite { span, .. }
+        | Stmt::Unsafe { span, .. }
+        | Stmt::FnDef { span, .. }
+        | Stmt::Assign { span, .. }
+        | Stmt::Expr { span, .. }
+        | Stmt::If { span, .. }
+        | Stmt::Loop { span, .. }
+        | Stmt::Each { span, .. }
+        | Stmt::While { span, .. }
+        | Stmt::Action { span, .. }
+        | Stmt::Return { span, .. }
+        | Stmt::Import { span, .. } => span.clone(),
+    }
+}
+
+fn admit_budget_builtin(
+    env: &Env,
+    name: &str,
+    args: Vec<Value>,
+    span: Option<crate::ast::Span>,
+    errors: &mut Vec<RuntimeError>,
+    call_stack: &[Frame],
+) -> bool {
+    match env.call_builtin(name, args) {
+        None | Some(Ok(_)) => true,
+        Some(Err(error)) => {
+            push_error(errors, error.message, span, call_stack);
+            false
+        }
+    }
 }
 
 fn push_error(

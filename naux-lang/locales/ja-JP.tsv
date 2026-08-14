@@ -1,0 +1,31 @@
+NAUX-INSTALLER-LOCALE	1
+locale	ja-JP
+language-name	日本語
+catalog-version	1
+text	installer_title	NAUX Learn をインストール
+text	action_install	インストール
+text	action_cancel	キャンセル
+text	action_finish	完了
+text	welcome_title	NAUX Learn {version} へようこそ
+text	release_badge	実験的な学習用リリース
+text	summary	NAUX Learn は、プログラミング学習とアルゴリズム演習のために意図的に小さくしたプロファイルです。
+text	intended_heading	このリリースの用途
+text	intended_1	プログラミング構文と問題解決の学習。
+text	intended_2	データ構造とアルゴリズムの演習。
+text	intended_3	実験的な .nx プログラムの作成と実行。
+text	excluded_heading	このリリースの対象外
+text	excluded_1	本番、セキュリティクリティカル、または安全クリティカルなシステム。
+text	excluded_2	安定した API や長期互換性が必要な用途。
+text	excluded_3	ネイティブ性能や C/C++ を上回るという主張。
+text	change_warning	構文、意味論、ライブラリ、プロジェクト形式、インストール動作は将来大きく変更される可能性があります。
+text	sandbox_warning	実行制限は意図しない暴走を減らしますが、セキュリティサンドボックスではありません。
+text	seed_warning	学習者に Rust や Cargo は不要ですが、この成果物はまだ Rust/Cargo seed で生成され、egg の seed debt を含みます。
+text	future_warning	将来の NAUX はより広い範囲を持ちますが、研究方針は機能や時期の約束ではありません。
+text	warranty_warning	この実験的ソフトウェアは同梱ライセンスに基づき無保証で提供されます。使用前に LICENSE と LIMITATIONS をお読みください。
+text	action_start	最初のプログラムを実行
+text	action_limitations	制限事項を読む
+text	action_release_notes	リリースノートを見る
+text	action_close	閉じる
+text	uninstall_title	NAUX Learn をアンインストール
+text	repair_title	NAUX Learn を修復
+text	rollback_title	NAUX Learn をロールバック

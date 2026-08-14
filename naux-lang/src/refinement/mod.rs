@@ -329,7 +329,7 @@ fn generate_stmt_constraints(
             let _ = synthesize_expr(expr, env, cset)?;
             Ok(())
         }
-        Stmt::Action { action: _, .. } => Ok(()),
+        Stmt::Action { .. } => Ok(()),
         Stmt::Return { value, .. } => {
             if let Some(expr) = value {
                 let _ = synthesize_expr(expr, env, cset)?;

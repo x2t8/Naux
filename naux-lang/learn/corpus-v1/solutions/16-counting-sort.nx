@@ -1,0 +1,23 @@
+~ rite
+    $n = read_int()
+    $maximum = read_int()
+    $values = []
+    $counts = []
+    ~ loop $maximum + 1
+        $counts = queue_push($counts, 0)
+    ~ end
+    ~ loop $n
+        $value = read_int()
+        $values = queue_push($values, $value)
+        $counts[$value] = $counts[$value] + 1
+    ~ end
+    $value = 0
+    ~ while $value <= $maximum
+        $remaining = $counts[$value]
+        ~ while $remaining > 0
+            !say $value
+            $remaining = $remaining - 1
+        ~ end
+        $value = $value + 1
+    ~ end
+~ end

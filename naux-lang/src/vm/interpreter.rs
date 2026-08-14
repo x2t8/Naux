@@ -2,11 +2,12 @@
 #![allow(dead_code, clippy::too_many_arguments)]
 
 use crate::ask::query_ask;
+use crate::runtime::budget::{CALL_DEPTH_BUILTIN, WORK_CHECKPOINT_BUILTIN};
 use crate::runtime::env::BuiltinFn;
-use crate::runtime::error::Frame as TraceFrame;
+use crate::runtime::error::{format_runtime_error_with_file, Frame as TraceFrame, RuntimeError};
 use crate::runtime::events::RuntimeEvent;
 use crate::runtime::value::{NauxObj, Value};
-use crate::vm::bytecode::{disasm_window, FunctionBytecode, Instr, Program, VmResult};
+use crate::vm::bytecode::{FunctionBytecode, Instr, Program, VmResult};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
@@ -454,7 +455,16 @@ fn wrap<T>(
     filename: &str,
     trace: &[TraceFrame],
 ) -> VmResult<T> {
-    res.map_err(|msg| vm_error(&msg, code, spans, ip, stack, src, filename, trace))
+    res.map_err(|msg| {
+        if msg.starts_with("Runtime error: ") {
+            // A recursive exec_code already attached the deepest source span.
+            // Reformatting here would duplicate the stage and terminal-escape
+            // the complete nested diagnostic at every caller frame.
+            msg
+        } else {
+            vm_error(&msg, code, spans, ip, stack, src, filename, trace)
+        }
+    })
 }
 
 fn call_builtin(
@@ -495,15 +505,26 @@ fn call_builtin(
                     .unwrap_or(Value::Null),
                 _ => return Err("invalid __index operands".into()),
             },
-            (Value::RcObj(rc), Value::Float(n)) => match rc.as_ref() {
-                NauxObj::List(v) => v.borrow().get(n as usize).cloned().unwrap_or(Value::Null),
-                NauxObj::Bytes(v) => v
-                    .borrow()
-                    .get(n as usize)
-                    .map(|b| Value::SmallInt(*b as i64))
-                    .unwrap_or(Value::Null),
-                _ => return Err("invalid __index operands".into()),
-            },
+            (Value::RcObj(rc), Value::Float(n)) => {
+                if !n.is_finite() || n.fract() != 0.0 {
+                    return Err("index must be an integer".into());
+                }
+                if n < 0.0 {
+                    Value::Null
+                } else {
+                    match rc.as_ref() {
+                        NauxObj::List(v) => {
+                            v.borrow().get(n as usize).cloned().unwrap_or(Value::Null)
+                        }
+                        NauxObj::Bytes(v) => v
+                            .borrow()
+                            .get(n as usize)
+                            .map(|b| Value::SmallInt(*b as i64))
+                            .unwrap_or(Value::Null),
+                        _ => return Err("invalid __index operands".into()),
+                    }
+                }
+            }
             (Value::RcObj(rc), Value::RcObj(krc)) => match (rc.as_ref(), krc.as_ref()) {
                 (NauxObj::Map(m), NauxObj::Text(s)) => {
                     m.borrow().get(s).cloned().unwrap_or(Value::Null)
@@ -523,7 +544,7 @@ fn call_builtin(
     args.reverse();
 
     if let Some(f) = builtins.get(name) {
-        match f(args) {
+        match f.call(args) {
             Ok(v) => {
                 stack.push(v.clone());
                 Ok(v)
@@ -550,6 +571,13 @@ fn call_function(
     filename: &str,
     debug: Option<&mut DebugHook<'_>>,
 ) -> VmResult<Value> {
+    admit_internal_budget_builtin(builtins, WORK_CHECKPOINT_BUILTIN, Vec::new())?;
+    let next_depth = i64::try_from(frames.len()).unwrap_or(i64::MAX);
+    admit_internal_budget_builtin(
+        builtins,
+        CALL_DEPTH_BUILTIN,
+        vec![Value::SmallInt(next_depth)],
+    )?;
     let mut args = Vec::new();
     for _ in 0..argc {
         args.push(pop(stack)?);
@@ -586,6 +614,20 @@ fn call_function(
     trace.pop();
     stack.push(ret.clone());
     Ok(ret)
+}
+
+fn admit_internal_budget_builtin(
+    builtins: &HashMap<String, BuiltinFn>,
+    name: &str,
+    args: Vec<Value>,
+) -> VmResult<()> {
+    let Some(builtin) = builtins.get(name) else {
+        return Ok(());
+    };
+    builtin
+        .call(args)
+        .map(|_| ())
+        .map_err(|error| error.message)
 }
 
 fn load_local(frames: &[Frame], idx: usize) -> Value {
@@ -764,52 +806,14 @@ fn format_value(v: &Value) -> String {
 
 fn vm_error(
     msg: &str,
-    code: &[Instr],
+    _code: &[Instr],
     spans: &[Option<crate::ast::Span>],
     ip: usize,
-    stack: &[Value],
+    _stack: &[Value],
     src: &str,
     filename: &str,
-    trace: &[TraceFrame],
+    _trace: &[TraceFrame],
 ) -> String {
-    let mut out = String::new();
-    use std::fmt::Write;
-    writeln!(&mut out, "Runtime error: {}", msg).ok();
-    if let Some(sp) = spans.get(ip).and_then(|s| s.clone()) {
-        let line_idx = sp.line.saturating_sub(1);
-        let line_text = src.lines().nth(line_idx).unwrap_or("");
-        let caret = format!("{}^", " ".repeat(sp.column.saturating_sub(1)));
-        writeln!(&mut out, "  at {}:{}:{}", filename, sp.line, sp.column).ok();
-        writeln!(&mut out, "  {}", line_text).ok();
-        writeln!(&mut out, "  {}", caret).ok();
-    } else {
-        writeln!(&mut out, "  at ip={}", ip).ok();
-    }
-    if !trace.is_empty() {
-        writeln!(&mut out, "  Traceback (most recent call last):").ok();
-        for frame in trace.iter().rev() {
-            if let Some(sp) = &frame.span {
-                let line_idx = sp.line.saturating_sub(1);
-                let line_text = src.lines().nth(line_idx).unwrap_or("");
-                let caret = format!("{}^", " ".repeat(sp.column.saturating_sub(1)));
-                writeln!(
-                    &mut out,
-                    "    at {} ({}:{}:{})",
-                    frame.name, filename, sp.line, sp.column
-                )
-                .ok();
-                writeln!(&mut out, "      {}", line_text).ok();
-                writeln!(&mut out, "      {}", caret).ok();
-            } else {
-                writeln!(&mut out, "    at {}", frame.name).ok();
-            }
-        }
-    }
-    writeln!(&mut out, "  nearby:").ok();
-    out.push_str(&disasm_window(code, ip, 2));
-    if !stack.is_empty() {
-        let top: Vec<String> = stack.iter().rev().take(3).map(format_value).collect();
-        writeln!(&mut out, "  stack top: {}", top.join(", ")).ok();
-    }
-    out
+    let error = RuntimeError::new(msg, spans.get(ip).and_then(Clone::clone));
+    format_runtime_error_with_file(src, &error, filename)
 }

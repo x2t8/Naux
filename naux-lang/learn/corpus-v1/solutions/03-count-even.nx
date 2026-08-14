@@ -1,0 +1,11 @@
+~ rite
+    $n = read_int()
+    $count = 0
+    ~ loop $n
+        $value = read_int()
+        ~ if $value % 2 == 0
+            $count = $count + 1
+        ~ end
+    ~ end
+    !say $count
+~ end

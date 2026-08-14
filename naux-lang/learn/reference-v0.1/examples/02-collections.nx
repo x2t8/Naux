@@ -1,0 +1,17 @@
+~ rite
+    $count = read_int()
+    $values = []
+    ~ loop $count
+        $values = queue_push($values, read_int())
+    ~ end
+    $values[1] = 10
+    $total = 0
+    $i = 0
+    ~ while $i < len($values)
+        $total = $total + $values[$i]
+        $i = $i + 1
+    ~ end
+    $summary = {count: $count, total: $total}
+    !say $summary.count
+    !say $summary["total"]
+~ end

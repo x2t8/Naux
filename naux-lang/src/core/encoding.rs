@@ -957,7 +957,7 @@ fn encode_term(encoder: &mut Encoder, term: &Term) -> Result<(), EncodeError> {
     Ok(())
 }
 
-pub(super) fn sha256(input: &[u8]) -> [u8; 32] {
+pub(crate) fn sha256(input: &[u8]) -> [u8; 32] {
     const INITIAL: [u32; 8] = [
         0x6a09_e667,
         0xbb67_ae85,

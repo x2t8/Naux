@@ -1,0 +1,35 @@
+~ rite
+    $rows = read_int()
+    $columns = read_int()
+    $blocked = []
+    $paths = []
+    ~ loop $rows * $columns
+        $blocked = queue_push($blocked, read_int())
+        $paths = queue_push($paths, 0)
+    ~ end
+    $row = 0
+    ~ while $row < $rows
+        $column = 0
+        ~ while $column < $columns
+            $index = $row * $columns + $column
+            ~ if $blocked[$index] == 0
+                ~ if $row == 0 && $column == 0
+                    $paths[$index] = 1
+                ~ else
+                    $from_top = 0
+                    $from_left = 0
+                    ~ if $row > 0
+                        $from_top = $paths[($row - 1) * $columns + $column]
+                    ~ end
+                    ~ if $column > 0
+                        $from_left = $paths[$row * $columns + $column - 1]
+                    ~ end
+                    $paths[$index] = $from_top + $from_left
+                ~ end
+            ~ end
+            $column = $column + 1
+        ~ end
+        $row = $row + 1
+    ~ end
+    !say $paths[$rows * $columns - 1]
+~ end

@@ -1,0 +1,25 @@
+~ rite
+    $n = read_int()
+    $target = read_int()
+    $values = []
+    ~ loop $n
+        $values = queue_push($values, read_int())
+    ~ end
+    $possible = []
+    ~ loop $target + 1
+        $possible = queue_push($possible, 0)
+    ~ end
+    $possible[0] = 1
+    $i = 0
+    ~ while $i < $n
+        $sum = $target
+        ~ while $sum >= $values[$i]
+            ~ if $possible[$sum - $values[$i]] == 1
+                $possible[$sum] = 1
+            ~ end
+            $sum = $sum - 1
+        ~ end
+        $i = $i + 1
+    ~ end
+    !say $possible[$target] == 1
+~ end

@@ -1,0 +1,32 @@
+~ fn flood($node, $n, $adjacency, $seen)
+    $seen[$node] = 1
+    $next = 0
+    ~ while $next < $n
+        ~ if $adjacency[$node * $n + $next] != 0 && $seen[$next] == 0
+            flood($next, $n, $adjacency, $seen)
+        ~ end
+        $next = $next + 1
+    ~ end
+~ end
+
+~ rite
+    $n = read_int()
+    $adjacency = []
+    ~ loop $n * $n
+        $adjacency = queue_push($adjacency, read_int())
+    ~ end
+    $seen = []
+    ~ loop $n
+        $seen = queue_push($seen, 0)
+    ~ end
+    $components = 0
+    $node = 0
+    ~ while $node < $n
+        ~ if $seen[$node] == 0
+            $components = $components + 1
+            flood($node, $n, $adjacency, $seen)
+        ~ end
+        $node = $node + 1
+    ~ end
+    !say $components
+~ end

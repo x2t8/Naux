@@ -1,10 +1,14 @@
+use std::io::{self, IsTerminal, Read};
 use std::path::PathBuf;
 use std::time::Instant;
 
 use crate::cli::util;
 use crate::cli::{DefaultEngine, DefaultMode};
+use crate::diagnostic::{format_source_diagnostic, DiagnosticStage};
 use crate::renderer::{render_cli, render_html};
+use crate::runtime::budget::ExecutionLimits;
 use crate::runtime::events::RuntimeEvent;
+use crate::runtime::input::S1_STANDARD_INPUT_MAX_BYTES;
 use crate::runtime::value::{NauxObj, Value};
 use crate::typecheck;
 
@@ -13,6 +17,7 @@ pub fn handle_run(
     mode: DefaultMode,
     engine: DefaultEngine,
     time: bool,
+    limits: ExecutionLimits,
 ) -> Result<(), String> {
     let target = path.unwrap_or_else(|| PathBuf::from("main.nx"));
     if !target.exists() {
@@ -25,17 +30,28 @@ pub fn handle_run(
     // Type check trước khi chạy
     let type_start = Instant::now();
     if let Err(e) = typecheck::check_program(&ast) {
-        let loc = e
-            .span
-            .map(|s| format!(" (line {}, col {})", s.line, s.column))
-            .unwrap_or_default();
-        return Err(format!("Type error{}: {}", loc, e.message));
+        return Err(format_source_diagnostic(
+            DiagnosticStage::Type,
+            &e.message,
+            &src,
+            &target.to_string_lossy(),
+            e.span.as_ref(),
+        ));
     }
     let type_time = type_start.elapsed();
+    let input = read_standard_input()?;
     let exec_start = Instant::now();
-    let (events, value) = util::execute_ast(engine, &ast, &src, &target, true)?;
+    let (events, value) =
+        util::execute_ast_with_input(engine, &ast, &src, &target, &input, false, limits)?;
     let exec_time = exec_start.elapsed();
     match mode {
+        DefaultMode::Plain => {
+            render_plain(&events)?;
+            if time {
+                print_time(load_time, type_time, exec_time, total_start.elapsed());
+            }
+            Ok(())
+        }
         DefaultMode::Cli => {
             if events.is_empty() {
                 if let Some(val) = value {
@@ -83,6 +99,65 @@ pub fn handle_run(
             Ok(())
         }
     }
+}
+
+fn read_standard_input() -> Result<String, String> {
+    let stdin = io::stdin();
+    if stdin.is_terminal() {
+        return Ok(String::new());
+    }
+    read_standard_input_bounded(&mut stdin.lock(), S1_STANDARD_INPUT_MAX_BYTES)
+}
+
+fn read_standard_input_bounded(reader: &mut impl Read, limit: usize) -> Result<String, String> {
+    let byte_limit = u64::try_from(limit)
+        .map_err(|_| "standard-input byte limit does not fit u64".to_string())?;
+    let mut bytes = Vec::new();
+    reader
+        .take(byte_limit.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("cannot read standard input: {error}"))?;
+    if bytes.len() > limit {
+        return Err(format!(
+            "standard input exceeds the S1 limit of {limit} bytes"
+        ));
+    }
+    String::from_utf8(bytes).map_err(|_| "standard input must be valid UTF-8".to_string())
+}
+
+fn render_plain(events: &[RuntimeEvent]) -> Result<(), String> {
+    if events
+        .iter()
+        .any(|event| !matches!(event, RuntimeEvent::Say(_) | RuntimeEvent::Log(_)))
+    {
+        return Err(
+            "plain mode supports only `!say` output; use `--mode cli`, `html`, or `json` for UI actions"
+                .to_string(),
+        );
+    }
+    for event in events {
+        match event {
+            RuntimeEvent::Say(message) => println!("{message}"),
+            RuntimeEvent::Log(_) => {}
+            _ => unreachable!("plain-mode event set was preflighted"),
+        }
+    }
+    Ok(())
+}
+
+fn print_time(
+    load_time: std::time::Duration,
+    type_time: std::time::Duration,
+    exec_time: std::time::Duration,
+    total_time: std::time::Duration,
+) {
+    eprintln!(
+        "[time] load: {:.3}ms | typecheck: {:.3}ms | exec: {:.3}ms | total: {:.3}ms",
+        load_time.as_secs_f64() * 1000.0,
+        type_time.as_secs_f64() * 1000.0,
+        exec_time.as_secs_f64() * 1000.0,
+        total_time.as_secs_f64() * 1000.0
+    );
 }
 
 fn render_json(events: &[RuntimeEvent]) -> String {
@@ -266,4 +341,28 @@ fn json_string(value: &str) -> String {
     }
     out.push('"');
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn standard_input_is_utf8_and_hard_bounded() {
+        assert_eq!(S1_STANDARD_INPUT_MAX_BYTES, 8_388_608);
+        assert_eq!(
+            read_standard_input_bounded(&mut "123".as_bytes(), 3).unwrap(),
+            "123"
+        );
+        assert_eq!(
+            read_standard_input_bounded(&mut "hẹllo".as_bytes(), 8).unwrap(),
+            "hẹllo"
+        );
+        assert!(read_standard_input_bounded(&mut "1234".as_bytes(), 3)
+            .unwrap_err()
+            .contains("exceeds"));
+        assert!(read_standard_input_bounded(&mut [0xff].as_slice(), 1)
+            .unwrap_err()
+            .contains("valid UTF-8"));
+    }
 }

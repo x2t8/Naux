@@ -50,7 +50,13 @@ pub fn handle_dev(cmd: DevCommand) -> Result<(), String> {
 pub fn run_core(path: &Path, engine: &str, mode: &str, time: bool) -> Result<(), String> {
     let engine = parse_engine(engine)?;
     let mode = parse_mode(mode)?;
-    run::handle_run(Some(path.to_path_buf()), mode, engine, time)
+    run::handle_run(
+        Some(path.to_path_buf()),
+        mode,
+        engine,
+        time,
+        crate::runtime::budget::ExecutionLimits::default(),
+    )
 }
 
 pub(crate) fn bench_runtime_core(
@@ -337,6 +343,7 @@ fn parse_engine(engine: &str) -> Result<DefaultEngine, String> {
 
 fn parse_mode(mode: &str) -> Result<DefaultMode, String> {
     match mode.to_ascii_lowercase().as_str() {
+        "plain" => Ok(DefaultMode::Plain),
         "cli" => Ok(DefaultMode::Cli),
         "html" => Ok(DefaultMode::Html),
         "json" => Ok(DefaultMode::Json),

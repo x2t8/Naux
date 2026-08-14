@@ -1,0 +1,14 @@
+NAUX-S1-HOST-DEPENDENCIES	1
+target	linux-x86_64-gnu
+elf-class	ELF64
+elf-data	little-endian
+elf-machine	Advanced Micro Devices X86-64
+elf-type	DYN
+interpreter	/lib64/ld-linux-x86-64.so.2
+needed	ld-linux-x86-64.so.2
+needed	libc.so.6
+needed	libgcc_s.so.1
+needed	libm.so.6
+minimum-glibc-interface	GLIBC_2.39
+minimum-libgcc-interface	GCC_4.2.0
+acceptance-kernel-abi-tag	GNU/Linux 4.4.0

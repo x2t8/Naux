@@ -1,0 +1,11 @@
+~ fn gcd($left, $right)
+    ~ if $right == 0
+        ^ $left
+    ~ else
+        ^ gcd($right, $left % $right)
+    ~ end
+~ end
+
+~ rite
+    !say gcd(read_int(), read_int())
+~ end

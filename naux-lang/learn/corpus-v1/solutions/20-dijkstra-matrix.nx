@@ -1,0 +1,43 @@
+~ rite
+    $n = read_int()
+    $start = read_int()
+    $target = read_int()
+    $weights = []
+    ~ loop $n * $n
+        $weights = queue_push($weights, read_int())
+    ~ end
+    $infinity = 1000000000
+    $distance = []
+    $used = []
+    ~ loop $n
+        $distance = queue_push($distance, $infinity)
+        $used = queue_push($used, 0)
+    ~ end
+    $distance[$start] = 0
+    $step = 0
+    ~ while $step < $n
+        $chosen = -1
+        $best = $infinity
+        $node = 0
+        ~ while $node < $n
+            ~ if $used[$node] == 0 && $distance[$node] < $best
+                $best = $distance[$node]
+                $chosen = $node
+            ~ end
+            $node = $node + 1
+        ~ end
+        ~ if $chosen != -1
+            $used[$chosen] = 1
+            $next = 0
+            ~ while $next < $n
+                $weight = $weights[$chosen * $n + $next]
+                ~ if $weight > 0 && $distance[$chosen] + $weight < $distance[$next]
+                    $distance[$next] = $distance[$chosen] + $weight
+                ~ end
+                $next = $next + 1
+            ~ end
+        ~ end
+        $step = $step + 1
+    ~ end
+    !say $distance[$target]
+~ end

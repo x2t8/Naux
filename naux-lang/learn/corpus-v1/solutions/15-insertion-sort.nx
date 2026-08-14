@@ -1,0 +1,28 @@
+~ rite
+    $n = read_int()
+    $values = []
+    ~ loop $n
+        $values = queue_push($values, read_int())
+    ~ end
+    $i = 1
+    ~ while $i < $n
+        $key = $values[$i]
+        $position = $i
+        $moving = true
+        ~ while $position > 0 && $moving
+            ~ if $values[$position - 1] > $key
+                $values[$position] = $values[$position - 1]
+                $position = $position - 1
+            ~ else
+                $moving = false
+            ~ end
+        ~ end
+        $values[$position] = $key
+        $i = $i + 1
+    ~ end
+    $i = 0
+    ~ loop $n
+        !say $values[$i]
+        $i = $i + 1
+    ~ end
+~ end

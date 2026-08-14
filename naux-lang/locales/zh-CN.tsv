@@ -1,0 +1,31 @@
+NAUX-INSTALLER-LOCALE	1
+locale	zh-CN
+language-name	简体中文
+catalog-version	1
+text	installer_title	安装 NAUX Learn
+text	action_install	安装
+text	action_cancel	取消
+text	action_finish	完成
+text	welcome_title	欢迎使用 NAUX Learn {version}
+text	release_badge	实验性学习版本
+text	summary	NAUX Learn 是一个有意保持精简的配置，用于学习编程和练习算法。
+text	intended_heading	此版本适用于
+text	intended_1	学习编程语法和解决问题的方法。
+text	intended_2	练习数据结构与算法。
+text	intended_3	编写并运行实验性的 .nx 程序。
+text	excluded_heading	此版本不适用于
+text	excluded_1	生产、安全关键或生命安全关键系统。
+text	excluded_2	需要稳定 API 或长期兼容性的场景。
+text	excluded_3	原生性能或领先 C/C++ 的声明。
+text	change_warning	语法、语义、库、项目格式和安装行为在未来版本中可能发生重大变化。
+text	sandbox_warning	执行限制可减少意外的无限运行，但它们不是安全沙箱。
+text	seed_warning	学习者无需 Rust 或 Cargo，但此构件仍由 Rust/Cargo 种子生成，并包含 egg 种子债务。
+text	future_warning	未来的 NAUX 将具有更广的范围；研究方向不构成功能或时间承诺。
+text	warranty_warning	本实验性软件依据随附许可证提供且不作担保。使用前请阅读 LICENSE 和 LIMITATIONS。
+text	action_start	运行第一个程序
+text	action_limitations	阅读限制
+text	action_release_notes	查看发行说明
+text	action_close	关闭
+text	uninstall_title	卸载 NAUX Learn
+text	repair_title	修复 NAUX Learn
+text	rollback_title	回滚 NAUX Learn

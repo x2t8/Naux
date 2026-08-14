@@ -280,8 +280,21 @@ fn lowering_context_for_block(block: &[IRNode], incoming: &LoweringContext) -> L
 /// Public entry: compile AST straight to bytecode (via IR + optimize).
 pub fn compile_script(stmts: &[Stmt]) -> Program {
     let (ir, report) = compile_ir_with_report(stmts);
+    finish_compilation(ir, &report)
+}
+
+/// Compile the same optimized program while materializing S1 semantic work
+/// checkpoints. Checkpoints are ordinary internal builtin calls so the VM and
+/// Surface interpreter consume the same learner execution budget without
+/// coupling that budget to bytecode instruction count.
+pub fn compile_script_with_budget_checkpoints(stmts: &[Stmt]) -> Program {
+    let (ir, report) = compile_ir_with_report_options(stmts, true);
+    finish_compilation(ir, &report)
+}
+
+fn finish_compilation(ir: IRProgram, report: &OptimizationReport) -> Program {
     if ir_proof_strict_enabled() {
-        if let Err(err) = validate_optimization_proof_contract(&ir, &report) {
+        if let Err(err) = validate_optimization_proof_contract(&ir, report) {
             panic!("{}", err);
         }
     }
@@ -329,6 +342,13 @@ pub fn compile_ir(stmts: &[Stmt]) -> IRProgram {
 }
 
 pub fn compile_ir_with_report(stmts: &[Stmt]) -> (IRProgram, OptimizationReport) {
+    compile_ir_with_report_options(stmts, false)
+}
+
+fn compile_ir_with_report_options(
+    stmts: &[Stmt],
+    budget_checkpoints: bool,
+) -> (IRProgram, OptimizationReport) {
     let proof_catalog = crate::refinement::check_refinements(stmts)
         .map(|report| report.proof_slots)
         .unwrap_or_default();
@@ -365,6 +385,7 @@ pub fn compile_ir_with_report(stmts: &[Stmt]) -> (IRProgram, OptimizationReport)
                         &mut local_env,
                         &fn_sigs,
                         &mut local_proof_state,
+                        budget_checkpoints,
                     ) {
                         ret_ty = Some(ret_ty.map(|old| unify_types(old, t.clone())).unwrap_or(t));
                     }
@@ -380,9 +401,14 @@ pub fn compile_ir_with_report(stmts: &[Stmt]) -> (IRProgram, OptimizationReport)
                 );
             }
             _ => {
-                if let Some(t) =
-                    compile_stmt_ir(stmt, &mut main, &mut env, &fn_sigs, &mut proof_state)
-                {
+                if let Some(t) = compile_stmt_ir(
+                    stmt,
+                    &mut main,
+                    &mut env,
+                    &fn_sigs,
+                    &mut proof_state,
+                    budget_checkpoints,
+                ) {
                     main_ret = Some(main_ret.map(|old| unify_types(old, t.clone())).unwrap_or(t));
                 }
             }
@@ -569,11 +595,19 @@ fn optimize_block(block: Vec<IRNode>) -> FeedbackLoopResult {
     let mut out: Vec<IRNode> = Vec::new();
     let mut orig_idx: Vec<usize> = Vec::new();
     let mut map_old_to_new: Vec<Option<usize>> = vec![None; block.len()];
+    let mut jump_targets = vec![false; block.len()];
+    for node in &block {
+        if let IRInstr::Jump(target) | IRInstr::JumpIfFalse(target) = node.instr {
+            if let Some(is_target) = jump_targets.get_mut(target) {
+                *is_target = true;
+            }
+        }
+    }
     // NOTE: keep optimizer conservative to preserve control-flow correctness.
     let mut i = 0;
     while i < block.len() {
         // Const-fold arithmetic/compare on two consts followed by op
-        if i + 2 < block.len() {
+        if i + 2 < block.len() && !jump_targets[i + 1] && !jump_targets[i + 2] {
             if let (IRInstr::ConstNum(a), IRInstr::ConstNum(b), op) =
                 (&block[i].instr, &block[i + 1].instr, &block[i + 2].instr)
             {
@@ -623,7 +657,7 @@ fn optimize_block(block: Vec<IRNode>) -> FeedbackLoopResult {
         }
 
         // Simplify JumpIfFalse fed by ConstBool
-        if i + 1 < block.len() {
+        if i + 1 < block.len() && !jump_targets[i + 1] {
             if let (IRInstr::ConstBool(b), IRInstr::JumpIfFalse(t)) =
                 (&block[i].instr, &block[i + 1].instr)
             {
@@ -1751,7 +1785,11 @@ fn compile_stmt_ir(
     env: &mut HashMap<String, Type>,
     fns: &HashMap<String, usize>,
     proof_state: &mut CompileProofState,
+    budget_checkpoints: bool,
 ) -> Option<Type> {
+    if budget_checkpoints && is_budgeted_statement(stmt) {
+        emit_work_checkpoint(bc, statement_span(stmt));
+    }
     match stmt {
         Stmt::Assign {
             name, expr, span, ..
@@ -1784,9 +1822,14 @@ fn compile_stmt_ir(
             let mut then_proof_state = proof_state.clone();
             then_proof_state.refine_from_condition(cond, true);
             for s in then_block {
-                if let Some(t) =
-                    compile_stmt_ir(s, bc, &mut env.clone(), fns, &mut then_proof_state)
-                {
+                if let Some(t) = compile_stmt_ir(
+                    s,
+                    bc,
+                    &mut env.clone(),
+                    fns,
+                    &mut then_proof_state,
+                    budget_checkpoints,
+                ) {
                     then_ret = Some(then_ret.map(|old| unify_types(old, t.clone())).unwrap_or(t));
                 }
             }
@@ -1798,9 +1841,14 @@ fn compile_stmt_ir(
             let mut else_proof_state = proof_state.clone();
             else_proof_state.refine_from_condition(cond, false);
             for s in else_block {
-                if let Some(t) =
-                    compile_stmt_ir(s, bc, &mut env.clone(), fns, &mut else_proof_state)
-                {
+                if let Some(t) = compile_stmt_ir(
+                    s,
+                    bc,
+                    &mut env.clone(),
+                    fns,
+                    &mut else_proof_state,
+                    budget_checkpoints,
+                ) {
                     else_ret = Some(else_ret.map(|old| unify_types(old, t.clone())).unwrap_or(t));
                 }
             }
@@ -1816,6 +1864,11 @@ fn compile_stmt_ir(
         Stmt::Loop { count, body, span } => {
             let tmp = format!("__loop_rem__{}", bc.len());
             compile_expr_ir(count, bc, env, fns, proof_state);
+            bc.push(IRNode::new(
+                IRInstr::CallBuiltin("__loop_count".into(), 1),
+                span.clone(),
+                Some(Type::Num),
+            ));
             proof_state.current.remove(&tmp);
             bc.push(IRNode::new(
                 IRInstr::StoreVar(tmp.clone()),
@@ -1830,8 +1883,18 @@ fn compile_stmt_ir(
             ));
             let jmp_false = bc.len();
             bc.push(IRNode::new(IRInstr::JumpIfFalse(0), span.clone(), None));
+            if budget_checkpoints {
+                emit_work_checkpoint(bc, span.clone());
+            }
             for s in body {
-                compile_stmt_ir(s, bc, &mut env.clone(), fns, &mut proof_state.clone());
+                compile_stmt_ir(
+                    s,
+                    bc,
+                    &mut env.clone(),
+                    fns,
+                    &mut proof_state.clone(),
+                    budget_checkpoints,
+                );
             }
             bc.push(IRNode::new(
                 IRInstr::LoadVar(tmp.clone()),
@@ -1861,10 +1924,20 @@ fn compile_stmt_ir(
             compile_expr_ir(cond, bc, env, fns, proof_state);
             let jmp_false = bc.len();
             bc.push(IRNode::new(IRInstr::JumpIfFalse(0), span.clone(), None));
+            if budget_checkpoints {
+                emit_work_checkpoint(bc, span.clone());
+            }
             let mut body_proof_state = proof_state.clone();
             body_proof_state.refine_from_condition(cond, true);
             for s in body {
-                compile_stmt_ir(s, bc, &mut env.clone(), fns, &mut body_proof_state);
+                compile_stmt_ir(
+                    s,
+                    bc,
+                    &mut env.clone(),
+                    fns,
+                    &mut body_proof_state,
+                    budget_checkpoints,
+                );
             }
             bc.push(IRNode::new(IRInstr::Jump(start), span.clone(), None));
             let end = bc.len();
@@ -1899,7 +1972,7 @@ fn compile_stmt_ir(
         Stmt::Rite { body, .. } => {
             let mut block_ret = None;
             for s in body {
-                if let Some(t) = compile_stmt_ir(s, bc, env, fns, proof_state) {
+                if let Some(t) = compile_stmt_ir(s, bc, env, fns, proof_state, budget_checkpoints) {
                     block_ret = Some(
                         block_ret
                             .map(|old| unify_types(old, t.clone()))
@@ -1955,6 +2028,9 @@ fn compile_stmt_ir(
             bc.push(IRNode::new(IRInstr::Lt, span.clone(), Some(Type::Bool)));
             let jmp_false = bc.len();
             bc.push(IRNode::new(IRInstr::JumpIfFalse(0), span.clone(), None));
+            if budget_checkpoints {
+                emit_work_checkpoint(bc, span.clone());
+            }
             bc.push(IRNode::new(
                 IRInstr::LoadVar(tmp_iter.clone()),
                 span.clone(),
@@ -1978,7 +2054,14 @@ fn compile_stmt_ir(
             proof_state.current.remove(var);
             let mut body_proof_state = proof_state.clone();
             for s in body {
-                compile_stmt_ir(s, bc, &mut env.clone(), fns, &mut body_proof_state);
+                compile_stmt_ir(
+                    s,
+                    bc,
+                    &mut env.clone(),
+                    fns,
+                    &mut body_proof_state,
+                    budget_checkpoints,
+                );
             }
             bc.push(IRNode::new(
                 IRInstr::LoadVar(tmp_idx.clone()),
@@ -2007,7 +2090,7 @@ fn compile_stmt_ir(
             let start = bc.len();
             let mut block_ret = None;
             for s in body {
-                if let Some(t) = compile_stmt_ir(s, bc, env, fns, proof_state) {
+                if let Some(t) = compile_stmt_ir(s, bc, env, fns, proof_state, budget_checkpoints) {
                     block_ret = Some(
                         block_ret
                             .map(|old| unify_types(old, t.clone()))
@@ -2022,6 +2105,42 @@ fn compile_stmt_ir(
         }
         Stmt::Import { .. } => None,
     }
+}
+
+fn is_budgeted_statement(stmt: &Stmt) -> bool {
+    !matches!(
+        stmt,
+        Stmt::Rite { .. } | Stmt::Unsafe { .. } | Stmt::FnDef { .. }
+    )
+}
+
+fn statement_span(stmt: &Stmt) -> Option<Span> {
+    match stmt {
+        Stmt::Rite { span, .. }
+        | Stmt::Unsafe { span, .. }
+        | Stmt::FnDef { span, .. }
+        | Stmt::Assign { span, .. }
+        | Stmt::Expr { span, .. }
+        | Stmt::If { span, .. }
+        | Stmt::Loop { span, .. }
+        | Stmt::Each { span, .. }
+        | Stmt::While { span, .. }
+        | Stmt::Action { span, .. }
+        | Stmt::Return { span, .. }
+        | Stmt::Import { span, .. } => span.clone(),
+    }
+}
+
+fn emit_work_checkpoint(bc: &mut Vec<IRNode>, span: Option<Span>) {
+    bc.push(IRNode::new(
+        IRInstr::CallBuiltin(
+            crate::runtime::budget::WORK_CHECKPOINT_BUILTIN.to_string(),
+            0,
+        ),
+        span.clone(),
+        Some(Type::Null),
+    ));
+    bc.push(IRNode::new(IRInstr::Pop, span, None));
 }
 
 fn compile_action_ir(
@@ -2155,49 +2274,94 @@ fn compile_expr_ir(
                     Type::Num
                 }
                 UnaryOp::Not => {
-                    bc.push(IRNode::new(
-                        IRInstr::ConstBool(false),
-                        span.clone(),
-                        Some(Type::Bool),
-                    ));
-                    bc.push(IRNode::new(IRInstr::Eq, span, Some(Type::Bool)));
+                    emit_truthiness_ir(bc, span, true);
                     Type::Bool
                 }
             }
         }
-        ExprKind::Binary { op, left, right } => {
-            let lt = compile_expr_ir(left, bc, env, fns, proof_state);
-            let rt = compile_expr_ir(right, bc, env, fns, proof_state);
-            let instr = match op {
-                BinaryOp::Add => IRInstr::Add,
-                BinaryOp::Sub => IRInstr::Sub,
-                BinaryOp::Mul => IRInstr::Mul,
-                BinaryOp::Div => IRInstr::Div,
-                BinaryOp::Mod => IRInstr::Mod,
-                BinaryOp::Xor => IRInstr::Xor,
-                BinaryOp::Shl => IRInstr::Shl,
-                BinaryOp::Eq => IRInstr::Eq,
-                BinaryOp::Ne => IRInstr::Ne,
-                BinaryOp::Gt => IRInstr::Gt,
-                BinaryOp::Ge => IRInstr::Ge,
-                BinaryOp::Lt => IRInstr::Lt,
-                BinaryOp::Le => IRInstr::Le,
-                BinaryOp::And => IRInstr::And,
-                BinaryOp::Or => IRInstr::Or,
-            };
-            let ret_ty = match op {
-                BinaryOp::Add => infer_add_type(&lt, &rt),
-                BinaryOp::Sub
-                | BinaryOp::Mul
-                | BinaryOp::Div
-                | BinaryOp::Mod
-                | BinaryOp::Xor
-                | BinaryOp::Shl => Type::Num,
-                _ => Type::Bool,
-            };
-            bc.push(IRNode::new(instr, span, Some(ret_ty.clone())));
-            ret_ty
-        }
+        ExprKind::Binary { op, left, right } => match op {
+            BinaryOp::And => {
+                compile_expr_ir(left, bc, env, fns, proof_state);
+                let left_false = bc.len();
+                bc.push(IRNode::new(IRInstr::JumpIfFalse(0), span.clone(), None));
+
+                compile_expr_ir(right, bc, env, fns, proof_state);
+                emit_truthiness_ir(bc, span.clone(), false);
+                let right_end = bc.len();
+                bc.push(IRNode::new(IRInstr::Jump(0), span.clone(), None));
+
+                let false_start = bc.len();
+                bc.push(IRNode::new(
+                    IRInstr::ConstBool(false),
+                    span,
+                    Some(Type::Bool),
+                ));
+                let end = bc.len();
+                if let IRInstr::JumpIfFalse(ref mut target) = bc[left_false].instr {
+                    *target = false_start;
+                }
+                if let IRInstr::Jump(ref mut target) = bc[right_end].instr {
+                    *target = end;
+                }
+                Type::Bool
+            }
+            BinaryOp::Or => {
+                compile_expr_ir(left, bc, env, fns, proof_state);
+                let evaluate_right = bc.len();
+                bc.push(IRNode::new(IRInstr::JumpIfFalse(0), span.clone(), None));
+                bc.push(IRNode::new(
+                    IRInstr::ConstBool(true),
+                    span.clone(),
+                    Some(Type::Bool),
+                ));
+                let left_end = bc.len();
+                bc.push(IRNode::new(IRInstr::Jump(0), span.clone(), None));
+
+                let right_start = bc.len();
+                compile_expr_ir(right, bc, env, fns, proof_state);
+                emit_truthiness_ir(bc, span, false);
+                let end = bc.len();
+                if let IRInstr::JumpIfFalse(ref mut target) = bc[evaluate_right].instr {
+                    *target = right_start;
+                }
+                if let IRInstr::Jump(ref mut target) = bc[left_end].instr {
+                    *target = end;
+                }
+                Type::Bool
+            }
+            _ => {
+                let lt = compile_expr_ir(left, bc, env, fns, proof_state);
+                let rt = compile_expr_ir(right, bc, env, fns, proof_state);
+                let instr = match op {
+                    BinaryOp::Add => IRInstr::Add,
+                    BinaryOp::Sub => IRInstr::Sub,
+                    BinaryOp::Mul => IRInstr::Mul,
+                    BinaryOp::Div => IRInstr::Div,
+                    BinaryOp::Mod => IRInstr::Mod,
+                    BinaryOp::Xor => IRInstr::Xor,
+                    BinaryOp::Shl => IRInstr::Shl,
+                    BinaryOp::Eq => IRInstr::Eq,
+                    BinaryOp::Ne => IRInstr::Ne,
+                    BinaryOp::Gt => IRInstr::Gt,
+                    BinaryOp::Ge => IRInstr::Ge,
+                    BinaryOp::Lt => IRInstr::Lt,
+                    BinaryOp::Le => IRInstr::Le,
+                    BinaryOp::And | BinaryOp::Or => unreachable!("handled above"),
+                };
+                let ret_ty = match op {
+                    BinaryOp::Add => infer_add_type(&lt, &rt),
+                    BinaryOp::Sub
+                    | BinaryOp::Mul
+                    | BinaryOp::Div
+                    | BinaryOp::Mod
+                    | BinaryOp::Xor
+                    | BinaryOp::Shl => Type::Num,
+                    _ => Type::Bool,
+                };
+                bc.push(IRNode::new(instr, span, Some(ret_ty.clone())));
+                ret_ty
+            }
+        },
         ExprKind::Call { callee, args } => {
             for arg in args {
                 compile_expr_ir(arg, bc, env, fns, proof_state);
@@ -2209,6 +2373,9 @@ fn compile_expr_ir(
                         name.as_str(),
                         "len"
                             | "to_text"
+                            | "read_line"
+                            | "read_token"
+                            | "read_int"
                             | "__index"
                             | "__setindex"
                             | "list_range"
@@ -2299,6 +2466,35 @@ fn compile_expr_ir(
     }
 }
 
+/// Convert the value currently on the stack to the canonical boolean for its
+/// runtime truthiness. `negate` emits logical-not instead. Keeping this in
+/// control flow makes the VM use the same `Value::truthy` boundary as the
+/// interpreter rather than approximating it with structural equality.
+fn emit_truthiness_ir(bc: &mut Vec<IRNode>, span: Option<Span>, negate: bool) {
+    let false_branch = bc.len();
+    bc.push(IRNode::new(IRInstr::JumpIfFalse(0), span.clone(), None));
+    bc.push(IRNode::new(
+        IRInstr::ConstBool(!negate),
+        span.clone(),
+        Some(Type::Bool),
+    ));
+    let end_jump = bc.len();
+    bc.push(IRNode::new(IRInstr::Jump(0), span.clone(), None));
+    let false_start = bc.len();
+    bc.push(IRNode::new(
+        IRInstr::ConstBool(negate),
+        span,
+        Some(Type::Bool),
+    ));
+    let end = bc.len();
+    if let IRInstr::JumpIfFalse(ref mut target) = bc[false_branch].instr {
+        *target = false_start;
+    }
+    if let IRInstr::Jump(ref mut target) = bc[end_jump].instr {
+        *target = end;
+    }
+}
+
 fn infer_add_type(lhs: &Type, rhs: &Type) -> Type {
     match (lhs, rhs) {
         (Type::Text, _) | (_, Type::Text) => Type::Text,
@@ -2311,6 +2507,8 @@ fn builtin_return_type(name: &str) -> Type {
     match name {
         "len" => Type::Num,
         "to_text" => Type::Text,
+        "read_line" | "read_token" => Type::Any,
+        "read_int" => Type::Num,
         "__index" => Type::Any,
         "__setindex" => Type::Any,
         "list_range" => Type::List(Box::new(Type::Num)),
@@ -2360,6 +2558,35 @@ mod tests {
             main_feedback_rounds: Vec::new(),
             function_feedback_rounds: Vec::new(),
         }
+    }
+
+    #[test]
+    fn ir_peephole_does_not_fold_a_boolean_branch_join() {
+        let block = vec![
+            IRNode::new(IRInstr::LoadVar("condition".into()), None, Some(Type::Bool)),
+            IRNode::new(IRInstr::JumpIfFalse(4), None, None),
+            IRNode::new(IRInstr::ConstBool(true), None, Some(Type::Bool)),
+            IRNode::new(IRInstr::Jump(5), None, None),
+            IRNode::new(IRInstr::ConstBool(false), None, Some(Type::Bool)),
+            IRNode::new(IRInstr::JumpIfFalse(8), None, None),
+            IRNode::new(IRInstr::ConstNum(7.0), None, Some(Type::Num)),
+            IRNode::new(IRInstr::Jump(9), None, None),
+            IRNode::new(IRInstr::ConstNum(9.0), None, Some(Type::Num)),
+            IRNode::new(IRInstr::Return, None, None),
+        ];
+
+        let optimized = optimize_block(block).block;
+        assert_eq!(
+            optimized
+                .iter()
+                .filter(|node| matches!(node.instr, IRInstr::JumpIfFalse(_)))
+                .count(),
+            2,
+            "the outer branch must still consume the value selected at the join"
+        );
+        assert!(optimized
+            .iter()
+            .any(|node| matches!(node.instr, IRInstr::ConstBool(false))));
     }
 
     #[test]

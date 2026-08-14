@@ -4,13 +4,15 @@
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 
+use crate::runtime::budget::{install_execution_budget, ExecutionLimits};
 use crate::runtime::env::Env;
 use crate::runtime::events::RuntimeEvent;
+use crate::runtime::input::register_standard_input;
 use crate::runtime::value::Value;
 use crate::typecheck::Type;
 use crate::vm::bytecode::VmResult;
 use crate::vm::bytecode::{Instr, Program};
-use crate::vm::compiler::compile_script;
+use crate::vm::compiler::{compile_script, compile_script_with_budget_checkpoints};
 #[cfg(feature = "experimental-regions")]
 use crate::vm::compiler::{compile_script_with_region_plan, RegionCompiledProgram};
 use crate::vm::interpreter::run_program;
@@ -23,12 +25,53 @@ pub fn run_vm(
     src: &str,
     filename: &str,
 ) -> VmResult<(Vec<RuntimeEvent>, crate::runtime::value::Value)> {
+    run_vm_with_input(stmts, src, filename, "")
+}
+
+pub fn run_vm_with_input(
+    stmts: &[crate::ast::Stmt],
+    src: &str,
+    filename: &str,
+    input: &str,
+) -> VmResult<(Vec<RuntimeEvent>, crate::runtime::value::Value)> {
     let mut env = Env::new();
     crate::stdlib::register_all(&mut env);
+    register_standard_input(&mut env, input.to_string());
     let builtins: HashMap<String, crate::runtime::env::BuiltinFn> = env.builtins();
     let prog = compile_script(stmts);
     let (val, events) = run_program(&prog, &builtins, src, filename)?;
     Ok((events, val))
+}
+
+pub fn run_vm_with_input_and_limits(
+    stmts: &[crate::ast::Stmt],
+    src: &str,
+    filename: &str,
+    input: &str,
+    limits: ExecutionLimits,
+) -> VmResult<(Vec<RuntimeEvent>, crate::runtime::value::Value)> {
+    let mut env = Env::new();
+    crate::stdlib::register_all(&mut env);
+    register_standard_input(&mut env, input.to_string());
+    install_execution_budget(&mut env, limits);
+    let builtins: HashMap<String, crate::runtime::env::BuiltinFn> = env.builtins();
+    let prog = compile_script_with_budget_checkpoints(stmts);
+    let (val, events) = run_program(&prog, &builtins, src, filename)?;
+    Ok((events, val))
+}
+
+/// S1 limits are semantic VM/interpreter limits. Native and typed JIT paths do
+/// not claim this boundary, so a bounded JIT request deterministically falls
+/// back to the instrumented VM.
+pub fn run_jit_with_input_and_limits(
+    stmts: &[crate::ast::Stmt],
+    src: &str,
+    filename: &str,
+    input: &str,
+    limits: ExecutionLimits,
+) -> VmResult<(Vec<RuntimeEvent>, crate::runtime::value::Value, bool)> {
+    let (events, value) = run_vm_with_input_and_limits(stmts, src, filename, input, limits)?;
+    Ok((events, value, false))
 }
 
 #[cfg(feature = "experimental-regions")]
@@ -115,8 +158,18 @@ pub fn run_jit(
     src: &str,
     filename: &str,
 ) -> VmResult<(Vec<RuntimeEvent>, crate::runtime::value::Value, bool)> {
+    run_jit_with_input(stmts, src, filename, "")
+}
+
+pub fn run_jit_with_input(
+    stmts: &[crate::ast::Stmt],
+    src: &str,
+    filename: &str,
+    input: &str,
+) -> VmResult<(Vec<RuntimeEvent>, crate::runtime::value::Value, bool)> {
     let mut env = Env::new();
     crate::stdlib::register_all(&mut env);
+    register_standard_input(&mut env, input.to_string());
     let builtins: HashMap<String, crate::runtime::env::BuiltinFn> = env.builtins();
     let prog = compile_script(stmts);
 

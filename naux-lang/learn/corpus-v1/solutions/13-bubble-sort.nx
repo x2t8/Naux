@@ -1,0 +1,25 @@
+~ rite
+    $n = read_int()
+    $values = []
+    ~ loop $n
+        $values = queue_push($values, read_int())
+    ~ end
+    $pass = 0
+    ~ while $pass < $n
+        $i = 0
+        ~ while $i + 1 < $n - $pass
+            ~ if $values[$i] > $values[$i + 1]
+                $temporary = $values[$i]
+                $values[$i] = $values[$i + 1]
+                $values[$i + 1] = $temporary
+            ~ end
+            $i = $i + 1
+        ~ end
+        $pass = $pass + 1
+    ~ end
+    $i = 0
+    ~ loop $n
+        !say $values[$i]
+        $i = $i + 1
+    ~ end
+~ end

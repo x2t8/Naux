@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed M1 readiness aggregation.
 
-M1 is ready only when one evidence set proves all three roadmap exits:
+M1 is ready only when one evidence set proves all three acceptance exits:
 - a stable, hard-failure-free multi-run window;
 - Rust slope policy running as the actual primary in a controlled CI run;
 - a verified, claim-eligible cross-language bundle from the same Git SHA.

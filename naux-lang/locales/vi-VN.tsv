@@ -1,0 +1,31 @@
+NAUX-INSTALLER-LOCALE	1
+locale	vi-VN
+language-name	Tiếng Việt
+catalog-version	1
+text	installer_title	Cài đặt NAUX Learn
+text	action_install	Cài đặt
+text	action_cancel	Hủy
+text	action_finish	Hoàn tất
+text	welcome_title	Chào mừng đến với NAUX Learn {version}
+text	release_badge	Bản phát hành học tập thử nghiệm
+text	summary	NAUX Learn là một profile nhỏ có chủ đích dành cho việc học lập trình và thực hành thuật toán.
+text	intended_heading	Bản phát hành này dành cho
+text	intended_1	Học cú pháp lập trình và tư duy giải quyết vấn đề.
+text	intended_2	Thực hành cấu trúc dữ liệu và thuật toán.
+text	intended_3	Viết và chạy các chương trình .nx thử nghiệm.
+text	excluded_heading	Bản phát hành này không dành cho
+text	excluded_1	Hệ thống production, security-critical hoặc safety-critical.
+text	excluded_2	Nhu cầu API ổn định hoặc tương thích dài hạn.
+text	excluded_3	Tuyên bố dẫn đầu hiệu năng native hoặc C/C++.
+text	change_warning	Cú pháp, semantics, thư viện, định dạng project và cách cài đặt có thể thay đổi đáng kể trong các bản tương lai.
+text	sandbox_warning	Giới hạn thực thi giúp giảm tính toán vô tình chạy quá lâu; chúng không phải security sandbox.
+text	seed_warning	Người học không cần Rust hoặc Cargo, nhưng artifact này vẫn được tạo bởi Rust/Cargo seed và còn khoản nợ seed egg.
+text	future_warning	NAUX tương lai sẽ có phạm vi rộng hơn; định hướng nghiên cứu không phải cam kết tính năng hoặc thời điểm.
+text	warranty_warning	Phần mềm thử nghiệm này được cung cấp theo giấy phép đi kèm và không có bảo đảm. Hãy đọc LICENSE và LIMITATIONS trước khi dùng.
+text	action_start	Chạy chương trình đầu tiên
+text	action_limitations	Đọc các giới hạn
+text	action_release_notes	Xem ghi chú phát hành
+text	action_close	Đóng
+text	uninstall_title	Gỡ cài đặt NAUX Learn
+text	repair_title	Sửa chữa NAUX Learn
+text	rollback_title	Khôi phục bản NAUX Learn trước

@@ -1,0 +1,28 @@
+~ rite
+    $n = read_int()
+    $values = []
+    $length = []
+    ~ loop $n
+        $values = queue_push($values, read_int())
+        $length = queue_push($length, 1)
+    ~ end
+    $answer = 0
+    $i = 0
+    ~ while $i < $n
+        $j = 0
+        ~ while $j < $i
+            ~ if $values[$j] < $values[$i]
+                $candidate = $length[$j] + 1
+                ~ if $candidate > $length[$i]
+                    $length[$i] = $candidate
+                ~ end
+            ~ end
+            $j = $j + 1
+        ~ end
+        ~ if $length[$i] > $answer
+            $answer = $length[$i]
+        ~ end
+        $i = $i + 1
+    ~ end
+    !say $answer
+~ end

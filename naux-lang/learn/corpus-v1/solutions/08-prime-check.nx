@@ -1,0 +1,12 @@
+~ rite
+    $n = read_int()
+    $prime = $n >= 2
+    $divisor = 2
+    ~ while $prime && $divisor * $divisor <= $n
+        ~ if $n % $divisor == 0
+            $prime = false
+        ~ end
+        $divisor = $divisor + 1
+    ~ end
+    !say $prime
+~ end

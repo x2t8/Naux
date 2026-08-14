@@ -1,0 +1,31 @@
+NAUX-INSTALLER-LOCALE	1
+locale	ko-KR
+language-name	한국어
+catalog-version	1
+text	installer_title	NAUX Learn 설치
+text	action_install	설치
+text	action_cancel	취소
+text	action_finish	완료
+text	welcome_title	NAUX Learn {version}에 오신 것을 환영합니다
+text	release_badge	실험적 학습용 릴리스
+text	summary	NAUX Learn은 프로그래밍 학습과 알고리즘 연습을 위해 의도적으로 작게 구성한 프로필입니다.
+text	intended_heading	이 릴리스의 용도
+text	intended_1	프로그래밍 문법과 문제 해결 학습.
+text	intended_2	자료 구조와 알고리즘 연습.
+text	intended_3	실험적인 .nx 프로그램 작성 및 실행.
+text	excluded_heading	이 릴리스의 비권장 용도
+text	excluded_1	프로덕션, 보안 중요 또는 안전 중요 시스템.
+text	excluded_2	안정적인 API 또는 장기 호환성이 필요한 환경.
+text	excluded_3	네이티브 성능 또는 C/C++ 성능 우위 주장.
+text	change_warning	문법, 의미론, 라이브러리, 프로젝트 형식과 설치 동작은 향후 크게 변경될 수 있습니다.
+text	sandbox_warning	실행 제한은 우발적인 무한 실행을 줄이지만 보안 샌드박스가 아닙니다.
+text	seed_warning	학습자는 Rust나 Cargo가 필요 없지만 이 산출물은 아직 Rust/Cargo seed로 생성되며 egg seed debt를 포함합니다.
+text	future_warning	향후 NAUX의 범위는 더 넓어지지만 연구 방향은 기능이나 일정에 대한 약속이 아닙니다.
+text	warranty_warning	이 실험적 소프트웨어는 동봉된 라이선스에 따라 보증 없이 제공됩니다. 사용 전에 LICENSE와 LIMITATIONS를 읽으십시오.
+text	action_start	첫 프로그램 실행
+text	action_limitations	제한 사항 읽기
+text	action_release_notes	릴리스 노트 보기
+text	action_close	닫기
+text	uninstall_title	NAUX Learn 제거
+text	repair_title	NAUX Learn 복구
+text	rollback_title	NAUX Learn 롤백

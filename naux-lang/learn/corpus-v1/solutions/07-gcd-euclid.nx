@@ -1,0 +1,10 @@
+~ rite
+    $a = read_int()
+    $b = read_int()
+    ~ while $b != 0
+        $remainder = $a % $b
+        $a = $b
+        $b = $remainder
+    ~ end
+    !say $a
+~ end

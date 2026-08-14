@@ -1,0 +1,32 @@
+~ rite
+    $n = read_int()
+    $start = read_int()
+    $adjacency = []
+    ~ loop $n * $n
+        $adjacency = queue_push($adjacency, read_int())
+    ~ end
+    $seen = []
+    $queue = []
+    ~ loop $n
+        $seen = queue_push($seen, 0)
+        $queue = queue_push($queue, 0)
+    ~ end
+    $head = 0
+    $tail = 1
+    $queue[0] = $start
+    $seen[$start] = 1
+    ~ while $head < $tail
+        $node = $queue[$head]
+        $head = $head + 1
+        !say $node
+        $next = 0
+        ~ while $next < $n
+            ~ if $adjacency[$node * $n + $next] != 0 && $seen[$next] == 0
+                $seen[$next] = 1
+                $queue[$tail] = $next
+                $tail = $tail + 1
+            ~ end
+            $next = $next + 1
+        ~ end
+    ~ end
+~ end

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 default-run = "naux"
+build = "build.rs"
 
 [features]
 default = []
@@ -16,6 +17,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "naux"
 path = "src/main.rs"
+
+[[bin]]
+name = "naux-learn-setup"
+path = "src/bin/naux_learn_setup.rs"
 
 [[bin]]
 name = "naux-r1-s7b-worker"

@@ -1,0 +1,20 @@
+NAUX-S1-HOST-DEPENDENCIES	1
+target	windows-x86_64-gnu
+object-format	PE32+
+machine	x86-64
+subsystem	Windows CUI
+candidate-host-floor	Windows 10 22H2 x86-64
+needed	KERNEL32.dll
+needed	USERENV.dll
+needed	WS2_32.dll
+needed	api-ms-win-core-synch-l1-2-0.dll
+needed	api-ms-win-crt-environment-l1-1-0.dll
+needed	api-ms-win-crt-heap-l1-1-0.dll
+needed	api-ms-win-crt-locale-l1-1-0.dll
+needed	api-ms-win-crt-math-l1-1-0.dll
+needed	api-ms-win-crt-private-l1-1-0.dll
+needed	api-ms-win-crt-runtime-l1-1-0.dll
+needed	api-ms-win-crt-stdio-l1-1-0.dll
+needed	api-ms-win-crt-string-l1-1-0.dll
+needed	bcryptprimitives.dll
+needed	ntdll.dll

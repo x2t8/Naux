@@ -1,0 +1,15 @@
+~ rite
+    $n = read_int()
+    $prefix = [0]
+    $running = 0
+    ~ loop $n
+        $running = $running + read_int()
+        $prefix = queue_push($prefix, $running)
+    ~ end
+    $queries = read_int()
+    ~ loop $queries
+        $left = read_int()
+        $right = read_int()
+        !say $prefix[$right + 1] - $prefix[$left]
+    ~ end
+~ end

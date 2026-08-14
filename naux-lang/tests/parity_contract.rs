@@ -149,6 +149,55 @@ $out = len("xx") != (3 / 2)
 }
 
 #[test]
+fn bool_001_logical_not_uses_the_same_truthiness_in_interpreter_and_vm() {
+    for (source, expected) in [
+        ("$out = !0\n^ $out\n", true),
+        ("$out = !1\n^ $out\n", false),
+        ("$out = !\"\"\n^ $out\n", true),
+        ("$out = ![1]\n^ $out\n", false),
+    ] {
+        assert_interpreter_vm_out(source, Value::Bool(expected));
+    }
+}
+
+#[test]
+fn bool_002_and_short_circuits_the_unselected_rhs_in_both_backends() {
+    assert_interpreter_vm_out("$out = false && (1 / 0)\n^ $out\n", Value::Bool(false));
+    assert_interpreter_vm_out("$out = 7 && 2\n^ $out\n", Value::Bool(true));
+}
+
+#[test]
+fn bool_003_or_short_circuits_the_unselected_rhs_in_both_backends() {
+    assert_interpreter_vm_out("$out = true || (1 / 0)\n^ $out\n", Value::Bool(true));
+    assert_interpreter_vm_out("$out = 0 || 2\n^ $out\n", Value::Bool(true));
+}
+
+#[test]
+fn bool_004_short_circuit_result_remains_valid_at_an_outer_branch_join() {
+    assert_interpreter_vm_out(
+        r#"
+$out = 0
+~ if 1 == 1 && 2 == 2
+    $out = 7
+~ end
+^ $out
+"#,
+        Value::SmallInt(7),
+    );
+}
+
+#[test]
+fn ctrl_001_loop_count_rejects_negative_and_fractional_values_in_both_backends() {
+    for source in ["~ loop -1\n~ end\n^ 0\n", "~ loop 3 / 2\n~ end\n^ 0\n"] {
+        assert_interpreter_vm_error_first_line(
+            source,
+            "Runtime error: Loop count must be a non-negative integer.",
+        );
+        assert_jit_error_contains(source, "Loop count must be a non-negative integer.");
+    }
+}
+
+#[test]
 fn imp_001_relative_import_resolves_from_importing_file() {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -682,7 +731,7 @@ fn err_002_error_shape_keeps_backend_stable_kind_and_message() {
     assert_eq!(interp_first, "Runtime error: Division by zero");
     assert_eq!(vm_first, interp_first);
     assert!(rendered.contains(" --> <parity>:"));
-    assert!(vm_err.contains("  at <parity>:"));
+    assert!(vm_err.contains(" --> <parity>:"));
 }
 
 #[test]
@@ -760,6 +809,7 @@ fn mem_002_safe_index_contract_is_null_on_read_and_error_on_write() {
     for src in [
         "$out = __index([1], 1)\n^ $out\n",
         "$out = __index([1], -1)\n^ $out\n",
+        "$values = [1]\n$out = $values[-1]\n^ $out\n",
         "$out = __index({x: 1}, \"missing\")\n^ $out\n",
     ] {
         let (env, _events, errors) = run_interpreter(src);
@@ -770,6 +820,14 @@ fn mem_002_safe_index_contract_is_null_on_read_and_error_on_write() {
         assert_eq!(vm_value, Value::Null);
         let (_events, jit_value, _used_jit) = run_jit_result(src).expect("JIT safe read");
         assert_eq!(jit_value, Value::Null);
+    }
+
+    for src in [
+        "$out = __index([10, 20], 3 / 2)\n^ $out\n",
+        "$values = [10, 20]\n$out = $values[3 / 2]\n^ $out\n",
+    ] {
+        assert_interpreter_vm_error_first_line(src, "Runtime error: index must be an integer");
+        assert_jit_error_contains(src, "index must be an integer");
     }
 
     for src in [

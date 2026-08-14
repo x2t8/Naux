@@ -1,0 +1,18 @@
+~ rite
+    $n = read_int()
+    $budget = read_int()
+    $costs = []
+    ~ loop $n
+        $costs = queue_push($costs, read_int())
+    ~ end
+    $bought = 0
+    $i = 0
+    ~ while $i < $n
+        ~ if $costs[$i] <= $budget
+            $budget = $budget - $costs[$i]
+            $bought = $bought + 1
+        ~ end
+        $i = $i + 1
+    ~ end
+    !say $bought
+~ end

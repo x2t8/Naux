@@ -4,6 +4,7 @@ use naux::core::{
     admit_x64_tail_worker_artifact, decode_x64_tail_worker_elf, emit_x64_tail_worker_elf_evidence,
     probe_x64_tail_worker_elf_evidence_mutations, verify_x64_tail_worker_elf_evidence,
     x64_tail_worker_elf_policy_hash, x64_tail_worker_expectation_from_reviewed_bytes,
+    X64_TAIL_WORKER_ELF_POLICY_ROOT,
 };
 use std::collections::BTreeSet;
 use std::fs;
@@ -118,6 +119,7 @@ fn adr0071_independently_inventories_the_exact_sealed_worker() {
     assert_eq!(verified.evidence(), &evidence);
     assert_eq!(evidence.artifact_hash(), expectation.artifact_hash());
     assert_eq!(evidence.policy_hash(), x64_tail_worker_elf_policy_hash());
+    assert_eq!(evidence.policy_hash(), X64_TAIL_WORKER_ELF_POLICY_ROOT);
     assert!(evidence.interpreter().starts_with('/'));
     assert!(evidence.header().program_header_count() > 0);
     assert_eq!(

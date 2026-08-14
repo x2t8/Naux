@@ -10,7 +10,7 @@ mod corevm0_definitional;
 mod corevm0_gate_a;
 mod corevm0_r1_s3;
 mod corevm0_r1_s4;
-mod encoding;
+pub(crate) mod encoding;
 mod interpret;
 mod machine_ir;
 mod polyvariant_r1;
@@ -74,7 +74,21 @@ mod x64_tail_state_allocation;
 mod x64_tail_state_plan;
 mod x64_tail_template_realization;
 mod x64_tail_worker_artifact;
+mod x64_tail_worker_dependency_admission;
+mod x64_tail_worker_dependency_closure;
+mod x64_tail_worker_dependency_compatibility;
+mod x64_tail_worker_dependency_definitions;
+mod x64_tail_worker_dependency_dynamic;
+mod x64_tail_worker_dependency_objects;
+mod x64_tail_worker_dependency_symbols;
+mod x64_tail_worker_dependency_versions;
 mod x64_tail_worker_elf;
+mod x64_tail_worker_root_compatibility;
+mod x64_tail_worker_root_relocations;
+mod x64_tail_worker_root_scope;
+mod x64_tail_worker_root_selection;
+mod x64_tail_worker_root_symbols;
+mod x64_tail_worker_root_versions;
 mod x64_target;
 
 pub use core_ssa::{
@@ -704,6 +718,192 @@ pub use x64_tail_worker_artifact::{
 };
 #[cfg(debug_assertions)]
 #[doc(hidden)]
+pub use x64_tail_worker_dependency_admission::probe_x64_tail_worker_dependency_admission_mutations;
+pub use x64_tail_worker_dependency_admission::{
+    admit_x64_tail_worker_dependency_declarations, verify_x64_tail_worker_dependency_admission,
+    x64_tail_worker_dependency_admission_evidence_hash,
+    x64_tail_worker_dependency_admission_policy_hash, VerifiedX64TailWorkerDependencyAdmission,
+    X64TailWorkerDependencyAdmissionError, X64TailWorkerDependencyAdmissionEvidence,
+    X64TailWorkerDependencyExpectation, X64_TAIL_WORKER_DEPENDENCY_ADMISSION_POLICY_ROOT,
+    X64_TAIL_WORKER_DEPENDENCY_ADMISSION_POLICY_VERSION,
+    X64_TAIL_WORKER_DEPENDENCY_ADMISSION_SCHEMA_VERSION, X64_TAIL_WORKER_DEPENDENCY_REQUIRED_FLAGS,
+    X64_TAIL_WORKER_DEPENDENCY_REQUIRED_FLAGS_1,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_dependency_closure::probe_x64_tail_worker_dependency_closure_mutations;
+pub use x64_tail_worker_dependency_closure::{
+    admit_x64_tail_worker_dependency_closure, verify_x64_tail_worker_dependency_closure,
+    x64_tail_worker_dependency_closure_evidence_hash,
+    x64_tail_worker_dependency_closure_expectation_hash,
+    x64_tail_worker_dependency_closure_policy_hash, VerifiedX64TailWorkerDependencyClosure,
+    X64TailWorkerDependencyClosureError, X64TailWorkerDependencyClosureEvidence,
+    X64TailWorkerDependencyClosureExpectation, X64TailWorkerDependencyClosureProviderEvidence,
+    X64TailWorkerDependencyClosureProviderExpectation,
+    X64_TAIL_WORKER_DEPENDENCY_CLOSURE_MAX_APPEARANCES,
+    X64_TAIL_WORKER_DEPENDENCY_CLOSURE_MAX_EDGES,
+    X64_TAIL_WORKER_DEPENDENCY_CLOSURE_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_CLOSURE_MAX_PROVIDERS,
+    X64_TAIL_WORKER_DEPENDENCY_CLOSURE_POLICY_ROOT,
+    X64_TAIL_WORKER_DEPENDENCY_CLOSURE_POLICY_VERSION,
+    X64_TAIL_WORKER_DEPENDENCY_CLOSURE_SCHEMA_VERSION,
+};
+pub use x64_tail_worker_dependency_compatibility::{
+    admit_x64_tail_worker_dependency_compatibility,
+    verify_x64_tail_worker_dependency_compatibility,
+    x64_tail_worker_dependency_compatibility_evidence_hash,
+    x64_tail_worker_dependency_compatibility_policy_hash,
+    VerifiedX64TailWorkerDependencyCompatibility,
+    X64TailWorkerDependencyCompatibilityBindingEvidence, X64TailWorkerDependencyCompatibilityError,
+    X64TailWorkerDependencyCompatibilityEvidence,
+    X64TailWorkerDependencyCompatibilityObjectEvidence,
+    X64_TAIL_WORKER_DEPENDENCY_COMPATIBILITY_MAX_AUX_PER_REQUIREMENT,
+    X64_TAIL_WORKER_DEPENDENCY_COMPATIBILITY_MAX_BINDINGS,
+    X64_TAIL_WORKER_DEPENDENCY_COMPATIBILITY_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_COMPATIBILITY_MAX_PROVIDERS,
+    X64_TAIL_WORKER_DEPENDENCY_COMPATIBILITY_MAX_REQUIREMENTS,
+    X64_TAIL_WORKER_DEPENDENCY_COMPATIBILITY_POLICY_ROOT,
+    X64_TAIL_WORKER_DEPENDENCY_COMPATIBILITY_POLICY_VERSION,
+    X64_TAIL_WORKER_DEPENDENCY_COMPATIBILITY_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_dependency_compatibility::{
+    probe_x64_tail_worker_dependency_compatibility_join_edges,
+    probe_x64_tail_worker_dependency_compatibility_mutations,
+};
+pub use x64_tail_worker_dependency_definitions::{
+    emit_x64_tail_worker_dependency_definition_evidence,
+    verify_x64_tail_worker_dependency_definition_evidence,
+    x64_tail_worker_dependency_definition_evidence_hash,
+    x64_tail_worker_dependency_definition_policy_hash, VerifiedX64TailWorkerDependencyDefinitions,
+    X64TailWorkerDependencyDefinitionAuxEvidence, X64TailWorkerDependencyDefinitionError,
+    X64TailWorkerDependencyDefinitionEvidence, X64TailWorkerDependencyDefinitionObjectEvidence,
+    X64TailWorkerDependencyDefinitionRecordEvidence,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_MAX_AUX_PER_DEFINITION,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_MAX_DEFINITIONS,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_MAX_DYNAMIC_ENTRIES,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_MAX_LOAD_SEGMENTS,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_MAX_PROGRAM_HEADERS,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_MAX_PROVIDERS,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_MAX_STRING_TABLE_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_MAX_TOTAL_AUX,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_POLICY_ROOT,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_POLICY_VERSION,
+    X64_TAIL_WORKER_DEPENDENCY_DEFINITION_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_dependency_definitions::{
+    probe_x64_tail_worker_dependency_definition_decoder_mutations,
+    probe_x64_tail_worker_dependency_definition_mutations,
+};
+pub use x64_tail_worker_dependency_dynamic::{
+    emit_x64_tail_worker_dependency_dynamic_evidence,
+    verify_x64_tail_worker_dependency_dynamic_evidence,
+    x64_tail_worker_dependency_dynamic_evidence_hash,
+    x64_tail_worker_dependency_dynamic_policy_hash, VerifiedX64TailWorkerDependencyDynamic,
+    X64TailWorkerDependencyDynamicError, X64TailWorkerDependencyDynamicEvidence,
+    X64TailWorkerDependencyDynamicName, X64TailWorkerDependencyDynamicObjectEvidence,
+    X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_MAX_ENTRIES,
+    X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_MAX_LOAD_SEGMENTS,
+    X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_MAX_NEEDED, X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_MAX_OBJECTS,
+    X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_MAX_PROGRAM_HEADERS,
+    X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_MAX_STRING_TABLE_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_POLICY_ROOT,
+    X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_POLICY_VERSION,
+    X64_TAIL_WORKER_DEPENDENCY_DYNAMIC_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_dependency_dynamic::{
+    probe_x64_tail_worker_dependency_dynamic_decoder_mutations,
+    probe_x64_tail_worker_dependency_dynamic_mutations,
+};
+pub use x64_tail_worker_dependency_objects::{
+    admit_x64_tail_worker_dependency_objects, dependency_object_manifest_hash,
+    dependency_objects_evidence_hash, verify_x64_tail_worker_dependency_objects,
+    x64_tail_worker_dependency_object_policy_hash, VerifiedX64TailWorkerDependencyObjectSet,
+    X64TailWorkerDependencyObjectElfIdentity, X64TailWorkerDependencyObjectError,
+    X64TailWorkerDependencyObjectEvidence, X64TailWorkerDependencyObjectExpectation,
+    X64TailWorkerDependencyObjectKind, X64TailWorkerDependencyObjectManifest,
+    X64TailWorkerDependencyObjectSet, X64TailWorkerDependencyObjectsEvidence,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_MAX_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_MAX_LOAD_SEGMENTS,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_MAX_OBJECTS,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_MAX_PATH_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_MAX_PROGRAM_HEADERS,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_MAX_SECTION_HEADERS,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_MAX_TOTAL_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_POLICY_ROOT,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_POLICY_VERSION,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_REQUIRED_SEALS,
+    X64_TAIL_WORKER_DEPENDENCY_OBJECT_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_dependency_objects::{
+    probe_x64_tail_worker_dependency_object_elf_mutations,
+    probe_x64_tail_worker_dependency_object_mutations,
+};
+pub use x64_tail_worker_dependency_symbols::{
+    emit_x64_tail_worker_dependency_symbol_evidence,
+    verify_x64_tail_worker_dependency_symbol_evidence,
+    x64_tail_worker_dependency_symbol_evidence_hash, x64_tail_worker_dependency_symbol_policy_hash,
+    VerifiedX64TailWorkerDependencySymbols, X64TailWorkerDependencySymbolError,
+    X64TailWorkerDependencySymbolEvidence, X64TailWorkerDependencySymbolNamespaceKind,
+    X64TailWorkerDependencySymbolObjectEvidence, X64TailWorkerDependencySymbolRecordEvidence,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_DYNAMIC_ENTRIES,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_GNU_BLOOM_WORDS,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_HASH_BUCKETS,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_LOAD_SEGMENTS,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_PROGRAM_HEADERS,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_PROVIDERS,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_STRING_TABLE_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_SYMBOLS,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_MAX_TOTAL_SYMBOLS,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_POLICY_ROOT,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_POLICY_VERSION,
+    X64_TAIL_WORKER_DEPENDENCY_SYMBOL_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_dependency_symbols::{
+    probe_x64_tail_worker_dependency_symbol_decoder_mutations,
+    probe_x64_tail_worker_dependency_symbol_mutations,
+};
+pub use x64_tail_worker_dependency_versions::{
+    emit_x64_tail_worker_dependency_version_evidence,
+    verify_x64_tail_worker_dependency_version_evidence,
+    x64_tail_worker_dependency_version_evidence_hash,
+    x64_tail_worker_dependency_version_policy_hash, VerifiedX64TailWorkerDependencyVersions,
+    X64TailWorkerDependencyVersionAuxEvidence, X64TailWorkerDependencyVersionError,
+    X64TailWorkerDependencyVersionEvidence, X64TailWorkerDependencyVersionObjectEvidence,
+    X64TailWorkerDependencyVersionRequirementEvidence,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_MAX_AUX_PER_REQUIREMENT,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_MAX_DYNAMIC_ENTRIES,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_MAX_LOAD_SEGMENTS,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_MAX_PROGRAM_HEADERS,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_MAX_PROVIDERS,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_MAX_REQUIREMENTS,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_MAX_STRING_TABLE_BYTES,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_MAX_TOTAL_AUX,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_POLICY_ROOT,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_POLICY_VERSION,
+    X64_TAIL_WORKER_DEPENDENCY_VERSION_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_dependency_versions::{
+    probe_x64_tail_worker_dependency_version_decoder_mutations,
+    probe_x64_tail_worker_dependency_version_mutations,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
 pub use x64_tail_worker_elf::probe_x64_tail_worker_elf_evidence_mutations;
 pub use x64_tail_worker_elf::{
     decode_x64_tail_worker_elf, emit_x64_tail_worker_elf_evidence,
@@ -714,8 +914,115 @@ pub use x64_tail_worker_elf::{
     X64_TAIL_WORKER_ELF_MAX_DEPENDENCIES, X64_TAIL_WORKER_ELF_MAX_DYNAMIC_ENTRIES,
     X64_TAIL_WORKER_ELF_MAX_LOAD_SEGMENTS, X64_TAIL_WORKER_ELF_MAX_NAME_BYTES,
     X64_TAIL_WORKER_ELF_MAX_PROGRAM_HEADERS, X64_TAIL_WORKER_ELF_MAX_SECTION_HEADERS,
-    X64_TAIL_WORKER_ELF_MAX_STRING_TABLE_BYTES, X64_TAIL_WORKER_ELF_POLICY_VERSION,
-    X64_TAIL_WORKER_ELF_SCHEMA_VERSION,
+    X64_TAIL_WORKER_ELF_MAX_STRING_TABLE_BYTES, X64_TAIL_WORKER_ELF_POLICY_ROOT,
+    X64_TAIL_WORKER_ELF_POLICY_VERSION, X64_TAIL_WORKER_ELF_SCHEMA_VERSION,
+};
+pub use x64_tail_worker_root_compatibility::{
+    admit_x64_tail_worker_root_compatibility, verify_x64_tail_worker_root_compatibility,
+    x64_tail_worker_root_compatibility_evidence_hash,
+    x64_tail_worker_root_compatibility_policy_hash, VerifiedX64TailWorkerRootCompatibility,
+    X64TailWorkerRootCompatibilityBindingEvidence, X64TailWorkerRootCompatibilityError,
+    X64TailWorkerRootCompatibilityEvidence,
+    X64_TAIL_WORKER_ROOT_COMPATIBILITY_MAX_AUX_PER_REQUIREMENT,
+    X64_TAIL_WORKER_ROOT_COMPATIBILITY_MAX_BINDINGS,
+    X64_TAIL_WORKER_ROOT_COMPATIBILITY_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_ROOT_COMPATIBILITY_MAX_PROVIDERS,
+    X64_TAIL_WORKER_ROOT_COMPATIBILITY_MAX_REQUIREMENTS,
+    X64_TAIL_WORKER_ROOT_COMPATIBILITY_POLICY_ROOT,
+    X64_TAIL_WORKER_ROOT_COMPATIBILITY_POLICY_VERSION,
+    X64_TAIL_WORKER_ROOT_COMPATIBILITY_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_root_compatibility::{
+    probe_x64_tail_worker_root_compatibility_join_edges,
+    probe_x64_tail_worker_root_compatibility_mutations,
+};
+pub use x64_tail_worker_root_relocations::{
+    emit_x64_tail_worker_root_relocation_evidence, verify_x64_tail_worker_root_relocation_evidence,
+    x64_tail_worker_root_relocation_evidence_hash, x64_tail_worker_root_relocation_policy_hash,
+    VerifiedX64TailWorkerRootRelocations, X64TailWorkerRootRelocationClass,
+    X64TailWorkerRootRelocationError, X64TailWorkerRootRelocationEvidence,
+    X64TailWorkerRootRelocationRecordEvidence, X64TailWorkerRootRelocationTableKind,
+    X64_TAIL_WORKER_ROOT_RELOCATION_MAX_RECORDS, X64_TAIL_WORKER_ROOT_RELOCATION_POLICY_ROOT,
+    X64_TAIL_WORKER_ROOT_RELOCATION_POLICY_VERSION, X64_TAIL_WORKER_ROOT_RELOCATION_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_root_relocations::{
+    probe_x64_tail_worker_root_relocation_decoder_mutations,
+    probe_x64_tail_worker_root_relocation_mutations,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_root_scope::probe_x64_tail_worker_root_scope_mutations;
+pub use x64_tail_worker_root_scope::{
+    admit_x64_tail_worker_root_scope, verify_x64_tail_worker_root_scope,
+    x64_tail_worker_root_scope_evidence_hash, x64_tail_worker_root_scope_expectation_hash,
+    x64_tail_worker_root_scope_policy_hash, VerifiedX64TailWorkerRootScope,
+    X64TailWorkerRootScopeEntryEvidence, X64TailWorkerRootScopeEntryExpectation,
+    X64TailWorkerRootScopeError, X64TailWorkerRootScopeEvidence, X64TailWorkerRootScopeExpectation,
+    X64_TAIL_WORKER_ROOT_SCOPE_MAX_ENTRIES, X64_TAIL_WORKER_ROOT_SCOPE_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_ROOT_SCOPE_MAX_PROVIDERS, X64_TAIL_WORKER_ROOT_SCOPE_POLICY_ROOT,
+    X64_TAIL_WORKER_ROOT_SCOPE_POLICY_VERSION, X64_TAIL_WORKER_ROOT_SCOPE_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_root_selection::probe_x64_tail_worker_root_selection_mutations;
+pub use x64_tail_worker_root_selection::{
+    emit_x64_tail_worker_root_selection_evidence, verify_x64_tail_worker_root_selection_evidence,
+    x64_tail_worker_root_selection_evidence_hash, x64_tail_worker_root_selection_policy_hash,
+    VerifiedX64TailWorkerRootSelection, X64TailWorkerRootSelectionDecisionEvidence,
+    X64TailWorkerRootSelectionDecisionKind, X64TailWorkerRootSelectionError,
+    X64TailWorkerRootSelectionEvidence, X64TailWorkerRootSelectionProbeEvidence,
+    X64_TAIL_WORKER_ROOT_SELECTION_FROZEN_IFUNC_REFUSALS,
+    X64_TAIL_WORKER_ROOT_SELECTION_FROZEN_REQUESTS,
+    X64_TAIL_WORKER_ROOT_SELECTION_FROZEN_ROOT_SYMBOLS,
+    X64_TAIL_WORKER_ROOT_SELECTION_FROZEN_SELECTED, X64_TAIL_WORKER_ROOT_SELECTION_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_ROOT_SELECTION_MAX_REQUESTS, X64_TAIL_WORKER_ROOT_SELECTION_MAX_SCOPE_PROBES,
+    X64_TAIL_WORKER_ROOT_SELECTION_POLICY_ROOT, X64_TAIL_WORKER_ROOT_SELECTION_POLICY_VERSION,
+    X64_TAIL_WORKER_ROOT_SELECTION_SCHEMA_VERSION, X64_TAIL_WORKER_ROOT_SELECTION_TOPOLOGY_ROOT,
+};
+pub use x64_tail_worker_root_symbols::{
+    emit_x64_tail_worker_root_symbol_evidence, verify_x64_tail_worker_root_symbol_evidence,
+    x64_tail_worker_root_symbol_evidence_hash, x64_tail_worker_root_symbol_policy_hash,
+    VerifiedX64TailWorkerRootSymbols, X64TailWorkerRootSymbolError,
+    X64TailWorkerRootSymbolEvidence, X64TailWorkerRootSymbolNamespaceKind,
+    X64TailWorkerRootSymbolObjectEvidence, X64TailWorkerRootSymbolRecordEvidence,
+    X64_TAIL_WORKER_ROOT_SYMBOL_MAX_DYNAMIC_ENTRIES,
+    X64_TAIL_WORKER_ROOT_SYMBOL_MAX_GNU_BLOOM_WORDS, X64_TAIL_WORKER_ROOT_SYMBOL_MAX_HASH_BUCKETS,
+    X64_TAIL_WORKER_ROOT_SYMBOL_MAX_LOAD_SEGMENTS, X64_TAIL_WORKER_ROOT_SYMBOL_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_ROOT_SYMBOL_MAX_PROGRAM_HEADERS,
+    X64_TAIL_WORKER_ROOT_SYMBOL_MAX_STRING_TABLE_BYTES, X64_TAIL_WORKER_ROOT_SYMBOL_MAX_SYMBOLS,
+    X64_TAIL_WORKER_ROOT_SYMBOL_POLICY_ROOT, X64_TAIL_WORKER_ROOT_SYMBOL_POLICY_VERSION,
+    X64_TAIL_WORKER_ROOT_SYMBOL_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_root_symbols::{
+    probe_x64_tail_worker_root_symbol_decoder_mutations,
+    probe_x64_tail_worker_root_symbol_mutations,
+};
+pub use x64_tail_worker_root_versions::{
+    emit_x64_tail_worker_root_version_evidence, verify_x64_tail_worker_root_version_evidence,
+    x64_tail_worker_root_version_evidence_hash, x64_tail_worker_root_version_policy_hash,
+    VerifiedX64TailWorkerRootVersions, X64TailWorkerRootVersionAuxEvidence,
+    X64TailWorkerRootVersionError, X64TailWorkerRootVersionEvidence,
+    X64TailWorkerRootVersionRequirementEvidence,
+    X64_TAIL_WORKER_ROOT_VERSION_MAX_AUX_PER_REQUIREMENT,
+    X64_TAIL_WORKER_ROOT_VERSION_MAX_DYNAMIC_ENTRIES,
+    X64_TAIL_WORKER_ROOT_VERSION_MAX_LOAD_SEGMENTS, X64_TAIL_WORKER_ROOT_VERSION_MAX_NAME_BYTES,
+    X64_TAIL_WORKER_ROOT_VERSION_MAX_PROGRAM_HEADERS,
+    X64_TAIL_WORKER_ROOT_VERSION_MAX_REQUIREMENTS,
+    X64_TAIL_WORKER_ROOT_VERSION_MAX_STRING_TABLE_BYTES,
+    X64_TAIL_WORKER_ROOT_VERSION_MAX_TOTAL_AUX, X64_TAIL_WORKER_ROOT_VERSION_POLICY_ROOT,
+    X64_TAIL_WORKER_ROOT_VERSION_POLICY_VERSION, X64_TAIL_WORKER_ROOT_VERSION_SCHEMA_VERSION,
+};
+#[cfg(debug_assertions)]
+#[doc(hidden)]
+pub use x64_tail_worker_root_versions::{
+    probe_x64_tail_worker_root_version_decoder_mutations,
+    probe_x64_tail_worker_root_version_mutations,
 };
 pub use x64_target::{
     evaluate_source_bound_x64_target_plan, evaluate_x64_target_plan,

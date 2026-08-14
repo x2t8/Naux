@@ -1,0 +1,29 @@
+~ rite
+    $n = read_int()
+    $capacity = read_int()
+    $weights = []
+    $values = []
+    ~ loop $n
+        $weights = queue_push($weights, read_int())
+    ~ end
+    ~ loop $n
+        $values = queue_push($values, read_int())
+    ~ end
+    $best = []
+    ~ loop $capacity + 1
+        $best = queue_push($best, 0)
+    ~ end
+    $item = 0
+    ~ while $item < $n
+        $space = $capacity
+        ~ while $space >= $weights[$item]
+            $candidate = $best[$space - $weights[$item]] + $values[$item]
+            ~ if $candidate > $best[$space]
+                $best[$space] = $candidate
+            ~ end
+            $space = $space - 1
+        ~ end
+        $item = $item + 1
+    ~ end
+    !say $best[$capacity]
+~ end

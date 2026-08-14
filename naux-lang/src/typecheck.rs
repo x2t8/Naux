@@ -267,6 +267,10 @@ fn check_expr(expr: &Expr, env: &Env, fns: &FnTable) -> Result<Type, TypeError> 
                     // Nếu vẫn không có, chấp nhận như call động (Type::Any).
                     return match builtin_ret_type(name, &arg_tys) {
                         Ok(ty) => Ok(ty),
+                        Err(message) if is_typed_builtin(name) => Err(TypeError {
+                            message,
+                            span: callee.span(),
+                        }),
                         Err(_) => Ok(Type::Any),
                     };
                 }
@@ -452,6 +456,20 @@ fn builtin_ret_type(name: &str, args: &[Type]) -> Result<Type, String> {
                 Err(format!("`to_text` expects 1 arg, got {}", args.len()))
             }
         }
+        "read_line" | "read_token" => {
+            if args.is_empty() {
+                Ok(Type::Any)
+            } else {
+                Err(format!("`{name}` expects 0 args, got {}", args.len()))
+            }
+        }
+        "read_int" => {
+            if args.is_empty() {
+                Ok(Type::Num)
+            } else {
+                Err(format!("`read_int` expects 0 args, got {}", args.len()))
+            }
+        }
         "__index" => {
             if args.len() == 2 {
                 Ok(Type::Any)
@@ -507,6 +525,25 @@ fn builtin_ret_type(name: &str, args: &[Type]) -> Result<Type, String> {
         "__call" => Ok(Type::Any),
         _ => Err(format!("Unknown function `{}`", name)),
     }
+}
+
+fn is_typed_builtin(name: &str) -> bool {
+    matches!(
+        name,
+        "len"
+            | "to_text"
+            | "read_line"
+            | "read_token"
+            | "read_int"
+            | "__index"
+            | "__setindex"
+            | "__bytes"
+            | "__syscall"
+            | "__bit_xor"
+            | "__bit_shl"
+            | "list_range"
+            | "__call"
+    )
 }
 
 // =====================================================================

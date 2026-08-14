@@ -1,35 +1,24 @@
-use crate::lexer;
-use crate::parser;
-use crate::parser::error::format_parse_error;
+use crate::cli::util;
+use crate::diagnostic::{format_source_diagnostic, DiagnosticStage};
 use crate::refinement;
 use crate::region;
 use crate::typecheck;
-use std::fs;
 use std::path::PathBuf;
 
 pub fn handle_check(path: Option<PathBuf>) -> Result<(), String> {
     let file_path = path.ok_or("File path is required for check command.")?;
-    println!("Checking file: {:?}", file_path);
-
-    let source = fs::read_to_string(&file_path)
-        .map_err(|e| format!("Could not read file {:?}: {}", file_path, e))?;
-
-    println!("Lexing...");
-    let tokens = lexer::lex(&source).map_err(|e| format!("Lex error: {}", e.message))?;
-
-    println!("Parsing...");
-    let ast = parser::Parser::from_tokens(&tokens)
-        .map_err(|err| format_parse_error(&source, &err, &file_path.to_string_lossy()))?;
-
-    println!("Typechecking...");
-    typecheck::check_program(&ast).map_err(|e| {
-        if let Some(span) = e.span {
-            format!("Type error at {}:{}: {}", span.line, span.column, e.message)
-        } else {
-            format!("Type error: {}", e.message)
-        }
+    let (source, ast) = util::load_ast(&file_path)?;
+    typecheck::check_program(&ast).map_err(|error| {
+        format_source_diagnostic(
+            DiagnosticStage::Type,
+            &error.message,
+            &source,
+            &file_path.to_string_lossy(),
+            error.span.as_ref(),
+        )
     })?;
 
+    println!("Checking file: {:?}", file_path);
     println!("Refinement checking...");
     match refinement::check_refinements(&ast) {
         Ok(report) => {

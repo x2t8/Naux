@@ -1,0 +1,50 @@
+~ rite
+    $n = read_int()
+    $adjacency = []
+    ~ loop $n * $n
+        $adjacency = queue_push($adjacency, read_int())
+    ~ end
+    $indegree = []
+    $queue = []
+    ~ loop $n
+        $indegree = queue_push($indegree, 0)
+        $queue = queue_push($queue, 0)
+    ~ end
+    $from = 0
+    ~ while $from < $n
+        $to = 0
+        ~ while $to < $n
+            ~ if $adjacency[$from * $n + $to] != 0
+                $indegree[$to] = $indegree[$to] + 1
+            ~ end
+            $to = $to + 1
+        ~ end
+        $from = $from + 1
+    ~ end
+    $head = 0
+    $tail = 0
+    $node = 0
+    ~ while $node < $n
+        ~ if $indegree[$node] == 0
+            $queue[$tail] = $node
+            $tail = $tail + 1
+        ~ end
+        $node = $node + 1
+    ~ end
+    ~ while $head < $tail
+        $node = $queue[$head]
+        $head = $head + 1
+        !say $node
+        $next = 0
+        ~ while $next < $n
+            ~ if $adjacency[$node * $n + $next] != 0
+                $indegree[$next] = $indegree[$next] - 1
+                ~ if $indegree[$next] == 0
+                    $queue[$tail] = $next
+                    $tail = $tail + 1
+                ~ end
+            ~ end
+            $next = $next + 1
+        ~ end
+    ~ end
+~ end

@@ -1,0 +1,27 @@
+~ rite
+    $n = read_int()
+    $values = []
+    ~ loop $n
+        $values = queue_push($values, read_int())
+    ~ end
+    $i = 0
+    ~ while $i < $n
+        $minimum = $i
+        $j = $i + 1
+        ~ while $j < $n
+            ~ if $values[$j] < $values[$minimum]
+                $minimum = $j
+            ~ end
+            $j = $j + 1
+        ~ end
+        $temporary = $values[$i]
+        $values[$i] = $values[$minimum]
+        $values[$minimum] = $temporary
+        $i = $i + 1
+    ~ end
+    $i = 0
+    ~ loop $n
+        !say $values[$i]
+        $i = $i + 1
+    ~ end
+~ end

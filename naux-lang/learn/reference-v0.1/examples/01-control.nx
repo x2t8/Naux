@@ -1,0 +1,17 @@
+~ fn classify($value)
+    ~ if $value % 2 == 0
+        ^ "even"
+    ~ else
+        ^ "odd"
+    ~ end
+~ end
+
+~ rite
+    # The unselected expressions must not divide by zero.
+    $and_guard = false && (1 / 0 > 0)
+    $or_guard = true || (1 / 0 > 0)
+    $value = read_int()
+    !say classify($value)
+    !say !$and_guard
+    !say $or_guard
+~ end

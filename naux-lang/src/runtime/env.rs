@@ -7,7 +7,32 @@ use crate::ast::{Span, Stmt};
 use crate::runtime::error::RuntimeError;
 use crate::runtime::value::Value;
 
-pub type BuiltinFn = fn(Vec<Value>) -> Result<Value, RuntimeError>;
+type BuiltinCallable = dyn Fn(Vec<Value>) -> Result<Value, RuntimeError>;
+
+#[derive(Clone)]
+pub struct BuiltinFn(Rc<BuiltinCallable>);
+
+impl BuiltinFn {
+    fn pure(function: fn(Vec<Value>) -> Result<Value, RuntimeError>) -> Self {
+        Self(Rc::new(function))
+    }
+
+    pub(crate) fn stateful(
+        function: impl Fn(Vec<Value>) -> Result<Value, RuntimeError> + 'static,
+    ) -> Self {
+        Self(Rc::new(function))
+    }
+
+    pub fn call(&self, args: Vec<Value>) -> Result<Value, RuntimeError> {
+        (self.0)(args)
+    }
+}
+
+impl std::fmt::Debug for BuiltinFn {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("BuiltinFn(<opaque>)")
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Scope {
@@ -149,16 +174,30 @@ impl Env {
         args: Vec<Value>,
     ) -> Option<Result<Value, RuntimeError>> {
         if let Some(f) = self.builtins.get(name) {
-            return Some(f(args));
+            return Some(f.call(args));
         }
         if let Some(parent) = &self.parent {
             return parent.borrow().call_builtin(name, args);
         }
-        self.builtins.get(name).map(|f| f(args))
+        None
     }
 
-    pub fn set_builtin(&mut self, name: &str, f: BuiltinFn) {
-        self.builtins.insert(name.to_string(), f);
+    pub fn set_builtin(
+        &mut self,
+        name: &str,
+        function: fn(Vec<Value>) -> Result<Value, RuntimeError>,
+    ) {
+        self.builtins
+            .insert(name.to_string(), BuiltinFn::pure(function));
+    }
+
+    pub(crate) fn set_stateful_builtin(
+        &mut self,
+        name: &str,
+        function: impl Fn(Vec<Value>) -> Result<Value, RuntimeError> + 'static,
+    ) {
+        self.builtins
+            .insert(name.to_string(), BuiltinFn::stateful(function));
     }
 
     pub fn builtins(&self) -> HashMap<String, BuiltinFn> {
@@ -188,14 +227,36 @@ impl Default for Env {
 }
 
 fn register_builtins(env: &mut Env) {
-    env.builtins.insert("len".into(), builtin_len);
-    env.builtins.insert("to_text".into(), builtin_to_text);
-    env.builtins.insert("__index".into(), builtin_index);
-    env.builtins.insert("__setindex".into(), builtin_setindex);
-    env.builtins.insert("__bytes".into(), builtin_bytes);
-    env.builtins.insert("__syscall".into(), builtin_syscall);
-    env.builtins.insert("__bit_xor".into(), builtin_bit_xor);
-    env.builtins.insert("__bit_shl".into(), builtin_bit_shl);
+    env.set_builtin("len", builtin_len);
+    env.set_builtin("to_text", builtin_to_text);
+    env.set_builtin("__index", builtin_index);
+    env.set_builtin("__setindex", builtin_setindex);
+    env.set_builtin("__bytes", builtin_bytes);
+    env.set_builtin("__syscall", builtin_syscall);
+    env.set_builtin("__bit_xor", builtin_bit_xor);
+    env.set_builtin("__bit_shl", builtin_bit_shl);
+    env.set_builtin("__loop_count", builtin_loop_count);
+}
+
+fn builtin_loop_count(args: Vec<Value>) -> Result<Value, RuntimeError> {
+    if args.len() != 1 {
+        return Err(RuntimeError::new("__loop_count(value)", None));
+    }
+    match args[0] {
+        Value::SmallInt(value) if value >= 0 => Ok(Value::SmallInt(value)),
+        Value::Float(value)
+            if value.is_finite()
+                && value.fract() == 0.0
+                && value >= 0.0
+                && value <= i64::MAX as f64 =>
+        {
+            Ok(Value::SmallInt(value as i64))
+        }
+        _ => Err(RuntimeError::new(
+            "Loop count must be a non-negative integer.",
+            None,
+        )),
+    }
 }
 
 fn builtin_len(args: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -236,17 +297,25 @@ fn builtin_index(args: Vec<Value>) -> Result<Value, RuntimeError> {
                 .unwrap_or(Value::Null)),
             _ => Err(RuntimeError::new("invalid __index operands", None)),
         },
-        (Value::RcObj(rc), Value::Float(n)) => match rc.as_ref() {
-            crate::runtime::value::NauxObj::List(v) => {
-                Ok(v.borrow().get(n as usize).cloned().unwrap_or(Value::Null))
+        (Value::RcObj(rc), Value::Float(n)) => {
+            if !n.is_finite() || n.fract() != 0.0 {
+                return Err(RuntimeError::new("index must be an integer", None));
             }
-            crate::runtime::value::NauxObj::Bytes(v) => Ok(v
-                .borrow()
-                .get(n as usize)
-                .map(|b| Value::SmallInt(*b as i64))
-                .unwrap_or(Value::Null)),
-            _ => Err(RuntimeError::new("invalid __index operands", None)),
-        },
+            if n < 0.0 {
+                return Ok(Value::Null);
+            }
+            match rc.as_ref() {
+                crate::runtime::value::NauxObj::List(v) => {
+                    Ok(v.borrow().get(n as usize).cloned().unwrap_or(Value::Null))
+                }
+                crate::runtime::value::NauxObj::Bytes(v) => Ok(v
+                    .borrow()
+                    .get(n as usize)
+                    .map(|b| Value::SmallInt(*b as i64))
+                    .unwrap_or(Value::Null)),
+                _ => Err(RuntimeError::new("invalid __index operands", None)),
+            }
+        }
         (Value::RcObj(rc), Value::RcObj(key_rc)) => match (rc.as_ref(), key_rc.as_ref()) {
             (crate::runtime::value::NauxObj::Map(m), crate::runtime::value::NauxObj::Text(s)) => {
                 Ok(m.borrow().get(s).cloned().unwrap_or(Value::Null))
