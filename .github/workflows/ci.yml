@@ -20,6 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: dtolnay/rust-toolchain@01ba1edad32c6f80dbcce879d3e0fa5a00b2a84e # 1.96.0
+        with:
+          toolchain: 1.96.0
+          components: rustfmt, clippy
       - name: fmt
         run: cargo fmt --all -- --check
       - name: clippy
@@ -42,6 +45,8 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: dtolnay/rust-toolchain@01ba1edad32c6f80dbcce879d3e0fa5a00b2a84e # 1.96.0
+        with:
+          toolchain: 1.96.0
       - name: Check core workspace
         run: cargo check --workspace --all-features
       - name: Test platform-neutral library core
@@ -59,6 +64,8 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: dtolnay/rust-toolchain@01ba1edad32c6f80dbcce879d3e0fa5a00b2a84e # 1.96.0
+        with:
+          toolchain: 1.96.0
       - name: VM/JIT sanity parity
         run: bash ./scripts/sanity_matrix.sh
       - name: Deterministic JIT alias mutation fuzz
