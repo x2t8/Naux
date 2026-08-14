@@ -13,9 +13,11 @@
   </p>
 
   <p>
-    <a href="INSTALL.md"><strong>Install NAUX Learn</strong></a>
+    <a href="tutorial/README.md"><strong>Start the Tutorial</strong></a>
     ·
-    <a href="LEARN.md"><strong>Write your first program</strong></a>
+    <a href="tutorial/01-install-linux.md"><strong>Install on Linux</strong></a>
+    ·
+    <a href="tutorial/02-install-windows.md"><strong>Install on Windows</strong></a>
     ·
     <a href="https://github.com/x2t8/Naux/releases/tag/v0.1.0-learn"><strong>Current prerelease</strong></a>
   </p>
@@ -68,13 +70,14 @@ Windows PowerShell has an unsigned experimental candidate:
 irm https://github.com/x2t8/Naux/releases/download/v0.1.0-learn/nauxup.ps1 | iex
 ```
 
-Start with the step-by-step [installation and uninstall guide](INSTALL.md),
-then [write the first NAUX program](LEARN.md). The Windows artifact remains a
-candidate until its declared real-Windows gate passes. The `main` branch is
-preparing 0.1.1; commands above deliberately point to the latest artifact that
-is actually public. The bundles are dynamically linked, Rust-seeded
-experimental artifacts. A checksum is integrity evidence, not a publisher
-signature.
+Start with the ordered [NAUX Learn tutorial](tutorial/README.md), which keeps
+Linux installation, Windows installation, the first program, algorithms,
+uninstall, and troubleshooting in one public folder. The Windows artifact
+remains a candidate until its declared real-Windows gate passes. The `main`
+branch is preparing 0.1.1; commands above deliberately point to the latest
+artifact that is actually public. The bundles are dynamically linked,
+Rust-seeded experimental artifacts. A checksum is integrity evidence, not a
+publisher signature.
 
 ### Build from source
 
@@ -293,8 +296,13 @@ naux-lang/tests/             Integration and parity evidence
 
 ## Public documentation
 
-- [Install, verify, locate, and uninstall NAUX Learn](INSTALL.md)
-- [Write the first program and practice algorithms](LEARN.md)
+- [NAUX Learn tutorial index](tutorial/README.md)
+- [Install on Linux](tutorial/01-install-linux.md)
+- [Install on Windows](tutorial/02-install-windows.md)
+- [Write the first program](tutorial/03-first-program.md)
+- [Practice algorithms](tutorial/04-algorithms.md)
+- [Uninstall NAUX Learn](tutorial/05-uninstall.md)
+- [Troubleshooting](tutorial/06-troubleshooting.md)
 - [Usage and local workflow](USAGE.md)
 - [Language behavior](docs/language_spec.md)
 - [Memory model](MEMORY_MODEL.md)
