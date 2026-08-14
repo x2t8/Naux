@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.0
+# NAUX Learn 0.1.1
 
 **Experimental Learning Release**
 

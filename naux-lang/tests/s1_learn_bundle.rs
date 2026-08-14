@@ -145,7 +145,10 @@ fn write_manifest(root: &Path, rows: &[String]) {
 }
 
 fn write_target_manifest(root: &Path, target: &str, rows: &[String]) {
-    let mut body = format!("NAUX-S1-LEARN-BUNDLE\t1\nbundle\t0.1.0\ntarget\t{target}\n");
+    let mut body = format!(
+        "NAUX-S1-LEARN-BUNDLE\t1\nbundle\t{}\ntarget\t{target}\n",
+        env!("CARGO_PKG_VERSION")
+    );
     for row in rows {
         body.push_str(row);
         body.push('\n');

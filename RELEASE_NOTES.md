@@ -1,10 +1,11 @@
-# NAUX Learn 0.1.0
+# NAUX Learn 0.1.1
 
 Status: experimental release\
 Target: Linux x86-64 GNU (`linux-x86_64-gnu`)\
 Scope: guided programming and algorithm study
 
-NAUX Learn 0.1.0 is the first bounded, usable product scope of NAUX. It lets a
+NAUX Learn 0.1.1 is the first maintenance release of the bounded, usable NAUX
+Learn scope. It lets a
 learner write `.nx` source, receive source-positioned diagnostics, consume
 deterministic batch input, run ordinary algorithms through the interpreter or
 bytecode VM, and install a prebuilt supported-host binary without installing
@@ -25,15 +26,39 @@ Rust or Cargo.
 - a sealed prebuilt directory bundle with independent verification and staged
   installation;
 - a fail-closed ownership receipt and exact, no-scan uninstall lifecycle.
+- version-pinned one-command bootstrap assets for Linux and Windows; each
+  validates the archive byte length, outer SHA-256, executable version, and
+  sealed inner manifest before Setup runs.
 
-## Install from the release archive
+## One-command install
+
+Linux x86-64 GNU:
+
+```bash
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.sh | sh
+```
+
+Windows x86-64 from PowerShell:
+
+```powershell
+irm https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.ps1 | iex
+```
+
+The Windows artifact remains an unsigned release candidate until its 0.1.1
+Wine and declared real-Windows gates pass.
+
+These commands are intentionally pinned to `v0.1.1-learn`. NAUX Learn is a
+prerelease, so GitHub's `/releases/latest/` route is not its version selector.
+The bootstrap files are integrity carriers, not publisher signatures.
+
+## Manual install from the release archive
 
 Verify the downloaded archive first:
 
 ```bash
-sha256sum --check naux-learn-0.1.0-linux-x86_64-gnu.tar.gz.sha256
-tar -xzf naux-learn-0.1.0-linux-x86_64-gnu.tar.gz
-cd naux-learn-0.1.0-linux-x86_64-gnu
+sha256sum --check naux-learn-0.1.1-linux-x86_64-gnu.tar.gz.sha256
+tar -xzf naux-learn-0.1.1-linux-x86_64-gnu.tar.gz
+cd naux-learn-0.1.1-linux-x86_64-gnu
 ./bin/naux bundle verify .
 ./naux-learn-setup
 ```
@@ -48,13 +73,13 @@ learner `.nx` projects outside the prefix are never scanned.
 Run the installed first program:
 
 ```bash
-"$HOME/.local/lib/naux-learn-0.1.0/bin/naux" run \
-  "$HOME/.local/lib/naux-learn-0.1.0/examples/hello.nx"
+"$HOME/.local/share/naux-learn/0.1.1/bin/naux" run \
+  "$HOME/.local/share/naux-learn/0.1.1/examples/hello.nx"
 ```
 
 ## Identity and verification
 
-The executable reports exactly `naux 0.1.0`. The internal bundle manifest
+The executable reports exactly `naux 0.1.1`. The internal bundle manifest
 binds every member path, mode, length, and SHA-256. The outer `.sha256` file
 binds the deterministic release archive. Neither mechanism is a publisher
 signature.

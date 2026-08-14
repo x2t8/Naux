@@ -42,37 +42,51 @@ production-readiness or performance claim.
 
 ## Quick start
 
-### Prebuilt NAUX Learn 0.1.0
+### Prebuilt NAUX Learn 0.1.1
 
 The accepted experimental release bundle supports Linux x86-64 GNU and does
-not require Rust or Cargo for installation or normal learner execution. Keep
-the archive and adjacent checksum in one directory, then run:
+not require Rust or Cargo for installation or normal learner execution. The
+version-pinned one-command installer downloads the exact sealed archive,
+checks its byte length and SHA-256, verifies its inner manifest, then opens the
+localized Setup flow:
 
 ```bash
-sha256sum --check naux-learn-0.1.0-linux-x86_64-gnu.tar.gz.sha256
-tar -xzf naux-learn-0.1.0-linux-x86_64-gnu.tar.gz
-cd naux-learn-0.1.0-linux-x86_64-gnu
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.sh | sh
+```
+
+For manual verification and installation:
+
+```bash
+sha256sum --check naux-learn-0.1.1-linux-x86_64-gnu.tar.gz.sha256
+tar -xzf naux-learn-0.1.1-linux-x86_64-gnu.tar.gz
+cd naux-learn-0.1.1-linux-x86_64-gnu
 ./bin/naux bundle verify .
 ./naux-learn-setup
 ```
 
 This is a dynamically linked, Rust-seeded experimental artifact. Read the
-[0.1.0 release notes](RELEASE_NOTES.md) and the limitations inside the bundle
+[0.1.1 release notes](RELEASE_NOTES.md) and the limitations inside the bundle
 before use. The checksum is integrity evidence, not a publisher signature.
 
 The repository also contains a deterministic **Windows x86-64 release
-candidate**. From PowerShell after checking the adjacent SHA-256 file:
+candidate**. Its version-pinned PowerShell bootstrap is:
 
 ```powershell
-Expand-Archive .\naux-learn-0.1.0-windows-x86_64-gnu.zip -DestinationPath .
-cd .\naux-learn-0.1.0-windows-x86_64-gnu
+irm https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.ps1 | iex
+```
+
+For manual extraction:
+
+```powershell
+Expand-Archive .\naux-learn-0.1.1-windows-x86_64-gnu.zip -DestinationPath .
+cd .\naux-learn-0.1.1-windows-x86_64-gnu
 .\bin\naux.exe bundle verify .
 .\NAUX-Learn-Setup.exe
 ```
 
-Its cross-build, deterministic ZIP, mutation gates, and Wine smoke pass. A
-real Windows 10/11 replay remains mandatory before it may be called a supported
-Windows release. See the
+Its cross-build, deterministic ZIP, and mutation gates pass. Wine and real
+Windows 10/11 replays remain mandatory for the 0.1.1 executable before it may
+be called a supported Windows release. See the
 [Windows release candidate contract](docs/s1_learn_windows_release.md).
 
 ### Build from source
@@ -305,7 +319,7 @@ naux-lang/tests/             Integration and parity evidence
 - [NAUX Learn supported-host bundle](docs/s1_learn_binary_bundle.md)
 - [NAUX Learn deterministic release archive](docs/s1_learn_release_archive.md)
 - [NAUX Learn Windows release candidate](docs/s1_learn_windows_release.md)
-- [NAUX Learn 0.1.0 release notes](RELEASE_NOTES.md)
+- [NAUX Learn 0.1.1 release notes](RELEASE_NOTES.md)
 - [Compiler IR specification](naux-lang/docs/IR_SPEC.md)
 
 Internal planning and unpublished research strategy are intentionally not part

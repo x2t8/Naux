@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.0 for Windows
+# NAUX Learn 0.1.1 for Windows
 
 Status: experimental Windows release candidate\
 Target: Windows x86-64 GNU (`windows-x86_64-gnu`)\
@@ -12,16 +12,25 @@ resource for Windows Explorer and shortcuts. It also contains nine sealed
 installer/disclosure locales and an exact installation-ownership receipt
 foundation.
 
-## Install
+## One-command install
+
+```powershell
+irm https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.ps1 | iex
+```
+
+The bootstrap is pinned to this release. It checks the archive byte length,
+SHA-256, executable version, and sealed bundle manifest before opening Setup.
+
+## Manual install
 
 In PowerShell, verify the adjacent archive checksum before extraction:
 
 ```powershell
-$expected = (Get-Content .\naux-learn-0.1.0-windows-x86_64-gnu.zip.sha256).Split()[0]
-$actual = (Get-FileHash .\naux-learn-0.1.0-windows-x86_64-gnu.zip -Algorithm SHA256).Hash.ToLower()
+$expected = (Get-Content .\naux-learn-0.1.1-windows-x86_64-gnu.zip.sha256).Split()[0]
+$actual = (Get-FileHash .\naux-learn-0.1.1-windows-x86_64-gnu.zip -Algorithm SHA256).Hash.ToLower()
 if ($actual -ne $expected) { throw "NAUX archive checksum mismatch" }
-Expand-Archive .\naux-learn-0.1.0-windows-x86_64-gnu.zip -DestinationPath .
-cd .\naux-learn-0.1.0-windows-x86_64-gnu
+Expand-Archive .\naux-learn-0.1.1-windows-x86_64-gnu.zip -DestinationPath .
+cd .\naux-learn-0.1.1-windows-x86_64-gnu
 .\bin\naux.exe bundle verify .
 .\NAUX-Learn-Setup.exe
 ```

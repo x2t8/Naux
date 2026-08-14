@@ -53,6 +53,8 @@ fn release_scripts_bind_archive_version_and_verify_before_publish() {
     let producer = read("scripts/package_s1_release.sh");
     assert!(producer.contains("version=${package#naux@}"));
     assert!(producer.contains("verify_s1_release.sh"));
+    assert!(producer.contains("render_s1_bootstrap.sh"));
+    assert!(producer.contains("nauxup.sh"));
     assert!(producer.contains("gzip --no-name --best"));
     assert!(producer.contains("--mtime=@0"));
 
@@ -60,6 +62,18 @@ fn release_scripts_bind_archive_version_and_verify_before_publish() {
     assert!(verifier.contains("release binary version does not match archive identity"));
     assert!(verifier.contains("bundle verify"));
     assert!(verifier.contains("cmp -- \"$expected\" \"$actual\""));
+
+    let renderer = read("scripts/render_s1_bootstrap.sh");
+    assert!(renderer.contains("tag=\"v$version-learn\""));
+    assert!(renderer.contains("archive_bytes=$(wc -c"));
+    assert!(renderer.contains("bootstrap checksum file is noncanonical"));
+
+    let bootstrap = read("distribution/s1-learn/bootstrap/nauxup.sh.in");
+    assert!(bootstrap.contains("--proto '=https'"));
+    assert!(bootstrap.contains("NAUX_ARCHIVE_SHA256='@@ARCHIVE_SHA256@@'"));
+    assert!(bootstrap.contains("bundle verify"));
+    assert!(bootstrap.contains("--same-permissions"));
+    assert!(!bootstrap.contains("releases/latest"));
 }
 
 #[test]
@@ -99,6 +113,14 @@ fn windows_release_identity_is_target_exact_and_fail_closed() {
     let archive_producer = read("scripts/package_s1_release_windows.sh");
     assert!(archive_producer.contains("-q -X -9"));
     assert!(archive_producer.contains("verify_s1_release_windows.sh"));
+    assert!(archive_producer.contains("render_s1_bootstrap.sh"));
+    assert!(archive_producer.contains("nauxup.ps1"));
+
+    let bootstrap = read("distribution/s1-learn/bootstrap/nauxup.ps1.in");
+    assert!(bootstrap.contains("Get-FileHash"));
+    assert!(bootstrap.contains("bundle verify"));
+    assert!(bootstrap.contains("NAUX_LEARN_INSTALL_LANGUAGE"));
+    assert!(!bootstrap.contains("releases/latest"));
 
     let verifier = read("scripts/verify_s1_release_windows.sh");
     assert!(verifier.contains("pe_timestamp"));
@@ -115,4 +137,5 @@ fn windows_release_identity_is_target_exact_and_fail_closed() {
     assert!(runtime.contains("--dry-run"));
     assert!(runtime.contains("installed logo identity mismatch"));
     assert!(runtime.contains("SequenceEqual"));
+    assert!(runtime.contains("S1 Windows pinned-bootstrap install: PASS"));
 }

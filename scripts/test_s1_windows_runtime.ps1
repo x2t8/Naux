@@ -2,12 +2,15 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Archive,
     [Parameter(Mandatory = $true)]
-    [string]$Checksum
+    [string]$Checksum,
+    [Parameter(Mandatory = $false)]
+    [string]$Bootstrap
 )
 
 $ErrorActionPreference = "Stop"
 $archivePath = (Resolve-Path $Archive).Path
 $checksumPath = (Resolve-Path $Checksum).Path
+$bootstrapPath = if ($Bootstrap) { (Resolve-Path $Bootstrap).Path } else { $null }
 $archiveName = [System.IO.Path]::GetFileName($archivePath)
 
 if ($archiveName -notmatch '^naux-learn-([0-9]+\.[0-9]+\.[0-9]+)-windows-x86_64-gnu\.zip$') {
@@ -34,6 +37,70 @@ $state = Join-Path $tempRoot "state"
 try {
     New-Item -ItemType Directory -Path $extract | Out-Null
     New-Item -ItemType Directory -Path $state | Out-Null
+
+    if ($bootstrapPath) {
+        $parseTokens = $null
+        $parseErrors = $null
+        [System.Management.Automation.Language.Parser]::ParseFile(
+            $bootstrapPath,
+            [ref]$parseTokens,
+            [ref]$parseErrors
+        ) | Out-Null
+        if (@($parseErrors).Count -ne 0) {
+            throw "Windows bootstrap parser gate failed: $($parseErrors[0].Message)"
+        }
+
+        $releaseDirectory = Split-Path -Parent $archivePath
+        function Invoke-WebRequest {
+            param(
+                [switch]$UseBasicParsing,
+                [Parameter(Mandatory = $true)]
+                [string]$Uri,
+                [Parameter(Mandatory = $true)]
+                [string]$OutFile
+            )
+            $requestUri = [uri]$Uri
+            $asset = [System.IO.Path]::GetFileName($requestUri.AbsolutePath)
+            if ($asset -notin @($archiveName, "$archiveName.sha256")) {
+                throw "bootstrap requested an unexpected release asset: $asset"
+            }
+            $expectedPathPrefix = "/x2t8/Naux/releases/download/v$version-learn/"
+            if ($requestUri.Host -cne 'github.com' -or
+                -not $requestUri.AbsolutePath.StartsWith(
+                    $expectedPathPrefix,
+                    [System.StringComparison]::Ordinal
+                )) {
+                throw "bootstrap requested an unpinned release URL: $Uri"
+            }
+            Copy-Item -LiteralPath (Join-Path $releaseDirectory $asset) -Destination $OutFile
+        }
+
+        $savedLocalAppData = $env:LOCALAPPDATA
+        $env:LOCALAPPDATA = Join-Path $tempRoot 'bootstrap-local-app-data'
+        $env:NAUX_LEARN_INSTALL_YES = '1'
+        $env:NAUX_LEARN_INSTALL_LANGUAGE = 'en-US'
+        try {
+            & $bootstrapPath | Out-Null
+            $bootstrapInstalled = Join-Path $env:LOCALAPPDATA (
+                "Programs\NAUX\Learn\$version\bin\naux.exe"
+            )
+            if (-not (Test-Path -LiteralPath $bootstrapInstalled -PathType Leaf)) {
+                throw 'Windows bootstrap did not publish the expected installed executable'
+            }
+            $bootstrapVersion = (& $bootstrapInstalled --version | Out-String).TrimEnd("`r", "`n")
+            if ($LASTEXITCODE -ne 0 -or $bootstrapVersion -ne "naux $version") {
+                throw 'Windows bootstrap installed executable version mismatch'
+            }
+        }
+        finally {
+            $env:LOCALAPPDATA = $savedLocalAppData
+            Remove-Item Env:NAUX_LEARN_INSTALL_YES -ErrorAction SilentlyContinue
+            Remove-Item Env:NAUX_LEARN_INSTALL_LANGUAGE -ErrorAction SilentlyContinue
+            Remove-Item Function:Invoke-WebRequest -ErrorAction SilentlyContinue
+        }
+        Write-Output "S1 Windows pinned-bootstrap install: PASS"
+    }
+
     Expand-Archive -LiteralPath $archivePath -DestinationPath $extract
     $bundle = Join-Path $extract "naux-learn-$version-windows-x86_64-gnu"
     $binary = Join-Path $bundle "bin\naux.exe"

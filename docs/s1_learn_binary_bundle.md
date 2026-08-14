@@ -1,7 +1,7 @@
 # NAUX Learn supported-host binary bundle v0.1
 
 Status: accepted\
-Date: 2026-08-13\
+Date: 2026-08-14\
 Scope: S1-WP6 / Linux x86-64 GNU learner distribution
 
 ## 1. Purpose and claim boundary
@@ -38,7 +38,7 @@ machine, PIE type, dependency names, or maximum declared interface versions.
 
 `BUILD-SEED.tsv` pins Rust 1.96.0 commit
 `ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96`, Cargo 1.96.0 commit
-`30a34c682`, target `x86_64-unknown-linux-gnu`, package `naux@0.1.0`,
+`30a34c682`, target `x86_64-unknown-linux-gnu`, package `naux@0.1.1`,
 `egg@0.10.0`, and the complete workspace `Cargo.lock` SHA-256. The producer
 runs `cargo build --locked --release -p naux --bin naux` only after the active
 seed agrees byte-for-byte with that record. The producer clears ambient Rust
@@ -85,7 +85,7 @@ missing members, and extra members fail closed.
 
 ```text
 NAUX-S1-LEARN-BUNDLE<TAB>1
-bundle<TAB>0.1.0
+bundle<TAB>0.1.1
 target<TAB>linux-x86_64-gnu
 file<TAB>MODE<TAB>SIZE<TAB>SHA256<TAB>PATH
 ...
@@ -179,19 +179,19 @@ claim is implied by this bundle.
 ## 9. Acceptance evidence
 
 The release-sealed producer generated the same 26-file artifact in distinct
-output directories. The accepted resealed artifact contains 5,357,302 bytes
+output directories. The accepted resealed artifact contains 5,357,110 bytes
 including its manifest and has manifest seal
-`67a65e1080f0ffb9bc55f36041c1f1af9fe61af55f8872b990f4994a9d1dfa2e`.
-Its executable is 4,082,544 bytes with SHA-256
-`9e85076204039755f5db3ae2355ac56cae5cf703ce0bf10cd3acb1e598291ff5`
-and reports exactly `naux 0.1.0`. The canonical 500-by-500 RGBA project logo
+`99e4ab2ee05d00615d00b3d6b8f7f87067289b8c11c4ba1957d57a9620390bb1`.
+Its executable is 4,082,552 bytes with SHA-256
+`dd12495211efcdb890cdf821476bf6386a19c738d2e7588d042f35ca881147da`
+and reports exactly `naux 0.1.1`. The canonical 500-by-500 RGBA project logo
 is installed at `assets/langnaux-learn.png`, is sealed as an ordinary bundle
 member, and has SHA-256
 `8818d089bc3a11394082080d7291fe9bafecaf698db66f17af40cc1900db1408`. The
 bundle-local Markdown link audit has no broken target.
 
-The native console Setup carrier is 1,113,056 bytes with SHA-256
-`0a509bf1a5fcca1210fb304dbf1fdf8206ffece755afbbefdded7c9262884078`.
+The native console Setup carrier is 1,112,856 bytes with SHA-256
+`b13a03710035b8af098581f5a5f966df7969979be8951aeaf428e4efd7ad6af1`.
 It presents the nine-language selector, localized disclosure and consent before
 installation, then repeats the disclosure and prints the sealed receipt after
 success.
@@ -204,7 +204,10 @@ native Setup tests,
 including nine bundle/lifecycle mutation tests and three release-identity
 tests.
 
-The current all-feature library gate reports 454 passed, zero failed, and six
-intentionally ignored in 444.34 seconds. Strict workspace
-all-target/all-feature Clippy, format, shell syntax, release reproducibility,
-mutation, and bundle-document gates pass.
+The 0.1.1 focused bundle/lifecycle group passes nine mutation and ownership
+tests, and the release-identity group passes three tests. Strict shell syntax,
+release reproducibility, mutation, no-toolchain bootstrap, and bundle-document
+gates pass. The CI-equivalent all-feature workspace regression also completes
+with the main library at 453 passed, zero failed, six deliberately ignored,
+and one controlled fixture filtered out; every subsequently executed
+integration and documentation test passes.

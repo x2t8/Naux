@@ -6,7 +6,9 @@ export LC_ALL=C
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
 temp_root=$(mktemp -d "${TMPDIR:-/tmp}/naux-s1-wp6.XXXXXXXX")
-bundle="$temp_root/naux-learn-0.1.0-linux-x86_64-gnu"
+package=$(awk -F '\t' '$1 == "package" { print $2; exit }' "$repo_root/distribution/s1-learn/BUILD-SEED.tsv")
+version=${package#naux@}
+bundle="$temp_root/naux-learn-$version-linux-x86_64-gnu"
 prefix="$temp_root/installed"
 poison="$temp_root/no-toolchain"
 state="$temp_root/state"

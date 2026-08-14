@@ -82,6 +82,11 @@ printf '%s  %s\n' "$archive_hash" "$archive_name" > "$result/$checksum_name"
 chmod 0644 -- "$result/$checksum_name"
 install -m 0644 -- "$release_notes" "$result/RELEASE_NOTES.md"
 
+"$script_dir/render_s1_bootstrap.sh" linux \
+    "$result/$archive_name" \
+    "$result/$checksum_name" \
+    "$result/nauxup.sh"
+
 "$script_dir/verify_s1_release.sh" \
     "$result/$archive_name" \
     "$result/$checksum_name"

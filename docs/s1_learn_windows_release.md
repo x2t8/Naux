@@ -1,7 +1,7 @@
-# NAUX Learn 0.1.0 Windows release candidate
+# NAUX Learn 0.1.1 Windows release candidate
 
-Status: cross-build, archive, and Wine smoke accepted; real-Windows gate pending\
-Date: 2026-08-13\
+Status: cross-build and archive accepted; Wine and real-Windows gates pending\
+Date: 2026-08-14\
 Target: `windows-x86_64-gnu` / Rust `x86_64-pc-windows-gnu`
 
 ## 1. Claim boundary
@@ -29,15 +29,15 @@ The cross build clears ambient Cargo/Rust overrides, disables incremental
 compilation, sets `SOURCE_DATE_EPOCH=0`, and passes linker policy
 `--no-insert-timestamp`. It also compiles the canonical multi-size icon with
 the pinned MinGW `windres` and links it as a native PE resource. The accepted
-candidate executable is 11,670,352 bytes, has a zero PE timestamp, and has
+candidate executable is 11,671,446 bytes, has a zero PE timestamp, and has
 SHA-256
-`558bdc8c9c6f0c06925de4ef9ed8f6e1cc5317a62feda661ca16f367f60ac242`.
+`6b76b26c6fc98a6170e373b5b25abe66cd2cc7e72f41f9cb94cdbf73ed2eda93`.
 Two builds with distinct Cargo target directories are byte-identical.
 
 The same producer emits the native console `NAUX-Learn-Setup.exe` with the
 identical PE timestamp, import, mitigation, and icon boundary. It is
-11,696,511 bytes with SHA-256
-`b467ff1132e4aac46af83f08863585b1131b2da76be90101fc5de5f49c1c58ef`.
+11,697,593 bytes with SHA-256
+`2a77fc58d583acb7ecb7b34c58b37c6c12b7e555c38a73bcc62f799e1768c3dd`.
 
 ## 3. Host boundary
 
@@ -67,18 +67,26 @@ console carrier, not yet a graphical wizard.
 The release directory contains exactly:
 
 ```text
-naux-learn-0.1.0-windows-x86_64-gnu.zip
-naux-learn-0.1.0-windows-x86_64-gnu.zip.sha256
+naux-learn-0.1.1-windows-x86_64-gnu.zip
+naux-learn-0.1.1-windows-x86_64-gnu.zip.sha256
 RELEASE_NOTES.md
+nauxup.ps1
 ```
 
 Info-ZIP 3.0 runs with `-X -9` over an exact ordered 33-entry list after every
 member timestamp is normalized to the ZIP epoch. The accepted ZIP is
-8,342,831 bytes with SHA-256
-`fa8d33eeaba941f5c9076a72769d13d5e8be7b9e7398643994ae02aeac64b699`.
-Its expanded 27-file bundle total is 23,815,826 bytes and its internal
+8,353,234 bytes with SHA-256
+`2346987f900babc5f021b6ffa77def35de085524354fc80b5eebf518ec9d5dda`.
+Its expanded 27-file bundle total is 23,818,002 bytes and its internal
 manifest seal is
-`c57f1ac023d130f7029dd737ccb6f2efbde610640cf91b56201a54f0980a31ee`.
+`120998ed3b3518f20b4dd520f2457aa57893ef07e364c1f8524351f6b16ab76c`.
+The 4,592-byte pinned `nauxup.ps1` has SHA-256
+`91b8ce0cccbb91af130f88c797d71041631185328993af46047565dd976dbfb2`.
+It pins the exact tag, ZIP basename, compressed byte length, and SHA-256,
+checks those values before extraction, invokes the sealed bundle verifier and
+version gate, then opens the same native localized Setup carrier. It owns only
+its private temporary tree and does not mutate user PATH or create an untracked
+launcher.
 The installed `assets/langnaux-learn.png` is a separately sealed 500-by-500
 RGBA source asset with SHA-256
 `8818d089bc3a11394082080d7291fe9bafecaf698db66f17af40cc1900db1408`.
@@ -103,24 +111,20 @@ directories and rejects checksum corruption, an extra coherently checksummed
 ZIP member, and a coherently resealed executable whose PE timestamp was
 changed. It also rejects a one-byte-mutated canonical ICO. Resource identity
 is checked on every build and independent archive verification.
-`scripts/test_s1_windows_runtime.ps1` independently
-verifies the checksum on Windows, extracts, checks the sealed PNG identity,
-checks version, verifies the nine catalogs, stages receipt-backed installation
-with Cargo/Rust absent from `PATH`, dry-runs exact uninstall, rechecks the
-installed PNG, executes the first program, and compares its bytes.
+`scripts/test_s1_windows_runtime.ps1` independently parses and replays the
+pinned bootstrap against local accepted assets, verifies the checksum on
+Windows, extracts, checks the sealed PNG identity, checks version, verifies the
+nine catalogs, stages receipt-backed installation with Cargo/Rust absent from
+`PATH`, dry-runs exact uninstall, rechecks the installed PNG, executes the first
+program, and compares its bytes.
 
 ## 6. Current evidence and exclusions
 
-The two independent cross builds and ZIPs are byte-identical. Linux-side
+The two independent 0.1.1 cross builds and ZIPs are byte-identical. Linux-side
 archive, manifest, PE, semantic icon, import, and canonical-reconstruction
-gates pass. Wine 11.14 passes `naux.exe --version`, bundle verification, all
-nine catalogs, direct native Setup installation in German, receipt-backed
-installation in `pt-BR`, byte-exact first-program execution, uninstall dry-run,
-and required refusal of in-process self-removal.
-Default and all-feature focused S1 groups each pass 30 tests plus two native
-Setup tests; the all-feature
-library regression passes 454 tests with six deliberately ignored. This is
-useful portability evidence, not proof of a real Windows host.
+gates pass. The predecessor 0.1.0 executable passed Wine 11.14 smoke, but its
+binary identity differs and that evidence cannot promote 0.1.1. Wine and
+declared real-Windows replays remain pending for this candidate.
 
 There is no GUI setup wizard, Start Menu/desktop shortcut creation,
 Authenticode signature, SmartScreen reputation, MSIX/winget package, publisher

@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.0 limitations
+# NAUX Learn 0.1.1 limitations
 
 NAUX Learn is an experimental learner profile, not a stable general-purpose
 language release. Its admitted use is deterministic programming and algorithm

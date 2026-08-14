@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.0 bundle
+# NAUX Learn 0.1.1 bundle
 
 ![NAUX Learn](../../assets/langnaux-learn.png)
 
@@ -33,7 +33,7 @@ From the bundle directory:
 Setup asks for one of nine languages before installation, shows the localized
 experimental disclosure, asks for consent, and repeats the disclosure after
 success. The default user-local prefix is
-$XDG_DATA_HOME/naux-learn/0.1.0 (or ~/.local/share/naux-learn/0.1.0).
+$XDG_DATA_HOME/naux-learn/0.1.1 (or ~/.local/share/naux-learn/0.1.1).
 The destination must be a new path. Installation verifies the source, copies
 to a sibling staging directory, verifies that copy again, and only then
 renames it into place. Existing prefixes are never overwritten.
@@ -46,14 +46,14 @@ and never scans for guessed NAUX files.
 Run the bundled first program and compare its exact output:
 
 ```bash
-"$HOME/.local/share/naux-learn/0.1.0/bin/naux" run \
-  "$HOME/.local/share/naux-learn/0.1.0/examples/hello.nx"
+"$HOME/.local/share/naux-learn/0.1.1/bin/naux" run \
+  "$HOME/.local/share/naux-learn/0.1.1/examples/hello.nx"
 ```
 
 Expected stdout is stored in `examples/hello.out`. For your own file:
 
 ```bash
-"$HOME/.local/share/naux-learn/0.1.0/bin/naux" run solution.nx < input.txt
+"$HOME/.local/share/naux-learn/0.1.1/bin/naux" run solution.nx < input.txt
 ```
 
 The installed executable does not invoke Rust or Cargo. `BUILD-SEED.tsv`

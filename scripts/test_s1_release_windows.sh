@@ -39,8 +39,9 @@ cmp -- "$build_a/x86_64-pc-windows-gnu/release/naux-learn-setup.exe" \
 cmp -- "$release_a/$archive_name" "$release_b/$archive_name"
 cmp -- "$release_a/$checksum_name" "$release_b/$checksum_name"
 cmp -- "$release_a/RELEASE_NOTES.md" "$release_b/RELEASE_NOTES.md"
+cmp -- "$release_a/nauxup.ps1" "$release_b/nauxup.ps1"
 actual_inventory=$(find "$release_a" -mindepth 1 -maxdepth 1 -type f -printf '%f\n' | sort)
-expected_inventory=$(printf '%s\n' RELEASE_NOTES.md "$archive_name" "$checksum_name" | sort)
+expected_inventory=$(printf '%s\n' RELEASE_NOTES.md nauxup.ps1 "$archive_name" "$checksum_name" | sort)
 if [[ "$actual_inventory" != "$expected_inventory" ]]; then
     echo "Windows release output inventory is not canonical" >&2
     exit 1

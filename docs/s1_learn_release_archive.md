@@ -1,7 +1,7 @@
-# NAUX Learn 0.1.0 release archive
+# NAUX Learn 0.1.1 release archive
 
 Status: accepted\
-Date: 2026-08-13\
+Date: 2026-08-14\
 Scope: post-S1 release sealing; no language-surface expansion
 
 ## 1. Purpose
@@ -19,15 +19,16 @@ does not perform a commit, tag, push, hosted release, or external publication.
 The producer emits one new directory containing exactly:
 
 ```text
-naux-learn-0.1.0-linux-x86_64-gnu.tar.gz
-naux-learn-0.1.0-linux-x86_64-gnu.tar.gz.sha256
+naux-learn-0.1.1-linux-x86_64-gnu.tar.gz
+naux-learn-0.1.1-linux-x86_64-gnu.tar.gz.sha256
 RELEASE_NOTES.md
+nauxup.sh
 ```
 
-`Cargo.toml` package version `0.1.0` is the sole compiled version source. The
+`Cargo.toml` package version `0.1.1` is the sole compiled version source. The
 CLI, internal bundle grammar, seed identity, archive name, checksum name, and
 release notes must all agree. Both `naux --version` and `naux -V` emit exactly
-`naux 0.1.0` plus LF and no stderr. Version flags are argument-exclusive.
+`naux 0.1.1` plus LF and no stderr. Version flags are argument-exclusive.
 
 ## 3. Deterministic archive producer
 
@@ -57,6 +58,21 @@ The adjacent checksum file contains exactly one canonical line:
 The checksum detects archive corruption but is not a signature and does not
 authenticate the publisher. A hosted release must disclose this explicitly.
 
+### Pinned bootstrap carrier
+
+`scripts/render_s1_bootstrap.sh` renders `nauxup.sh` only after the archive and
+canonical checksum exist. The generated script embeds the exact release tag,
+archive basename, compressed byte length, and SHA-256. It admits Linux x86-64,
+downloads only from that tag, checks the checksum grammar, size, and digest,
+extracts into a private temporary tree, invokes the inner `bundle verify`,
+checks the executable version, and only then hands control to localized Setup.
+The temporary tree is removed on every exit.
+
+The bootstrap does not edit shell profiles or create an external launcher:
+persistent ownership remains entirely inside Setup's sealed receipt. The
+bootstrap and digest travel through the same GitHub release channel, so this
+is corruption and substitution detection, not publisher authentication.
+
 ## 5. Independent verifier
 
 `scripts/verify_s1_release.sh` operates before extraction:
@@ -79,12 +95,13 @@ does not install into a user prefix.
 ## 6. Release acceptance carrier
 
 `scripts/test_s1_release.sh` produces two releases in distinct temporary
-directories and byte-compares their archives, checksum files, and release
-notes. It rejects a corrupted checksum and a coherently rechecksummed archive
-containing an extra member. It then extracts the canonical archive, places
-executable `cargo` and `rustc` poison sentinels first on `PATH`, installs with
-a sealed lifecycle receipt, runs the installed first program, dry-runs exact
-removal, uninstalls, and byte-compares output.
+directories and byte-compares their archives, checksum files, release notes,
+and rendered `nauxup.sh`. It rejects a corrupted checksum, a coherently
+rechecksummed archive containing an extra member, and a mutated bootstrap
+download. It then places executable `cargo` and `rustc` poison sentinels first
+on `PATH`, replays the pinned bootstrap through a local transport double,
+installs with a sealed lifecycle receipt, runs the installed first program,
+dry-runs exact removal, uninstalls, and byte-compares output.
 
 `naux-lang/tests/s1_release_identity.rs` independently locks the executable,
 seed, bundle sources, release notes, archive producer, and verifier identity.
@@ -92,7 +109,7 @@ seed, bundle sources, release notes, archive producer, and verifier identity.
 ## 7. Explicit exclusions
 
 This carrier is not a publisher signature, transparency-log entry, SBOM,
-provenance attestation, package-manager package, auto-updater, installer UI,
+provenance attestation, package-manager package, auto-updater, graphical installer UI,
 cross-platform archive, static binary, production release, compatibility SLA,
 security SLA, native-performance claim, dependency closure, self-generation,
 or compiler-generation claim.
@@ -101,23 +118,19 @@ or compiler-generation claim.
 
 Two fresh release builds produced byte-identical archives, checksum files, and
 release notes. The accepted local candidate is
-`naux-learn-0.1.0-linux-x86_64-gnu.tar.gz`: 2,192,134 compressed bytes,
+`naux-learn-0.1.1-linux-x86_64-gnu.tar.gz`: 2,191,819 compressed bytes,
 32 exact archive entries, and SHA-256
-`fe227cb8b20064dcca02f6274bdcbc421c60c3b7c278c9f22acc4ac81790914b`.
-Its admitted internal 26-file bundle contains 5,357,302 bytes and seals as
-`67a65e1080f0ffb9bc55f36041c1f1af9fe61af55f8872b990f4994a9d1dfa2e`.
+`6fc528dfd518f260aea1c95cda87063f53abe1b466d5cf35c5572f279bdade42`.
+Its admitted internal 26-file bundle contains 5,357,110 bytes and seals as
+`99e4ab2ee05d00615d00b3d6b8f7f87067289b8c11c4ba1957d57a9620390bb1`.
+The 3,748-byte `nauxup.sh` has SHA-256
+`d97021e63af93c3bd45498316ca264dd6bf1b04d7478eab89b49ed20300e692d`.
 
-The release carrier passes byte reproducibility, exact three-file output
+The release carrier passes byte reproducibility, exact four-file output
 inventory, corrupted-checksum rejection, coherently rechecksummed extra-member
-rejection, canonical-stream reconstruction, no-toolchain installation, and
-byte-exact first-program execution, dry-run, and exact uninstall. The focused
-default and all-feature S1 groups each pass 30 tests plus two native Setup
-tests.
-
-The current all-feature library regression has 454 passing tests, zero
-failures, and six intentionally ignored tests. Strict workspace
-all-target/all-feature Clippy, formatting, shell syntax, reproducibility,
-mutation, and local-link gates pass.
+rejection, bootstrap download mutation rejection, canonical-stream
+reconstruction, no-toolchain bootstrap installation, and byte-exact
+first-program execution, dry-run, and exact uninstall.
 
 Acceptance is local evidence only and does not itself constitute a tag, hosted
 release, or external publication.

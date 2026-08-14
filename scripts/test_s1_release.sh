@@ -28,8 +28,9 @@ checksum_name="$archive_name.sha256"
 cmp -- "$release_a/$archive_name" "$release_b/$archive_name"
 cmp -- "$release_a/$checksum_name" "$release_b/$checksum_name"
 cmp -- "$release_a/RELEASE_NOTES.md" "$release_b/RELEASE_NOTES.md"
+cmp -- "$release_a/nauxup.sh" "$release_b/nauxup.sh"
 actual_inventory=$(find "$release_a" -mindepth 1 -maxdepth 1 -type f -printf '%f\n' | sort)
-expected_inventory=$(printf '%s\n' RELEASE_NOTES.md "$archive_name" "$checksum_name" | sort)
+expected_inventory=$(printf '%s\n' RELEASE_NOTES.md nauxup.sh "$archive_name" "$checksum_name" | sort)
 if [[ "$actual_inventory" != "$expected_inventory" ]]; then
     echo "release output inventory is not canonical" >&2
     exit 1
@@ -68,11 +69,51 @@ fi
 mkdir -m 0755 -- "$poison" "$extract" "$state"
 install -m 0755 /bin/false "$poison/cargo"
 install -m 0755 /bin/false "$poison/rustc"
-tar --extract --gzip --file "$release_a/$archive_name" --directory "$extract" --no-same-owner
-bundle="$extract/${archive_name%.tar.gz}"
+cat > "$poison/curl" <<'EOF'
+#!/usr/bin/env sh
+set -eu
+output=''
+url=''
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --output)
+            shift
+            [ "$#" -gt 0 ] || exit 2
+            output=$1
+            ;;
+        https://*) url=$1 ;;
+    esac
+    shift
+done
+[ -n "$output" ] && [ -n "$url" ] || exit 2
+asset=${url##*/}
+case "$asset" in
+    naux-learn-*.tar.gz|naux-learn-*.tar.gz.sha256) ;;
+    *) exit 2 ;;
+esac
+[ "$url" = "https://github.com/x2t8/Naux/releases/download/$NAUX_TEST_RELEASE_TAG/$asset" ] \
+    || exit 2
+cp -- "$NAUX_TEST_RELEASE_DIR/$asset" "$output"
+EOF
+chmod 0755 -- "$poison/curl"
 
-env PATH="$poison:/usr/bin:/bin" \
-    "$bundle/naux-learn-setup" --yes --language en-US --prefix "$prefix" \
+bad_release="$temp_root/bad-release"
+mkdir -m 0755 -- "$bad_release"
+cp -- "$release_a/$archive_name" "$bad_release/$archive_name"
+cp -- "$release_a/$checksum_name" "$bad_release/$checksum_name"
+printf '\000' | dd of="$bad_release/$archive_name" bs=1 seek=0 conv=notrunc status=none
+if env PATH="$poison:/usr/bin:/bin" NAUX_TEST_RELEASE_DIR="$bad_release" \
+    NAUX_TEST_RELEASE_TAG="v$version-learn" \
+    sh "$release_a/nauxup.sh" --yes --language en-US --prefix "$prefix" \
+    --state-directory "$state" > /dev/null 2>&1; then
+    echo "pinned bootstrap accepted a mutated archive" >&2
+    exit 1
+fi
+test ! -e "$prefix"
+
+env PATH="$poison:/usr/bin:/bin" NAUX_TEST_RELEASE_DIR="$release_a" \
+    NAUX_TEST_RELEASE_TAG="v$version-learn" \
+    sh "$release_a/nauxup.sh" --yes --language en-US --prefix "$prefix" \
     --state-directory "$state" > "$temp_root/install.txt"
 receipt=$(sed -n 's/^receipt: //p' "$temp_root/install.txt")
 env PATH="$poison:/usr/bin:/bin" \
@@ -87,4 +128,5 @@ test ! -e "$receipt"
 
 printf 'S1 release byte-reproducibility: PASS\n'
 printf 'S1 release outer mutation rejection: PASS\n'
-printf 'S1 release no-toolchain native-setup/run/uninstall: PASS\n'
+printf 'S1 release pinned-bootstrap mutation rejection: PASS\n'
+printf 'S1 release pinned-bootstrap/no-toolchain setup/run/uninstall: PASS\n'
