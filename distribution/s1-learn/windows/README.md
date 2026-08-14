@@ -2,6 +2,11 @@
 
 ![NAUX Learn](../../../assets/langnaux-learn.png)
 
+> [!WARNING]
+> This Windows candidate was withdrawn and is not publicly distributed. The
+> bundle definition remains only as reproducible packaging infrastructure for
+> a future usability-corrected release.
+
 This is the experimental Windows x86-64 GNU bundle for guided programming and
 algorithm study. It contains a prebuilt `naux.exe`; using it does not require
 Rust, Cargo, LLVM, MinGW, a C compiler, an assembler, or a linker.

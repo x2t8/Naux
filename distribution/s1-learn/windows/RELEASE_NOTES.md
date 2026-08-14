@@ -1,6 +1,7 @@
 # NAUX Learn 0.1.1 for Windows
 
 Status: experimental Windows release candidate\
+Publication: withdrawn; retained only as a historical build record\
 Target: Windows x86-64 GNU (`windows-x86_64-gnu`)\
 Scope: guided programming and algorithm study
 
@@ -12,14 +13,11 @@ resource for Windows Explorer and shortcuts. It also contains nine sealed
 installer/disclosure locales and an exact installation-ownership receipt
 foundation.
 
-## One-command install
+## Publication status
 
-```powershell
-irm https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.ps1 | iex
-```
-
-The bootstrap is pinned to this release. It checks the archive byte length,
-SHA-256, executable version, and sealed bundle manifest before opening Setup.
+This candidate is withdrawn and has no public installer URL. The material
+below is retained only to reproduce and verify locally built historical
+artifacts.
 
 ## Manual install
 

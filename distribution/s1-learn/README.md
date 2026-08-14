@@ -2,6 +2,12 @@
 
 ![NAUX Learn](../../assets/langnaux-learn.png)
 
+> [!WARNING]
+> This bundle definition belongs to a withdrawn prerelease. No public download
+> or supported one-command installer currently exists. It remains in the
+> source tree only so the sealed packaging and verification work can be reused
+> for a future release after the learner UX is corrected.
+
 This is the experimental Linux x86-64 GNU bundle for guided programming and
 algorithm study. It contains a prebuilt NAUX executable; using the bundle does
 not require Rust, Cargo, LLVM, a C compiler, an assembler, or a linker.
@@ -21,27 +27,10 @@ The supported WP6 host is Linux x86-64 with the GNU dynamic loader at
 listed in `HOST-DEPENDENCIES.tsv`, and ordinary UTF-8 terminal/file I/O.
 This bundle is dynamically linked; it is not a portable static executable.
 
-## Verify and install
+## Verify a locally built historical bundle
 
-One-command installation:
-
-```bash
-curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.sh | sh
-```
-
-Setup detects a supported locale from the environment, prints a concise plan,
-and asks for one confirmation. For unattended installation:
-
-```bash
-curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.sh \
-  | sh -s -- --yes
-```
-
-The bootstrap pins the archive version, byte length, and SHA-256, checks the
-matching row in `SHA256SUMS`, verifies the sealed inner bundle, and only then
-runs Setup. It uses a private temporary directory and removes it on exit.
-
-Manual installation from an extracted bundle:
+There is no public installer for this withdrawn version. From an extracted
+bundle produced locally by the repository release tooling:
 
 From the bundle directory:
 

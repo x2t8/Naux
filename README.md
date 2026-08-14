@@ -13,13 +13,11 @@
   </p>
 
   <p>
-    <a href="tutorial/README.md"><strong>Start the Tutorial</strong></a>
+    <a href="#build-from-source"><strong>Build from source</strong></a>
     ·
-    <a href="tutorial/01-install-linux.md"><strong>Install on Linux</strong></a>
+    <a href="tutorial/README.md"><strong>Language tutorial</strong></a>
     ·
-    <a href="tutorial/02-install-windows.md"><strong>Install on Windows</strong></a>
-    ·
-    <a href="https://github.com/x2t8/Naux/releases/tag/v0.1.1-learn"><strong>Current Linux prerelease</strong></a>
+    <a href="docs/s1_learn_quick_reference_v0_1.md"><strong>Quick reference</strong></a>
   </p>
 </div>
 
@@ -52,31 +50,16 @@ production-readiness or performance claim.
 
 ## Quick start
 
-### Current public Linux prerelease: NAUX Learn 0.1.1
+### Binary release status
 
-The public experimental release bundle supports Linux x86-64 GNU and does
-not require Rust or Cargo for installation or normal learner execution. The
-version-pinned one-command installer downloads the exact sealed archive,
-checks its byte length and SHA-256, verifies its inner manifest, then opens the
-localized Setup flow:
+There is currently **no supported public NAUX binary release**. The earlier
+NAUX Learn prereleases were withdrawn while terminal input, learner-facing CLI
+scope, onboarding, and real-user acceptance gates are redesigned. Old release
+URLs and cached installer commands must not be used.
 
-```bash
-curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.sh | sh
-```
-
-Windows PowerShell remains on the separate unsigned 0.1.0 candidate:
-
-```powershell
-irm https://github.com/x2t8/Naux/releases/download/v0.1.0-learn/nauxup.ps1 | iex
-```
-
-Start with the ordered [NAUX Learn tutorial](tutorial/README.md), which keeps
-Linux installation, Windows installation, the first program, algorithms,
-uninstall, and troubleshooting in one public folder. The Windows artifact
-remains a candidate until its declared real-Windows gate passes; the Linux
-0.1.1 release makes no Windows claim. The bundles are dynamically linked,
-Rust-seeded experimental artifacts. A checksum is integrity evidence, not a
-publisher signature.
+The repository remains available as an experimental compiler/runtime research
+tree. Until a replacement prerelease passes the new usability gates, use the
+source workflow below.
 
 ### Build from source
 
@@ -315,7 +298,6 @@ naux-lang/tests/             Integration and parity evidence
 - [NAUX Learn supported-host bundle](docs/s1_learn_binary_bundle.md)
 - [NAUX Learn deterministic release archive](docs/s1_learn_release_archive.md)
 - [NAUX Learn Windows release candidate](docs/s1_learn_windows_release.md)
-- [Upcoming NAUX Learn 0.1.1 release notes](RELEASE_NOTES.md)
 - [Compiler IR specification](naux-lang/docs/IR_SPEC.md)
 
 Internal planning and unpublished research strategy are intentionally not part

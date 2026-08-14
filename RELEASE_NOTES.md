@@ -1,6 +1,7 @@
 # NAUX Learn 0.1.1
 
 Status: experimental release\
+Publication: withdrawn; retained only as a historical build record\
 Target: Linux x86-64 GNU (`linux-x86_64-gnu`)\
 Scope: guided programming and algorithm study
 
@@ -32,23 +33,17 @@ Rust or Cargo.
   validates the archive byte length, outer SHA-256, executable version, and
   sealed inner manifest before Setup runs.
 
-## One-command install
+## Publication status
 
-Linux x86-64 GNU:
-
-```bash
-curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.1-learn/nauxup.sh | sh
-```
-
-For unattended installation, append `| sh -s -- --yes`. The command is
-intentionally pinned to `v0.1.1-learn`. NAUX Learn is a
-prerelease, so GitHub's `/releases/latest/` route is not its version selector.
-The bootstrap files are integrity carriers, not publisher signatures.
+This prerelease was withdrawn after real-user testing exposed incomplete
+interactive terminal input and learner-facing CLI usability defects. Its
+GitHub assets are no longer public, and there is no supported installation
+command for this version.
 
 Windows packaging and GUI/IDE integration are outside this Linux release
 slice and are not claimed by these notes.
 
-## Manual install from the release archive
+## Historical local-archive verification
 
 Verify the downloaded archive first:
 
