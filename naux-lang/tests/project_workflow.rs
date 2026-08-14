@@ -94,7 +94,8 @@ fn new_project_verify_runs_check_test_build_and_benchmark() {
     );
     let rejected_stdout =
         String::from_utf8(rejected.stdout).expect("failed verify output must be UTF-8");
-    assert!(rejected_stdout.contains("[FAIL] tests/smoke_test.nx"));
+    let failed_test = Path::new("tests").join("smoke_test.nx");
+    assert!(rejected_stdout.contains(&format!("[FAIL] {}", failed_test.display())));
     assert!(rejected_stdout.contains("Summary: 0 passed, 1 failed"));
     assert!(
         !rejected_stdout.contains("[VERIFY 3/4]"),
