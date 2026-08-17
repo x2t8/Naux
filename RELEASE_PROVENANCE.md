@@ -75,7 +75,9 @@ to produce byte-identical provenance. It rejects a wrong expected source
 commit or tree, mutation of each public asset, a mutated provenance seal, a
 false inner manifest seal, and an extra asset. Linked assets and noncanonical
 transport modes are rejected as well. It also requires the public security,
-compatibility, and support policy files.
+compatibility, and support policy files. The same gate reconstructs the bundle
+metrics and requires the public version, install URL, manifest seal, archive
+size, and archive hash to agree with the emitted artifact.
 
 ## Explicit non-claims
 

@@ -1,7 +1,7 @@
 # NAUX Learn Tutorial
 
 Start here to inspect the experimental learner language and its algorithm
-examples. NAUX Learn 0.1.2 is available as a Linux x86-64 GNU experimental
+examples. NAUX Learn 0.1.3 is available as a Linux x86-64 GNU experimental
 pre-release; no Windows artifact is published for this version.
 
 ## Learning path
@@ -13,11 +13,11 @@ pre-release; no Windows artifact is published for this version.
 | 3 | [First-program explanation](03-first-program.md) | Understand the learner syntax |
 | 4 | [Practice algorithms](04-algorithms.md) | Use input, lists, functions, loops, and the exercise corpus |
 | Source route | [Build from source](../README.md#build-from-source) | Run the research tree with Rust/Cargo |
-| Removal | [Uninstall](05-uninstall.md) | Remove 0.1.2 using its sealed receipt |
+| Removal | [Uninstall](05-uninstall.md) | Remove 0.1.3 using its sealed receipt |
 | Help | [Troubleshooting](06-troubleshooting.md) | Resolve common installation and command problems |
 
 The [Windows](02-install-windows.md) page records the withdrawn Windows route;
-0.1.2 publishes Linux assets only.
+0.1.3 publishes Linux assets only.
 
 ## What NAUX Learn is
 

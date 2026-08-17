@@ -39,7 +39,7 @@ machine, PIE type, dependency names, or maximum declared interface versions.
 
 `BUILD-SEED.tsv` pins Rust 1.96.0 commit
 `ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96`, Cargo 1.96.0 commit
-`30a34c682`, target `x86_64-unknown-linux-gnu`, package `naux@0.1.2`,
+`30a34c682`, target `x86_64-unknown-linux-gnu`, package `naux@0.1.3`,
 `egg@0.10.0`, and the complete workspace `Cargo.lock` SHA-256. The producer
 runs `cargo build --locked --release -p naux --bin naux --bin
 naux-learn-setup --bin nauxup` only after the active seed agrees byte-for-byte
@@ -77,7 +77,7 @@ missing members, and extra members fail closed.
 
 ```text
 NAUX-S1-LEARN-BUNDLE<TAB>1
-bundle<TAB>0.1.2
+bundle<TAB>0.1.3
 target<TAB>linux-x86_64-gnu
 file<TAB>MODE<TAB>SIZE<TAB>SHA256<TAB>PATH
 ...
@@ -175,10 +175,10 @@ claim is implied by this bundle.
 ## 9. Acceptance evidence
 
 Two independent producer runs emitted byte-identical archives. The minimal
-bundle has seven manifest-owned files, 6,367,750 admitted bytes, and manifest
-seal `56b8c4d255f4e3c3493e63259b2a5ae1531d3f8c310942331e696bacbc0b2761`.
-The canonical archive has nine tar entries, 2,551,230 bytes, and SHA-256
-`e7adabd2f2e2f11e0fb075b15880cb12518bcd604503226b56f10f2a887d3f76`.
+bundle has seven manifest-owned files, 6,367,702 admitted bytes, and manifest
+seal `397a930f52b456a761facaf89d48afcee8eaee45726d7e0317366c6460e626bb`.
+The canonical archive has nine tar entries, 2,550,960 bytes, and SHA-256
+`726aff2f633136a73c9cc9f14d574c98d907d19c555159548fee0ccde1e0065e`.
 
 The no-toolchain clean-HOME carrier passes verification, Setup, launch,
 external-source execution, `nauxup doctor`, dry-run, exact uninstall, mutation

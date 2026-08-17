@@ -13,7 +13,7 @@ body:
     attributes:
       label: NAUX version
       description: Paste the exact output of `naux --version`.
-      placeholder: naux 0.1.2
+      placeholder: naux 0.1.3
     validations:
       required: true
   - type: input

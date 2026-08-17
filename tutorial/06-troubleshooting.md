@@ -5,7 +5,7 @@
 
 ## `naux: command not found`
 
-NAUX Learn 0.1.2 creates launchers in `~/.local/bin` but deliberately does not
+NAUX Learn 0.1.3 creates launchers in `~/.local/bin` but deliberately does not
 modify shell profiles.
 
 Linux:
