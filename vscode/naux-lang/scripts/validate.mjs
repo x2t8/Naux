@@ -33,6 +33,8 @@ for (const [field, expected] of Object.entries(expectedIdentity)) {
 assert.equal(packageJson.displayName, "NAUX Language");
 assert.equal(packageJson.publisher, "x2t8");
 assert.equal(packageJson.license, identity.license);
+assert.equal(packageJson.preview, true, "Marketplace package must remain experimental");
+assert.deepEqual(packageJson.galleryBanner, { color: "#111318", theme: "dark" });
 assert.equal(packageJson.repository.url, "https://github.com/x2t8/naux-grammar.git");
 assert.equal(packageJson.homepage, "https://github.com/x2t8/naux-grammar");
 assert.equal(packageJson.dependencies, undefined, "grammar must remain dependency-free");
@@ -40,6 +42,11 @@ assert.equal(packageJson.devDependencies, undefined, "grammar must remain depend
 assert.ok(
   existsSync(join(packageRoot, ".github/workflows/validate.yml")),
   "standalone validation workflow missing"
+);
+assert.ok(existsSync(join(packageRoot, "CHANGELOG.md")), "Marketplace changelog missing");
+assert.ok(
+  readFileSync(join(packageRoot, ".vscodeignore"), "utf8").includes(".github/**"),
+  "VSIX package must exclude repository workflows"
 );
 
 const language = packageJson.contributes.languages.find(({ id }) => id === "naux");

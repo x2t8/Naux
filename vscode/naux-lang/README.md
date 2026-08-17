@@ -58,6 +58,15 @@ Linguist's independent real-world usage requirement.
 
 ## Install in VS Code locally
 
+After the Marketplace release, install by searching for **NAUX Language** in
+VS Code or by running:
+
+```bash
+code --install-extension x2t8.naux-lang
+```
+
+To install directly from a checked-out grammar repository:
+
 1. Open the command palette.
 2. Select **Extensions: Install Extension from Location...**.
 3. Select this `vscode/naux-lang` directory.

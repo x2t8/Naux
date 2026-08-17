@@ -1,4 +1,5 @@
 .vscodeignore
+.github/**
 scripts/**
 test/**
 linguist-language.json

@@ -2,9 +2,10 @@
   "name": "naux-lang",
   "displayName": "NAUX Language",
   "description": "Language support, TextMate grammar, and file icon for NAUX (.nx)",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "x2t8",
   "license": "MIT",
+  "preview": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/x2t8/naux-grammar.git"
@@ -24,8 +25,14 @@
     "naux",
     "nx",
     "language",
-    "textmate"
+    "textmate",
+    "syntax-highlighting",
+    "compiler"
   ],
+  "galleryBanner": {
+    "color": "#111318",
+    "theme": "dark"
+  },
   "scripts": {
     "test": "node scripts/validate.mjs"
   },
