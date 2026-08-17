@@ -1,8 +1,8 @@
 {
   "name": "naux-lang",
   "displayName": "NAUX Language",
-  "description": "Language support, TextMate grammar, and file icon for NAUX (.nx)",
-  "version": "0.1.1",
+  "description": "Language support, TextMate grammar, and editor snippets for NAUX (.nx)",
+  "version": "0.1.2",
   "publisher": "x2t8",
   "license": "MIT",
   "preview": true,
@@ -57,11 +57,10 @@
         "path": "./syntaxes/naux.tmLanguage.json"
       }
     ],
-    "iconThemes": [
+    "snippets": [
       {
-        "id": "naux-icon-theme",
-        "label": "NAUX Icons",
-        "path": "./icons/naux-icon-theme.json"
+        "language": "naux",
+        "path": "./snippets/naux.json"
       }
     ]
   }

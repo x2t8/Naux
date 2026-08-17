@@ -1,0 +1,83 @@
+{
+  "NAUX entry block": {
+    "prefix": ["rite", "naux-rite"],
+    "body": [
+      "~ rite",
+      "    $0",
+      "~ end"
+    ],
+    "description": "Create the NAUX program entry block"
+  },
+  "NAUX function": {
+    "prefix": ["fn", "naux-fn"],
+    "body": [
+      "~ fn ${1:name}(\\$${2:argument})",
+      "    $0",
+      "~ end"
+    ],
+    "description": "Create a NAUX function"
+  },
+  "NAUX if block": {
+    "prefix": ["if", "naux-if"],
+    "body": [
+      "~ if \\$${1:condition}",
+      "    $0",
+      "~ end"
+    ],
+    "description": "Create a conditional block"
+  },
+  "NAUX if else block": {
+    "prefix": ["ifelse", "naux-ifelse"],
+    "body": [
+      "~ if \\$${1:condition}",
+      "    ${2}",
+      "~ else",
+      "    $0",
+      "~ end"
+    ],
+    "description": "Create a conditional block with an else branch"
+  },
+  "NAUX counted loop": {
+    "prefix": ["loop", "naux-loop"],
+    "body": [
+      "~ loop \\$${1:count}",
+      "    $0",
+      "~ end"
+    ],
+    "description": "Create a bounded counted loop"
+  },
+  "NAUX while loop": {
+    "prefix": ["while", "naux-while"],
+    "body": [
+      "~ while \\$${1:condition}",
+      "    $0",
+      "~ end"
+    ],
+    "description": "Create a while loop"
+  },
+  "NAUX output": {
+    "prefix": ["say", "naux-say"],
+    "body": ["!say \\$${1:value}"],
+    "description": "Print a value with the say action"
+  },
+  "NAUX integer input": {
+    "prefix": ["readint", "naux-read-int"],
+    "body": ["\\$${1:value} = read_int()"],
+    "description": "Read one integer from standard input"
+  },
+  "NAUX return": {
+    "prefix": ["return", "naux-return"],
+    "body": ["^ \\$${1:value}"],
+    "description": "Return a value from a function"
+  },
+  "NAUX list": {
+    "prefix": ["list", "naux-list"],
+    "body": ["\\$${1:values} = [${2}]"],
+    "description": "Create a list value"
+  },
+  "NAUX record": {
+    "prefix": ["record", "naux-record"],
+    "body": ["\\$${1:record} = {${2:key}: ${3:value}}"],
+    "description": "Create a record value"
+  }
+}

@@ -8,8 +8,8 @@ const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const packageJson = readJson(join(packageRoot, "package.json"));
 const identity = readJson(join(packageRoot, "linguist-language.json"));
 const grammar = readJson(join(packageRoot, identity.grammar));
-const iconTheme = readJson(join(packageRoot, "icons/naux-icon-theme.json"));
 const languageConfiguration = readJson(join(packageRoot, "language-configuration.json"));
+const snippets = readJson(join(packageRoot, "snippets/naux.json"));
 
 const expectedIdentity = {
   language: "NAUX",
@@ -39,6 +39,42 @@ assert.equal(packageJson.repository.url, "https://github.com/x2t8/naux-grammar.g
 assert.equal(packageJson.homepage, "https://github.com/x2t8/naux-grammar");
 assert.equal(packageJson.dependencies, undefined, "grammar must remain dependency-free");
 assert.equal(packageJson.devDependencies, undefined, "grammar must remain dependency-free");
+for (const field of [
+  "main",
+  "browser",
+  "activationEvents",
+  "extensionDependencies",
+  "extensionPack"
+]) {
+  assert.equal(
+    packageJson[field],
+    undefined,
+    `portable language package must not define ${field}`
+  );
+}
+assert.equal(
+  packageJson.contributes.iconThemes,
+  undefined,
+  "file icon themes are upstream-owned and must not be bundled"
+);
+assert.equal(
+  packageJson.contributes.configurationDefaults,
+  undefined,
+  "language package must not override user settings"
+);
+assert.ok(
+  !existsSync(join(packageRoot, "icons/naux-icon-theme.json")),
+  "legacy file-icon theme must remain removed"
+);
+assert.deepEqual(
+  readdirSync(join(packageRoot, "icons")).sort(),
+  ["nauxlang.png"],
+  "icons directory may contain only the Marketplace/Open VSX registry mark"
+);
+const manifestText = JSON.stringify(packageJson);
+for (const forbidden of ["workbench.iconTheme", "vscode-icons", "naux-icon-theme"]) {
+  assert.ok(!manifestText.includes(forbidden), `forbidden icon integration: ${forbidden}`);
+}
 assert.ok(
   existsSync(join(packageRoot, ".github/workflows/validate.yml")),
   "standalone validation workflow missing"
@@ -63,13 +99,57 @@ assert.equal(grammarContribution.path, `./${identity.grammar}`);
 assert.equal(grammar.name, identity.language);
 assert.equal(grammar.scopeName, identity.tmScope);
 assert.deepEqual(grammar.fileTypes, ["nx"]);
-assert.equal(iconTheme.fileExtensions.nx, "naux");
-assert.equal(iconTheme.languageIds.naux, "naux");
 assert.ok(existsSync(join(packageRoot, packageJson.icon)), "package icon missing");
-assert.ok(
-  existsSync(join(packageRoot, "icons", iconTheme.iconDefinitions.naux.iconPath)),
-  "file-theme icon missing"
+
+assert.deepEqual(packageJson.contributes.snippets, [
+  { language: "naux", path: "./snippets/naux.json" }
+]);
+const expectedSnippetNames = [
+  "NAUX entry block",
+  "NAUX function",
+  "NAUX if block",
+  "NAUX if else block",
+  "NAUX counted loop",
+  "NAUX while loop",
+  "NAUX output",
+  "NAUX integer input",
+  "NAUX return",
+  "NAUX list",
+  "NAUX record"
+];
+assert.deepEqual(Object.keys(snippets), expectedSnippetNames, "snippet surface drift");
+const snippetPrefixes = [];
+for (const [name, snippet] of Object.entries(snippets)) {
+  assert.ok(Array.isArray(snippet.prefix) && snippet.prefix.length > 0, `${name}: prefix missing`);
+  assert.ok(Array.isArray(snippet.body) && snippet.body.length > 0, `${name}: body missing`);
+  assert.ok(
+    typeof snippet.description === "string" && snippet.description.length > 0,
+    `${name}: description missing`
+  );
+  assert.ok(snippet.body.every((line) => typeof line === "string"), `${name}: invalid body`);
+  snippetPrefixes.push(...snippet.prefix);
+}
+assert.equal(
+  new Set(snippetPrefixes).size,
+  snippetPrefixes.length,
+  "snippet prefixes must be unique"
 );
+const snippetText = JSON.stringify(snippets);
+for (const fragment of [
+  "~ rite",
+  "~ fn",
+  "~ if",
+  "~ else",
+  "~ loop",
+  "~ while",
+  "~ end",
+  "!say",
+  "read_int()",
+  "^ "
+]) {
+  assert.ok(snippetText.includes(fragment), `snippet surface is missing ${fragment}`);
+}
+assert.ok(snippetText.includes("\\\\$"), "literal NAUX variables must escape snippet dollars");
 
 const expectedLinguistEntry = `NAUX:
   type: programming

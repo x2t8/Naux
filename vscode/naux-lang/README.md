@@ -29,7 +29,8 @@ usage threshold or GitHub acceptance.
 
 - `syntaxes/naux.tmLanguage.json`: TextMate grammar;
 - `language-configuration.json`: editor brackets, indentation, and folding;
-- `icons/`: the global NAUX project mark and VS Code file-icon theme;
+- `snippets/naux.json`: source-validated editor snippets;
+- `icons/nauxlang.png`: the global NAUX project mark used by registries;
 - `scripts/validate.mjs`: dependency-free identity and compiler-drift checks;
 - `test/fixtures/`: grammar fixtures, never part of the NAUX runtime installer;
 - `LICENSE`: standalone MIT grant for the grammar package.
@@ -48,29 +49,45 @@ From this directory:
 npm test
 ```
 
-The validator checks that the package, grammar, icon theme, and Linguist
-candidate identity agree. Inside the NAUX monorepo it additionally derives the
-public builtin inventory from the Rust seed and rejects grammar drift.
+The validator checks that the package, grammar, snippets, and Linguist
+candidate identity agree. It also rejects activation code, icon-theme
+injection, settings overrides, and extension dependencies. Inside the NAUX
+monorepo it additionally derives the public builtin inventory from the Rust
+seed and rejects grammar drift.
 
 The package has no runtime or npm dependencies. GitHub Linguist may import this
 repository with its official `script/add-grammar` workflow once NAUX satisfies
 Linguist's independent real-world usage requirement.
 
-## Install in VS Code locally
+## Install
 
-After the Marketplace release, install by searching for **NAUX Language** in
-VS Code or by running:
+Install from
+[Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=x2t8.naux-lang)
+or search for **NAUX Language** in the extension view. VS Code users can run:
 
 ```bash
 code --install-extension x2t8.naux-lang
 ```
+
+The same VSIX is registry-portable and may be published unchanged at
+[`x2t8.naux-lang` on Open VSX](https://open-vsx.org/extension/x2t8/naux-lang).
+
+## File-icon policy
+
+NAUX Language registers the stable language ID `naux`, but it does not include
+or activate a file-icon theme, change `workbench.iconTheme`, install another
+extension, or write editor settings. File-icon themes may map the public
+language ID independently. Until a user's chosen theme supports NAUX, `.nx`
+files retain that theme's ordinary fallback icon.
+
+## Install from source
 
 To install directly from a checked-out grammar repository:
 
 1. Open the command palette.
 2. Select **Extensions: Install Extension from Location...**.
 3. Select this `vscode/naux-lang` directory.
-4. Open a `.nx` file. Optionally select **NAUX Icons** as the file-icon theme.
+4. Open a `.nx` file.
 
 This editor package is separate from the minimal NAUX compiler/runtime
 distribution. Installing NAUX must not copy grammar fixtures, package tests,
