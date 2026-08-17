@@ -129,6 +129,16 @@ The current surface language uses:
 See the [language specification](docs/language_spec.md) for the admitted
 surface behavior.
 
+## Editor support
+
+The canonical, dependency-free TextMate grammar is published separately at
+[`x2t8/naux-grammar`](https://github.com/x2t8/naux-grammar) and mirrored under
+`vscode/naux-lang` for compiler-surface drift checks. It defines `.nx`,
+`source.naux`, the `naux` language id, and all currently registered public
+builtins. The grammar is technically prepared for GitHub Linguist, but NAUX is
+not yet a Linguist-recognized language; upstream submission remains gated by
+Linguist's independent real-world usage requirement.
+
 ## Current execution pipeline
 
 ```mermaid
@@ -268,7 +278,7 @@ cargo run -p naux -- dev disasm naux-lang/examples/bench_sum_dense.nx
 |-- scripts/            Benchmark, validation, and reporting tools
 |-- tools/perf-gates/   Rust performance-gate utilities
 |-- naux-meta-coq/      Separate formal-model workspace
-|-- vscode/naux-lang/   MIT-licensed grammar and Linguist candidate identity
+|-- vscode/naux-lang/   Mirror of the canonical MIT-licensed NAUX grammar
 |-- docs/               Active public language and benchmark documentation
 |-- tutorial/           Current learner-facing guides
 |-- assets/             Public project assets
@@ -313,7 +323,8 @@ naux-lang/tests/             Integration and parity evidence
 - [Support and issue policy](SUPPORT.md)
 - [Withdrawn release evidence](archive/README.md)
 - [Compiler IR specification](naux-lang/docs/IR_SPEC.md)
-- [NAUX grammar and Linguist candidate](vscode/naux-lang/README.md)
+- [Canonical NAUX grammar](https://github.com/x2t8/naux-grammar)
+- [Monorepo grammar mirror and Linguist candidate](vscode/naux-lang/README.md)
 
 Internal planning and unpublished research strategy are intentionally not part
 of the public repository surface.
