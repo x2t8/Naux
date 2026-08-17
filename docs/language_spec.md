@@ -55,16 +55,17 @@ Observable behavior is governed by `../PARITY_CONTRACT.md` and
   block.
 - Builtin functions live in stdlib collection, graph, and math families.
 
-## Deterministic batch I/O
+## Standard I/O
 
 - `read_int()` consumes an exact signed 64-bit token.
 - `read_token()` consumes one Unicode-whitespace-delimited text token and
   returns `null` at EOF.
 - `read_line()` consumes through the next line feed, strips that line feed and
   one preceding carriage return, and returns `null` at EOF.
-- All reads share one cursor over the bounded UTF-8 input tape supplied by
-  `naux run file.nx < input.txt`.
-- Normal `naux run` uses plain output: each `!say` becomes its display text and
+- All reads share one cursor over bounded UTF-8 input. `naux run file.nx` reads
+  interactively from a terminal; `naux run file.nx < input.txt` consumes a
+  deterministic batch tape.
+- Normal execution uses plain output: each `!say` becomes its display text and
   one newline. `--mode cli` selects the event-oriented renderer.
 
 The exact cap, terminal behavior, fallback, and non-claims are specified in

@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::io::{self, BufRead, Write};
 use std::rc::Rc;
 
 use crate::runtime::env::Env;
@@ -16,6 +17,10 @@ struct InputTape {
 impl InputTape {
     fn new(text: String) -> Self {
         Self { text, cursor: 0 }
+    }
+
+    fn append(&mut self, text: &str) {
+        self.text.push_str(text);
     }
 
     fn read_line(&mut self) -> Option<String> {
@@ -64,33 +69,163 @@ impl InputTape {
 }
 
 pub fn register_standard_input(env: &mut Env, input: String) {
-    let tape = Rc::new(RefCell::new(InputTape::new(input)));
+    register_input(env, InputSource::Batch(InputTape::new(input)));
+}
 
-    let line_tape = Rc::clone(&tape);
+/// Register stdin builtins that read from the controlling terminal on demand.
+///
+/// Batch execution intentionally uses [`register_standard_input`] instead. The
+/// two sources share the same token/line cursor semantics, while terminal mode
+/// refills the tape one line at a time so `read_int()` can block for keyboard
+/// input without requiring an EOF keystroke first.
+pub fn register_terminal_input(env: &mut Env) {
+    register_input(env, InputSource::Terminal(TerminalInput::default()));
+}
+
+#[derive(Debug)]
+enum InputSource {
+    Batch(InputTape),
+    Terminal(TerminalInput),
+}
+
+impl InputSource {
+    fn read_line(&mut self) -> Result<Option<String>, RuntimeError> {
+        match self {
+            Self::Batch(tape) => Ok(tape.read_line()),
+            Self::Terminal(input) => input.read_line(),
+        }
+    }
+
+    fn read_token(&mut self) -> Result<Option<String>, RuntimeError> {
+        match self {
+            Self::Batch(tape) => Ok(tape.read_token()),
+            Self::Terminal(input) => input.read_token(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct TerminalInput {
+    tape: InputTape,
+    bytes_read: usize,
+}
+
+impl Default for TerminalInput {
+    fn default() -> Self {
+        Self {
+            tape: InputTape::new(String::new()),
+            bytes_read: 0,
+        }
+    }
+}
+
+impl TerminalInput {
+    fn read_line(&mut self) -> Result<Option<String>, RuntimeError> {
+        let stdin = io::stdin();
+        let stderr = io::stderr();
+        self.read_line_with_io(&mut stdin.lock(), &mut stderr.lock())
+    }
+
+    fn read_token(&mut self) -> Result<Option<String>, RuntimeError> {
+        let stdin = io::stdin();
+        let stderr = io::stderr();
+        self.read_token_with_io(&mut stdin.lock(), &mut stderr.lock())
+    }
+
+    fn read_line_with_io(
+        &mut self,
+        reader: &mut impl BufRead,
+        prompt: &mut impl Write,
+    ) -> Result<Option<String>, RuntimeError> {
+        if self.tape.cursor < self.tape.text.len() {
+            return Ok(self.tape.read_line());
+        }
+        if !self.refill(reader, prompt)? {
+            return Ok(None);
+        }
+        Ok(self.tape.read_line())
+    }
+
+    fn read_token_with_io(
+        &mut self,
+        reader: &mut impl BufRead,
+        prompt: &mut impl Write,
+    ) -> Result<Option<String>, RuntimeError> {
+        loop {
+            if let Some(token) = self.tape.read_token() {
+                return Ok(Some(token));
+            }
+            if !self.refill(reader, prompt)? {
+                return Ok(None);
+            }
+        }
+    }
+
+    fn refill(
+        &mut self,
+        reader: &mut impl BufRead,
+        prompt: &mut impl Write,
+    ) -> Result<bool, RuntimeError> {
+        prompt
+            .write_all(b"input> ")
+            .and_then(|()| prompt.flush())
+            .map_err(|error| {
+                RuntimeError::new(format!("cannot write terminal input prompt: {error}"), None)
+            })?;
+
+        let mut line = String::new();
+        let bytes = reader.read_line(&mut line).map_err(|error| {
+            RuntimeError::new(format!("cannot read terminal input: {error}"), None)
+        })?;
+        if bytes == 0 {
+            return Ok(false);
+        }
+        self.bytes_read = self
+            .bytes_read
+            .checked_add(bytes)
+            .ok_or_else(|| RuntimeError::new("terminal-input byte count overflowed", None))?;
+        if self.bytes_read > S1_STANDARD_INPUT_MAX_BYTES {
+            return Err(RuntimeError::new(
+                format!(
+                    "terminal input exceeds the S1 limit of {} bytes",
+                    S1_STANDARD_INPUT_MAX_BYTES
+                ),
+                None,
+            ));
+        }
+        self.tape.append(&line);
+        Ok(true)
+    }
+}
+
+fn register_input(env: &mut Env, input: InputSource) {
+    let source = Rc::new(RefCell::new(input));
+
+    let line_source = Rc::clone(&source);
     env.set_stateful_builtin("read_line", move |args| {
         require_no_args("read_line", &args)?;
-        Ok(line_tape
+        Ok(line_source
             .borrow_mut()
-            .read_line()
+            .read_line()?
             .map(Value::make_text)
             .unwrap_or(Value::Null))
     });
 
-    let token_tape = Rc::clone(&tape);
+    let token_source = Rc::clone(&source);
     env.set_stateful_builtin("read_token", move |args| {
         require_no_args("read_token", &args)?;
-        Ok(token_tape
+        Ok(token_source
             .borrow_mut()
-            .read_token()
+            .read_token()?
             .map(Value::make_text)
             .unwrap_or(Value::Null))
     });
 
     env.set_stateful_builtin("read_int", move |args| {
         require_no_args("read_int", &args)?;
-        let token = tape
+        let token = source
             .borrow_mut()
-            .read_token()
+            .read_token()?
             .ok_or_else(|| RuntimeError::new("`read_int` reached end of input", None))?;
         token.parse::<i64>().map(Value::SmallInt).map_err(|_| {
             RuntimeError::new(
@@ -182,5 +317,42 @@ mod tests {
         let escaped = diagnostic_token("\u{1b}[31m");
         assert!(!escaped.contains('\u{1b}'));
         assert!(escaped.contains("\\u{1b}"));
+    }
+
+    #[test]
+    fn terminal_input_refills_lazily_and_preserves_shared_cursor() {
+        let mut input = TerminalInput::default();
+        let mut reader = "17 29\nhello world\n".as_bytes();
+        let mut prompts = Vec::new();
+
+        assert_eq!(
+            input
+                .read_token_with_io(&mut reader, &mut prompts)
+                .unwrap()
+                .as_deref(),
+            Some("17")
+        );
+        assert_eq!(
+            input
+                .read_token_with_io(&mut reader, &mut prompts)
+                .unwrap()
+                .as_deref(),
+            Some("29")
+        );
+        assert_eq!(
+            input
+                .read_line_with_io(&mut reader, &mut prompts)
+                .unwrap()
+                .as_deref(),
+            Some("")
+        );
+        assert_eq!(
+            input
+                .read_line_with_io(&mut reader, &mut prompts)
+                .unwrap()
+                .as_deref(),
+            Some("hello world")
+        );
+        assert_eq!(prompts, b"input> input> ");
     }
 }

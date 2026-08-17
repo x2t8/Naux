@@ -39,10 +39,13 @@ pub fn handle_run(
         ));
     }
     let type_time = type_start.elapsed();
-    let input = read_standard_input()?;
     let exec_start = Instant::now();
-    let (events, value) =
-        util::execute_ast_with_input(engine, &ast, &src, &target, &input, false, limits)?;
+    let (events, value) = if io::stdin().is_terminal() {
+        util::execute_ast_with_terminal_input(engine, &ast, &src, &target, false, limits)?
+    } else {
+        let input = read_standard_input()?;
+        util::execute_ast_with_input(engine, &ast, &src, &target, &input, false, limits)?
+    };
     let exec_time = exec_start.elapsed();
     match mode {
         DefaultMode::Plain => {
@@ -103,9 +106,6 @@ pub fn handle_run(
 
 fn read_standard_input() -> Result<String, String> {
     let stdin = io::stdin();
-    if stdin.is_terminal() {
-        return Ok(String::new());
-    }
     read_standard_input_bounded(&mut stdin.lock(), S1_STANDARD_INPUT_MAX_BYTES)
 }
 

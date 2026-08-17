@@ -100,7 +100,7 @@ fn reference_is_versioned_bounded_and_fixture_synchronized() {
         "## Operators",
         "## Control flow",
         "## Lists and maps",
-        "## Deterministic batch input and output",
+        "## Standard input and output",
         "## Diagnostics",
         "## Explicit exclusions",
     ] {

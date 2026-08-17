@@ -15,7 +15,7 @@ use crate::runtime::budget::{
 use crate::runtime::env::Env;
 use crate::runtime::error::{Frame, RuntimeError};
 use crate::runtime::events::RuntimeEvent;
-use crate::runtime::input::register_standard_input;
+use crate::runtime::input::{register_standard_input, register_terminal_input};
 use crate::runtime::value::{NauxObj, Value};
 use crate::stdlib::register_all;
 
@@ -46,14 +46,14 @@ pub fn eval_script_with_bindings(
     stmts: &[Stmt],
     bindings: &[(String, Value)],
 ) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
-    eval_script_with_context(stmts, None, bindings, None, None)
+    eval_script_with_context(stmts, None, bindings, ScriptInput::None, None)
 }
 
 pub fn eval_script_with_base_dir(
     stmts: &[Stmt],
     base_dir: Option<&Path>,
 ) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
-    eval_script_with_context(stmts, base_dir, &[], None, None)
+    eval_script_with_context(stmts, base_dir, &[], ScriptInput::None, None)
 }
 
 pub fn eval_script_with_base_dir_and_input(
@@ -61,7 +61,7 @@ pub fn eval_script_with_base_dir_and_input(
     base_dir: Option<&Path>,
     input: &str,
 ) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
-    eval_script_with_context(stmts, base_dir, &[], Some(input), None)
+    eval_script_with_context(stmts, base_dir, &[], ScriptInput::Batch(input), None)
 }
 
 pub fn eval_script_with_base_dir_input_and_limits(
@@ -70,14 +70,35 @@ pub fn eval_script_with_base_dir_input_and_limits(
     input: &str,
     limits: ExecutionLimits,
 ) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
-    eval_script_with_context(stmts, base_dir, &[], Some(input), Some(limits))
+    eval_script_with_context(
+        stmts,
+        base_dir,
+        &[],
+        ScriptInput::Batch(input),
+        Some(limits),
+    )
+}
+
+pub fn eval_script_with_base_dir_terminal_input_and_limits(
+    stmts: &[Stmt],
+    base_dir: Option<&Path>,
+    limits: ExecutionLimits,
+) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
+    eval_script_with_context(stmts, base_dir, &[], ScriptInput::Terminal, Some(limits))
+}
+
+#[derive(Clone, Copy)]
+enum ScriptInput<'a> {
+    None,
+    Batch(&'a str),
+    Terminal,
 }
 
 fn eval_script_with_context(
     stmts: &[Stmt],
     base_dir: Option<&Path>,
     bindings: &[(String, Value)],
-    input: Option<&str>,
+    input: ScriptInput<'_>,
     limits: Option<ExecutionLimits>,
 ) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
     let mut env = Env::new();
@@ -85,8 +106,10 @@ fn eval_script_with_context(
     if let Some(limits) = limits {
         install_execution_budget(&mut env, limits);
     }
-    if let Some(input) = input {
-        register_standard_input(&mut env, input.to_string());
+    match input {
+        ScriptInput::None => {}
+        ScriptInput::Batch(input) => register_standard_input(&mut env, input.to_string()),
+        ScriptInput::Terminal => register_terminal_input(&mut env),
     }
     for (name, value) in bindings {
         env.set(name, value.clone());

@@ -162,8 +162,10 @@ naux doctor [--json --out <file>]
 naux ide [file.nx]
 ```
 
-`naux run` uses plain `!say` output by default and accepts bounded UTF-8 batch
-input through `read_int()`, `read_token()`, and `read_line()`. See the
+`naux run <file.nx>` uses plain `!say` output by default. A controlling terminal
+provides live, prompted keyboard input; redirected stdin remains bounded UTF-8
+batch input for judge and script parity through `read_int()`, `read_token()`,
+and `read_line()`. See the
 [NAUX Learn batch-I/O contract](docs/s1_learn_batch_io.md) for exact EOF,
 cursor, size, and fallback semantics. Use `--mode cli` for the ritual event
 renderer. Common lexer, parser, type, and runtime failures use the bounded

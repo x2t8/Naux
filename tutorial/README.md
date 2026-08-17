@@ -10,8 +10,9 @@ scope, and onboarding are redesigned.
 | Step | Guide | Outcome |
 |---:|---|---|
 | 1 | [Build from source](../README.md#build-from-source) | Run the current research tree with Rust/Cargo |
-| 2 | [Write the first program](03-first-program.md) | Check and run a `.nx` source file |
-| 3 | [Practice algorithms](04-algorithms.md) | Use input, lists, functions, loops, and the exercise corpus |
+| 2 | [Five-minute quickstart](00-quickstart.md) | Write, check, run, and enter keyboard input |
+| 3 | [First-program explanation](03-first-program.md) | Understand the learner syntax |
+| 4 | [Practice algorithms](04-algorithms.md) | Use input, lists, functions, loops, and the exercise corpus |
 | Existing installs | [Uninstall](05-uninstall.md) | Remove a withdrawn prerelease using its sealed receipt |
 | Help | [Troubleshooting](06-troubleshooting.md) | Resolve common installation and command problems |
 
@@ -47,9 +48,9 @@ cargo run -p naux -- check solution.nx
 cargo run -p naux -- run solution.nx < input.txt
 ```
 
-Interactive terminal reads are not yet supported by the withdrawn learner
-runner; redirected or piped input remains the currently admitted path. This is
-a known usability defect, not the target experience for the next release.
+The current tree supports both interactive terminal input and deterministic
+redirected input. The next binary release will expose the same behavior
+without requiring Rust or Cargo on the learner's machine.
 
 For the exact admitted language surface, see the
 [NAUX Learn quick reference](../docs/s1_learn_quick_reference_v0_1.md).

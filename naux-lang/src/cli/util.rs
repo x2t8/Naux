@@ -12,7 +12,10 @@ use crate::parser::error::format_parse_error;
 use crate::runtime;
 use crate::runtime::budget::ExecutionLimits;
 use crate::runtime::error::format_runtime_error_with_file;
-use crate::vm::run::{run_jit_with_input_and_limits, run_vm_with_input_and_limits};
+use crate::vm::run::{
+    run_jit_with_input_and_limits, run_jit_with_terminal_input_and_limits,
+    run_vm_with_input_and_limits, run_vm_with_terminal_input_and_limits,
+};
 
 pub fn load_ast(path: &Path) -> Result<(String, Vec<Stmt>), String> {
     let src = fs::read_to_string(path)
@@ -70,17 +73,85 @@ pub fn execute_ast_with_input(
     ),
     String,
 > {
+    execute_ast_with_input_source(
+        engine,
+        ast,
+        src,
+        path,
+        ExecutionInput::Batch(input),
+        print_engine,
+        limits,
+    )
+}
+
+pub fn execute_ast_with_terminal_input(
+    engine: DefaultEngine,
+    ast: &[Stmt],
+    src: &str,
+    path: &Path,
+    print_engine: bool,
+    limits: ExecutionLimits,
+) -> Result<
+    (
+        Vec<runtime::events::RuntimeEvent>,
+        Option<crate::runtime::value::Value>,
+    ),
+    String,
+> {
+    execute_ast_with_input_source(
+        engine,
+        ast,
+        src,
+        path,
+        ExecutionInput::Terminal,
+        print_engine,
+        limits,
+    )
+}
+
+#[derive(Clone, Copy)]
+enum ExecutionInput<'a> {
+    Batch(&'a str),
+    Terminal,
+}
+
+fn execute_ast_with_input_source(
+    engine: DefaultEngine,
+    ast: &[Stmt],
+    src: &str,
+    path: &Path,
+    input: ExecutionInput<'_>,
+    print_engine: bool,
+    limits: ExecutionLimits,
+) -> Result<
+    (
+        Vec<runtime::events::RuntimeEvent>,
+        Option<crate::runtime::value::Value>,
+    ),
+    String,
+> {
     match engine {
         DefaultEngine::Interp => {
             if print_engine {
                 eprintln!("[engine] interp");
             }
-            let (_env, events, errors) = runtime::eval_script_with_base_dir_input_and_limits(
-                ast,
-                path.parent(),
-                input,
-                limits,
-            );
+            let (_env, events, errors) = match input {
+                ExecutionInput::Batch(input) => {
+                    runtime::eval_script_with_base_dir_input_and_limits(
+                        ast,
+                        path.parent(),
+                        input,
+                        limits,
+                    )
+                }
+                ExecutionInput::Terminal => {
+                    runtime::eval_script_with_base_dir_terminal_input_and_limits(
+                        ast,
+                        path.parent(),
+                        limits,
+                    )
+                }
+            };
             if let Some(err) = errors.first() {
                 Err(format_runtime_error_with_file(
                     src,
@@ -95,13 +166,31 @@ pub fn execute_ast_with_input(
             if print_engine {
                 eprintln!("[engine] vm");
             }
-            let (events, val) =
-                run_vm_with_input_and_limits(ast, src, &path.to_string_lossy(), input, limits)?;
+            let (events, val) = match input {
+                ExecutionInput::Batch(input) => {
+                    run_vm_with_input_and_limits(ast, src, &path.to_string_lossy(), input, limits)?
+                }
+                ExecutionInput::Terminal => run_vm_with_terminal_input_and_limits(
+                    ast,
+                    src,
+                    &path.to_string_lossy(),
+                    limits,
+                )?,
+            };
             Ok((events, Some(val)))
         }
         DefaultEngine::Jit => {
-            let (events, val, used_jit) =
-                run_jit_with_input_and_limits(ast, src, &path.to_string_lossy(), input, limits)?;
+            let (events, val, used_jit) = match input {
+                ExecutionInput::Batch(input) => {
+                    run_jit_with_input_and_limits(ast, src, &path.to_string_lossy(), input, limits)?
+                }
+                ExecutionInput::Terminal => run_jit_with_terminal_input_and_limits(
+                    ast,
+                    src,
+                    &path.to_string_lossy(),
+                    limits,
+                )?,
+            };
             if print_engine {
                 if used_jit {
                     eprintln!("[engine] jit");

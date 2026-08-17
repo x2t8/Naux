@@ -5,25 +5,7 @@
 
 Complete one host installation guide first.
 
-## 1. Name the executable
-
-Linux:
-
-```sh
-NAUX=naux
-```
-
-Windows PowerShell:
-
-```powershell
-$NauxHome = Join-Path $env:LOCALAPPDATA 'Programs\NAUX\Learn\0.1.0'
-$Naux = Join-Path $NauxHome 'bin\naux.exe'
-```
-
-The examples below write `"$NAUX"` for Linux. In PowerShell, replace it with
-`& $Naux`.
-
-## 2. Create `hello.nx`
+## 1. Create `hello.nx`
 
 Use any plain-text editor and save this UTF-8 source:
 
@@ -36,35 +18,19 @@ Use any plain-text editor and save this UTF-8 source:
 Every complete learner program has one `~ rite` entry block. `~ end` closes a
 block, and `!say value` prints one line.
 
-## 3. Check without running
-
-Linux:
+## 2. Check without running
 
 ```sh
-"$NAUX" check hello.nx
-```
-
-Windows PowerShell:
-
-```powershell
-& $Naux check hello.nx
+naux check hello.nx
 ```
 
 A valid program exits successfully. A malformed program reports its source
 filename, line, column, source excerpt, and caret.
 
-## 4. Run
-
-Linux:
+## 3. Run
 
 ```sh
-"$NAUX" run hello.nx
-```
-
-Windows PowerShell:
-
-```powershell
-& $Naux run hello.nx
+naux run hello.nx
 ```
 
 Expected output:
@@ -73,7 +39,7 @@ Expected output:
 Hello, NAUX!
 ```
 
-## 5. Variables, functions, and decisions
+## 4. Variables, functions, and decisions
 
 ```naux
 ~ fn absolute($value)
@@ -97,20 +63,13 @@ Hello, NAUX!
 - Conditions must be boolean.
 - Direct recursion is available within explicit work and call-depth limits.
 
-Save `-42` in `input.txt`, then run:
-
-Linux:
+Run it directly and enter `-42` when NAUX asks for input:
 
 ```sh
-"$NAUX" run absolute.nx < input.txt
+naux run absolute.nx
 ```
 
-Windows PowerShell:
-
-```powershell
-Get-Content -Raw input.txt | & $Naux run absolute.nx
-```
-
+For judge-style input, `naux run absolute.nx < input.txt` remains deterministic.
 Expected output is `42`.
 
 Continue with [algorithm exercises](04-algorithms.md).

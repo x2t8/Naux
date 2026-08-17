@@ -1,0 +1,31 @@
+~ fn is_prime_number($n)
+    ~ if $n < 2
+        ^ false
+    ~ end
+
+    $divisor = 2
+    ~ while $divisor * $divisor <= $n
+        ~ if $n % $divisor == 0
+            ^ false
+        ~ end
+        $divisor = $divisor + 1
+    ~ end
+
+    ^ true
+~ end
+
+~ rite
+    $count = read_int()
+    $sum = 0
+    $index = 0
+
+    ~ while $index < $count
+        $number = read_int()
+        ~ if is_prime_number($number)
+            $sum = $sum + $number
+        ~ end
+        $index = $index + 1
+    ~ end
+
+    !say $sum
+~ end

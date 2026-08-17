@@ -151,7 +151,7 @@ text and field access return `null` for a missing key. The corpus uses
 `queue_push` as the generic list-growth operation and does not present an
 algorithm-specific host builtin as student-written work.
 
-## Deterministic batch input and output
+## Standard input and output
 
 - `read_int()` consumes one signed 64-bit integer token; malformed input or EOF
   is a source-positioned runtime error.
@@ -160,6 +160,9 @@ algorithm-specific host builtin as student-written work.
 - `read_line()` consumes from the shared cursor through the next LF, removes
   that LF and one preceding CR, and returns `null` at EOF.
 - All reads share one cursor over a valid UTF-8 tape of at most 8 MiB.
+- `naux run solution.nx` reads keyboard input on demand when attached to a
+  terminal. `naux run solution.nx < input.txt` remains deterministic batch
+  mode.
 - Each `!say value` emits its display text followed by exactly one LF in plain
   mode. Ordinary successful judge-style execution emits no stderr banner.
 
