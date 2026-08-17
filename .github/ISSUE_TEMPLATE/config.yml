@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Private vulnerability report
+    url: https://github.com/x2t8/Naux/security/advisories/new
+    about: Report a suspected vulnerability privately; do not disclose it in a public issue.
+  - name: Support and issue policy
+    url: https://github.com/x2t8/Naux/blob/main/SUPPORT.md
+    about: Read the required reproduction information and current support boundary.

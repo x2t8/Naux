@@ -38,6 +38,8 @@ jobs:
           --skip adr0073_
       - name: Interactive terminal I/O
         run: bash scripts/test_s1_terminal_io.sh
+      - name: Research Preview provenance
+        run: bash scripts/test_s2_preview_provenance.sh
       - name: performance governance tests
         run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 

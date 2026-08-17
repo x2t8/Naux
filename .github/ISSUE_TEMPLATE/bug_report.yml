@@ -1,0 +1,78 @@
+name: Bug report
+description: Report a reproducible NAUX correctness, runtime, tooling, or documentation defect
+title: "[bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report vulnerabilities here. Follow SECURITY.md and use a private vulnerability report.
+  - type: input
+    id: version
+    attributes:
+      label: NAUX version
+      description: Paste the exact output of `naux --version`.
+      placeholder: naux 0.1.2
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Host
+      description: Operating system, architecture, and libc version when relevant.
+      placeholder: Arch Linux, x86_64, glibc 2.42
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and input
+      description: Include the exact command, deterministic input, and exit status.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Minimal NAUX source
+      description: Reduce the program while preserving the defect.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed output
+      description: Include complete stdout and stderr.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: parity
+    attributes:
+      label: VM/interpreter parity
+      description: Compare `--engine vm` and `--engine interp` when both paths apply.
+      options:
+        - Both fail identically
+        - VM only
+        - Interpreter only
+        - Not tested
+        - Not applicable
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched existing issues.
+          required: true
+        - label: This report contains no secret or unpatched vulnerability details.
+          required: true
