@@ -34,18 +34,20 @@ fn executable_bundle_seed_and_notes_share_one_release_identity() {
     assert!(seed
         .lines()
         .any(|line| line == format!("package\tnaux@{VERSION}")));
-    let notes = read("archive/releases/0.1.1/RELEASE_NOTES.linux.md");
+    let notes = read("distribution/s1-learn/RELEASE_NOTES.md");
     assert!(notes.starts_with(&format!("# NAUX Learn {VERSION}\n")));
-    assert!(notes.contains("Status: experimental release"));
-    assert!(notes.contains("It is not dependency closure"));
+    assert!(notes.contains("Status: development candidate"));
+    assert!(notes.contains("not a public release"));
 
-    let bundle_readme = read("distribution/s1-learn/README.md");
     let limitations = read("distribution/s1-learn/LIMITATIONS.md");
     let hello = read("distribution/s1-learn/hello.nx");
-    for source in [bundle_readme, limitations, hello] {
+    for source in [limitations, hello] {
         assert!(source.contains(VERSION));
         assert!(!source.contains("0.2.0-dev"));
     }
+    let bundle_readme = read("distribution/s1-learn/README.md");
+    assert!(bundle_readme.contains("exactly six files plus the manifest"));
+    assert!(bundle_readme.contains("installs no examples, documentation, images"));
 }
 
 #[test]
@@ -62,6 +64,8 @@ fn release_scripts_bind_archive_version_and_verify_before_publish() {
     assert!(verifier.contains("release binary version does not match archive identity"));
     assert!(verifier.contains("bundle verify"));
     assert!(verifier.contains("cmp -- \"$expected\" \"$actual\""));
+    assert!(verifier.contains("$root_name/bin/nauxup"));
+    assert!(!verifier.contains("$root_name/examples/"));
 
     let renderer = read("scripts/render_s1_bootstrap.sh");
     assert!(renderer.contains("tag=\"v$version-learn\""));

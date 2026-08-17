@@ -137,10 +137,7 @@ fn run_linux(options: Options, catalog: InstallerCatalog) -> Result<(), String> 
             layout.bin_directory().display()
         );
     }
-    println!(
-        "\nRun:\n  naux --version\n  naux run {}",
-        layout.prefix().join("examples/hello.nx").display()
-    );
+    println!("\nRun:\n  naux --version\n  naux run program.nx");
     println!("\nManage:\n  nauxup status\n  nauxup doctor\n  nauxup uninstall");
     Ok(())
 }

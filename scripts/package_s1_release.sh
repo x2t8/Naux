@@ -6,7 +6,7 @@ export LC_ALL=C
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
 seed_file="$repo_root/distribution/s1-learn/BUILD-SEED.tsv"
-release_notes="$repo_root/archive/releases/0.1.1/RELEASE_NOTES.linux.md"
+release_notes="$repo_root/distribution/s1-learn/RELEASE_NOTES.md"
 
 if [[ $# -gt 1 ]]; then
     echo "usage: scripts/package_s1_release.sh [new-output-directory]" >&2

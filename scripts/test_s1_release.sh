@@ -123,8 +123,8 @@ env HOME="$home" PATH="$launcher_bin:$poison:/usr/bin:/bin" \
 printf 'naux %s\n' "$version" > "$temp_root/version.expected"
 cmp -- "$temp_root/version.expected" "$temp_root/version.actual"
 env HOME="$home" PATH="$launcher_bin:$poison:/usr/bin:/bin" \
-    naux run "$prefix/examples/hello.nx" > "$temp_root/hello.actual"
-cmp -- "$prefix/examples/hello.out" "$temp_root/hello.actual"
+    naux run "$repo_root/distribution/s1-learn/hello.nx" > "$temp_root/hello.actual"
+cmp -- "$repo_root/distribution/s1-learn/hello.out" "$temp_root/hello.actual"
 env HOME="$home" PATH="$launcher_bin:$poison:/usr/bin:/bin" \
     nauxup doctor > /dev/null
 env HOME="$home" PATH="$launcher_bin:$poison:/usr/bin:/bin" \

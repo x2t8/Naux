@@ -7,7 +7,7 @@ export TZ=UTC
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
 seed_file="$repo_root/distribution/s1-learn/windows/BUILD-SEED.tsv"
-release_notes="$repo_root/archive/releases/0.1.1/RELEASE_NOTES.windows.md"
+release_notes="$repo_root/distribution/s1-learn/windows/RELEASE_NOTES.md"
 
 if [[ $# -gt 1 ]]; then
     echo "usage: scripts/package_s1_release_windows.sh [new-output-directory]" >&2

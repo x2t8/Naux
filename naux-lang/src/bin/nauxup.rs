@@ -1,4 +1,4 @@
-//! Minimal, receipt-driven Linux manager for NAUX Learn 0.1.1.
+//! Minimal, receipt-driven Linux manager for NAUX Learn.
 
 #[cfg(unix)]
 mod unix {
@@ -191,7 +191,9 @@ mod unix {
         println!("  nauxup list");
         println!("  nauxup doctor");
         println!("  nauxup uninstall [--dry-run | --yes]");
-        println!("\n0.1.1 intentionally has no network update command. A signed update channel is future work.");
+        println!(
+            "\n{S1_BUNDLE_VERSION} intentionally has no network update command. A signed update channel is future work."
+        );
     }
 
     #[cfg(test)]

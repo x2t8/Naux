@@ -4,10 +4,8 @@ rustc-commit	ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96
 cargo-release	1.96.0
 cargo-commit	30a34c682
 host	x86_64-unknown-linux-gnu
-cargo-lock-sha256	d94060417e13e81f7b2d682eefee9807ddda3fbe7438c130f55ee590c005c92b
-package	naux@0.1.1
+cargo-lock-sha256	d9172e56826cc72a24e3fa7e4de83b6fbc034496d24ca0e8a62dcaf835086bb6
+package	naux@0.1.2
 optimizer-seed-dependency	egg@0.10.0
 installer-locales	en-US,vi-VN,zh-CN,ja-JP,ko-KR,es,pt-BR,fr,de
 installer-locale-set-sha256	f1e95569c502d94cfdc7e0071e942ccab56ced89943b1d82eed8099a9d9941c1
-brand-source	assets/langnaux-learn.png
-brand-source-sha256	8818d089bc3a11394082080d7291fe9bafecaf698db66f17af40cc1900db1408

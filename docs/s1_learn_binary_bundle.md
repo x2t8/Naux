@@ -1,15 +1,16 @@
-# NAUX Learn supported-host binary bundle v0.1
+# NAUX Learn minimal Linux binary bundle
 
-Status: accepted\
-Date: 2026-08-14\
+Status: implementation candidate\
+Date: 2026-08-17\
 Scope: S1-WP6 / Linux x86-64 GNU learner distribution
 
 ## 1. Purpose and claim boundary
 
-WP6 gives a learner one prebuilt `naux` executable, the admitted learner
-reference, exact limitations, and a deterministic first program. Installing
-or using the bundle does not invoke Rust, Cargo, LLVM, a C compiler, an
-assembler, or a linker.
+WP6 gives a learner prebuilt `naux`, Setup, and lifecycle-manager executables.
+Documentation, examples, logos, grammar fixtures, and learner projects remain
+on the project site or in the source repository; they are not installed into
+the toolchain prefix. Installing or using the bundle does not invoke Rust,
+Cargo, LLVM, a C compiler, an assembler, or a linker.
 
 This is a distribution boundary, not dependency closure. The binary is still
 built by the pinned Rust/Cargo seed, incorporates `egg`, and is dynamically
@@ -38,10 +39,11 @@ machine, PIE type, dependency names, or maximum declared interface versions.
 
 `BUILD-SEED.tsv` pins Rust 1.96.0 commit
 `ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96`, Cargo 1.96.0 commit
-`30a34c682`, target `x86_64-unknown-linux-gnu`, package `naux@0.1.1`,
+`30a34c682`, target `x86_64-unknown-linux-gnu`, package `naux@0.1.2`,
 `egg@0.10.0`, and the complete workspace `Cargo.lock` SHA-256. The producer
-runs `cargo build --locked --release -p naux --bin naux` only after the active
-seed agrees byte-for-byte with that record. The producer clears ambient Rust
+runs `cargo build --locked --release -p naux --bin naux --bin
+naux-learn-setup --bin nauxup` only after the active seed agrees byte-for-byte
+with that record. The producer clears ambient Rust
 wrapper, encoded-flag, target-flag, and release-profile overrides, disables
 incremental compilation, and fixes the workspace target directory. This is a
 bounded producer discipline, not a hermetic build-environment claim.
@@ -56,23 +58,13 @@ archive traversal surface is part of WP6. Its exact regular-file inventory is:
 | `0644` | `BUILD-SEED.tsv` | 16 KiB |
 | `0644` | `HOST-DEPENDENCIES.tsv` | 16 KiB |
 | `0644` | `LICENSE` | 64 KiB |
-| `0644` | `README.md` | 256 KiB |
 | `0755` | `naux-learn-setup` | 16 MiB |
-| `0644` | `assets/langnaux-learn.png` | 512 KiB |
 | `0755` | `bin/naux` | 16 MiB |
-| `0644` | `docs/LIMITATIONS.md` | 256 KiB |
-| `0644` | `docs/RELEASE_DISCLOSURE.md` | 256 KiB |
-| `0644` | `docs/s1_learn_batch_io.md` | 256 KiB |
-| `0644` | `docs/s1_learn_diagnostics.md` | 256 KiB |
-| `0644` | `docs/s1_learn_execution_envelope.md` | 256 KiB |
-| `0644` | `docs/s1_learn_quick_reference_v0_1.md` | 1 MiB |
-| `0644` | `examples/hello.nx` | 64 KiB |
-| `0644` | `examples/hello.out` | 64 KiB |
-| `0644` | `locales/SUPPORTED_LOCALES.tsv` | 16 KiB |
-| `0644` | `locales/{de,en-US,es,fr,ja-JP,ko-KR,pt-BR,vi-VN,zh-CN}.tsv` | 64 KiB each |
+| `0755` | `bin/nauxup` | 16 MiB |
 | `0644` | `MANIFEST.tsv` | 16 KiB |
 
-The only directories are `assets`, `bin`, `docs`, `examples`, and `locales`.
+The only payload directory is `bin`. Installer locales and the experimental
+disclosure are embedded into the native executables.
 The inventory has a 40-entry hard ceiling, paths have a 160-byte ceiling, and
 total admitted bytes have a 32 MiB ceiling. Only UTF-8 normal relative path
 components separated by `/` are admitted. Absolute paths, `.`, `..`,
@@ -85,7 +77,7 @@ missing members, and extra members fail closed.
 
 ```text
 NAUX-S1-LEARN-BUNDLE<TAB>1
-bundle<TAB>0.1.1
+bundle<TAB>0.1.2
 target<TAB>linux-x86_64-gnu
 file<TAB>MODE<TAB>SIZE<TAB>SHA256<TAB>PATH
 ...
@@ -146,10 +138,11 @@ scripts/test_s1_learn_bundle.sh
 
 It packages into a fresh temporary directory, puts executable `cargo` and
 `rustc` poison sentinels at the only `PATH`, verifies and installs using the
-prebuilt binary, runs installed `examples/hello.nx`, byte-compares stdout with
-`examples/hello.out`, proves reinstall refusal, dry-runs receipt-based removal,
-and performs exact uninstall. Thus the normal lifecycle cannot silently depend
-on Cargo or Rust being available.
+prebuilt binaries, runs a repository-owned fixture located outside the
+installation, byte-compares stdout, proves reinstall refusal, runs
+`nauxup doctor`, dry-runs receipt-based removal, and performs exact uninstall.
+Thus the normal lifecycle cannot silently depend on Cargo or Rust, and the
+installer cannot claim ownership of learner source files.
 
 ## 7. Mutation and regression boundary
 
@@ -158,7 +151,8 @@ using the host `sha256sum` oracle and locks admission/installation behavior. It
 rejects missing, extra, same-length substituted, duplicate, traversing,
 symlinked, oversized, mode-drifted, and existing-prefix cases. Lifecycle tests
 also reject changed payloads, corrupt or linked receipts, receipt collisions,
-and coherently resealed packaged catalogs that differ from the executable.
+and, on the Windows transport contract, coherently resealed packaged catalogs
+that differ from the executable.
 Library units reject noncanonical line endings and a corrupted seal before
 accepting manifest contents.
 
@@ -168,46 +162,26 @@ bounded semantic execution envelope.
 
 ## 8. Explicit exclusions
 
-WP6 does not provide tar/zip packaging, reproducible byte identity across
-arbitrary build roots, a hermetic origin image, static linking, musl support,
-another OS or architecture, a release signature, publisher authentication,
-auto-update, repair, rollback, registry publication, sandboxing,
+The core WP6 directory contract does not admit arbitrary archives. The
+adjacent release carrier provides one canonical `.tar.gz`, `SHA256SUMS`, and a
+pinned bootstrap script. WP6 does not provide reproducible byte identity
+across arbitrary build roots, a hermetic origin image, static linking, musl
+support, another OS or architecture, a release signature, publisher
+authentication, auto-update, repair, rollback, registry publication, sandboxing,
 security-critical suitability, production support, native learner execution,
 or performance evidence against C/C++/Rust. No broader language or release
 claim is implied by this bundle.
 
 ## 9. Acceptance evidence
 
-The release-sealed producer generated the same 27-file artifact in distinct
-output directories. The accepted resealed artifact contains 6,537,062 bytes
-including its manifest and has manifest seal
-`02d3e1f9299f39e1166aa8802509c2e20b5b07cad3bbd3a7094c43cd2842dc4a`.
-Its executable is 4,096,880 bytes with SHA-256
-`00be9ca9f18345b26806f23e6535ce8c2448835c3d3e2f76c3fc1a48c8d0c696`
-and reports exactly `naux 0.1.1`. The canonical 500-by-500 RGBA project logo
-is installed at `assets/langnaux-learn.png`, is sealed as an ordinary bundle
-member, and has SHA-256
-`8818d089bc3a11394082080d7291fe9bafecaf698db66f17af40cc1900db1408`. The
-bundle-local Markdown link audit has no broken target.
+Two independent producer runs emitted byte-identical archives. The minimal
+bundle has seven manifest-owned files, 6,367,750 admitted bytes, and manifest
+seal `56b8c4d255f4e3c3493e63259b2a5ae1531d3f8c310942331e696bacbc0b2761`.
+The canonical archive has nine tar entries, 2,551,230 bytes, and SHA-256
+`e7adabd2f2e2f11e0fb075b15880cb12518bcd604503226b56f10f2a887d3f76`.
 
-The native console Setup carrier is 1,171,008 bytes with SHA-256
-`128851bebe4929eb277133afb623f8e87764a7a9d1b436c2a2fcf3cc4a2b4df0`.
-It detects one of nine supported locales, prints one concise plan, asks for one
-confirmation, creates missing user-local directories, and publishes exact
-stable launchers. The 1,106,328-byte `nauxup` manager has SHA-256
-`920065975e4b429ff3715bffc7ba71d928e6d4cfc6390d4db459f8b05bd4d3f0`.
-
-The no-toolchain carrier passes with `cargo` and `rustc` poison sentinels ahead
-of the complete tool path. Starting from a HOME without `.local`, bundle
-verification, receipt-backed staged installation, stable command launch,
-first-program output, `nauxup doctor`, dry-run, exact uninstall, and
-existing-launcher refusal all pass. Bundle/lifecycle mutation tests and the
-three release-identity tests also pass.
-
-The 0.1.1 focused bundle/lifecycle group passes nine mutation and ownership
-tests, and the release-identity group passes three tests. Strict shell syntax,
-release reproducibility, mutation, no-toolchain bootstrap, and bundle-document
-gates pass. The CI-equivalent all-feature workspace regression also completes
-with the main library at 453 passed, zero failed, six deliberately ignored,
-and one controlled fixture filtered out; every subsequently executed
-integration and documentation test passes.
+The no-toolchain clean-HOME carrier passes verification, Setup, launch,
+external-source execution, `nauxup doctor`, dry-run, exact uninstall, mutation
+rejection, and bootstrap checksum rejection. A real pseudo-terminal carrier
+passes keyboard input on both the VM and interpreter. These are development
+candidate results, not evidence that a public release exists.

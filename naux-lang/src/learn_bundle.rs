@@ -82,19 +82,9 @@ const LINUX_REQUIRED_FILES: &[RequiredFile] = &[
         max_bytes: 64 * 1024,
     },
     RequiredFile {
-        path: "README.md",
-        mode: 0o644,
-        max_bytes: 256 * 1024,
-    },
-    RequiredFile {
         path: "naux-learn-setup",
         mode: 0o755,
         max_bytes: 16 * 1024 * 1024,
-    },
-    RequiredFile {
-        path: "assets/langnaux-learn.png",
-        mode: 0o644,
-        max_bytes: 512 * 1024,
     },
     RequiredFile {
         path: "bin/naux",
@@ -105,96 +95,6 @@ const LINUX_REQUIRED_FILES: &[RequiredFile] = &[
         path: "bin/nauxup",
         mode: 0o755,
         max_bytes: 16 * 1024 * 1024,
-    },
-    RequiredFile {
-        path: "docs/LIMITATIONS.md",
-        mode: 0o644,
-        max_bytes: 256 * 1024,
-    },
-    RequiredFile {
-        path: "docs/RELEASE_DISCLOSURE.md",
-        mode: 0o644,
-        max_bytes: 256 * 1024,
-    },
-    RequiredFile {
-        path: "docs/s1_learn_batch_io.md",
-        mode: 0o644,
-        max_bytes: 256 * 1024,
-    },
-    RequiredFile {
-        path: "docs/s1_learn_diagnostics.md",
-        mode: 0o644,
-        max_bytes: 256 * 1024,
-    },
-    RequiredFile {
-        path: "docs/s1_learn_execution_envelope.md",
-        mode: 0o644,
-        max_bytes: 256 * 1024,
-    },
-    RequiredFile {
-        path: "docs/s1_learn_quick_reference_v0_1.md",
-        mode: 0o644,
-        max_bytes: 1024 * 1024,
-    },
-    RequiredFile {
-        path: "examples/hello.nx",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "examples/hello.out",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "locales/SUPPORTED_LOCALES.tsv",
-        mode: 0o644,
-        max_bytes: 16 * 1024,
-    },
-    RequiredFile {
-        path: "locales/de.tsv",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "locales/en-US.tsv",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "locales/es.tsv",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "locales/fr.tsv",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "locales/ja-JP.tsv",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "locales/ko-KR.tsv",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "locales/pt-BR.tsv",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "locales/vi-VN.tsv",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
-    },
-    RequiredFile {
-        path: "locales/zh-CN.tsv",
-        mode: 0o644,
-        max_bytes: 64 * 1024,
     },
 ];
 
@@ -338,7 +238,15 @@ fn required_files(target: LearnBundleTarget) -> &'static [RequiredFile] {
     }
 }
 
-const REQUIRED_DIRECTORIES: &[&str] = &["assets", "bin", "docs", "examples", "locales"];
+const LINUX_REQUIRED_DIRECTORIES: &[&str] = &["bin"];
+const WINDOWS_REQUIRED_DIRECTORIES: &[&str] = &["assets", "bin", "docs", "examples", "locales"];
+
+fn required_directories(target: LearnBundleTarget) -> &'static [&'static str] {
+    match target {
+        LearnBundleTarget::LinuxX86_64Gnu => LINUX_REQUIRED_DIRECTORIES,
+        LearnBundleTarget::WindowsX86_64Gnu => WINDOWS_REQUIRED_DIRECTORIES,
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LearnBundleError {
@@ -405,7 +313,7 @@ impl VerifiedLearnBundle {
 
     /// Return the exact owned directory set in parent-before-child order.
     pub fn owned_relative_directories(&self) -> &'static [&'static str] {
-        REQUIRED_DIRECTORIES
+        required_directories(self.target)
     }
 }
 
@@ -464,7 +372,7 @@ pub fn verify_learn_bundle(root: &Path) -> Result<VerifiedLearnBundle, LearnBund
     require_mode(&manifest_path, 0o644, S1_BUNDLE_MANIFEST)?;
     let parsed = parse_manifest(&manifest_bytes)?;
     let required_files = required_files(parsed.target);
-    let inventory = inspect_inventory(root)?;
+    let inventory = inspect_inventory(root, parsed.target)?;
 
     let expected_paths: Vec<_> = required_files.iter().map(|file| file.path).collect();
     let manifest_paths: Vec<_> = parsed
@@ -531,9 +439,11 @@ pub fn verify_learn_bundle(root: &Path) -> Result<VerifiedLearnBundle, LearnBund
             "bundle filesystem inventory differs from its canonical file set",
         ));
     }
-    validate_packaged_catalogs(&root.join("locales")).map_err(|error| {
-        LearnBundleError::new(format!("bundle installer locale admission failed: {error}"))
-    })?;
+    if parsed.target == LearnBundleTarget::WindowsX86_64Gnu {
+        validate_packaged_catalogs(&root.join("locales")).map_err(|error| {
+            LearnBundleError::new(format!("bundle installer locale admission failed: {error}"))
+        })?;
+    }
 
     Ok(VerifiedLearnBundle {
         root: root.to_path_buf(),
@@ -832,11 +742,14 @@ struct Inventory {
     files: BTreeSet<String>,
 }
 
-fn inspect_inventory(root: &Path) -> Result<Inventory, LearnBundleError> {
+fn inspect_inventory(
+    root: &Path,
+    target: LearnBundleTarget,
+) -> Result<Inventory, LearnBundleError> {
     let mut files = BTreeSet::new();
     let mut directories = BTreeSet::new();
     walk_inventory(root, Path::new(""), &mut files, &mut directories)?;
-    let expected_directories: BTreeSet<_> = REQUIRED_DIRECTORIES
+    let expected_directories: BTreeSet<_> = required_directories(target)
         .iter()
         .map(|path| path.to_string())
         .collect();
@@ -1067,7 +980,7 @@ fn copy_bundle_to_staging(
             staging.display()
         ))
     })?;
-    for directory in REQUIRED_DIRECTORIES {
+    for directory in required_directories(target) {
         fs::create_dir(staging.join(directory)).map_err(|error| {
             LearnBundleError::new(format!(
                 "cannot create staged directory `{directory}`: {error}"

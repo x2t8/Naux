@@ -64,7 +64,6 @@ expected_cargo_commit=$(seed_value cargo-commit)
 expected_host=$(seed_value host)
 expected_lock_hash=$(seed_value cargo-lock-sha256)
 expected_package=$(seed_value package)
-expected_brand_hash=$(seed_value brand-source-sha256)
 expected_locale_hash=$(seed_value installer-locale-set-sha256)
 
 actual_rustc_release=$(rustc -vV | sed -n 's/^release: //p')
@@ -73,7 +72,6 @@ actual_host=$(rustc -vV | sed -n 's/^host: //p')
 actual_cargo_release=$(cargo -V | sed -n 's/^cargo \([^ ]*\) .*/\1/p')
 actual_cargo_commit=$(cargo -V | sed -n 's/^cargo [^ ]* (\([^ ]*\) .*/\1/p')
 actual_lock_hash=$(sha256sum -- "$repo_root/Cargo.lock" | awk '{print $1}')
-actual_brand_hash=$(sha256sum -- "$repo_root/assets/langnaux-learn.png" | awk '{print $1}')
 actual_locale_hash=$(
     cd -- "$repo_root/naux-lang/locales"
     for locale_file in "${locale_files[@]}"; do
@@ -98,7 +96,6 @@ if [[ "$actual_rustc_release" != "$expected_rustc_release" \
     || "$actual_cargo_commit" != "$expected_cargo_commit" \
     || "$actual_host" != "$expected_host" \
     || "$actual_lock_hash" != "$expected_lock_hash" \
-    || "$actual_brand_hash" != "$expected_brand_hash" \
     || "$actual_locale_hash" != "$expected_locale_hash" \
     || "naux@$actual_package_version" != "$expected_package" ]]; then
     echo "active build seed does not match distribution/s1-learn/BUILD-SEED.tsv" >&2
@@ -187,59 +184,24 @@ if [[ "$interpreter" != "/lib64/ld-linux-x86-64.so.2" \
     exit 1
 fi
 
-mkdir -p -- "$staging/assets" "$staging/bin" "$staging/docs" "$staging/examples" "$staging/locales"
-chmod 0755 -- "$staging" "$staging/assets" "$staging/bin" "$staging/docs" "$staging/examples" "$staging/locales"
+mkdir -p -- "$staging/bin"
+chmod 0755 -- "$staging" "$staging/bin"
 install -m 0644 -- "$source_dir/BUILD-SEED.tsv" "$staging/BUILD-SEED.tsv"
 install -m 0644 -- "$source_dir/HOST-DEPENDENCIES.tsv" "$staging/HOST-DEPENDENCIES.tsv"
 install -m 0644 -- "$repo_root/LICENSE" "$staging/LICENSE"
-sed 's#../../assets/langnaux-learn.png#assets/langnaux-learn.png#' \
-    "$source_dir/README.md" > "$staging/README.md"
-chmod 0644 -- "$staging/README.md"
 install -m 0755 -- "$setup_binary" "$staging/naux-learn-setup"
-install -m 0644 -- "$repo_root/assets/langnaux-learn.png" "$staging/assets/langnaux-learn.png"
 install -m 0755 -- "$binary" "$staging/bin/naux"
 install -m 0755 -- "$nauxup_binary" "$staging/bin/nauxup"
-install -m 0644 -- "$source_dir/LIMITATIONS.md" "$staging/docs/LIMITATIONS.md"
-install -m 0644 -- "$source_dir/RELEASE_DISCLOSURE.md" "$staging/docs/RELEASE_DISCLOSURE.md"
-install -m 0644 -- "$repo_root/docs/s1_learn_batch_io.md" "$staging/docs/s1_learn_batch_io.md"
-install -m 0644 -- "$repo_root/docs/s1_learn_diagnostics.md" "$staging/docs/s1_learn_diagnostics.md"
-install -m 0644 -- "$repo_root/docs/s1_learn_execution_envelope.md" "$staging/docs/s1_learn_execution_envelope.md"
-install -m 0644 -- "$repo_root/docs/s1_learn_quick_reference_v0_1.md" "$staging/docs/s1_learn_quick_reference_v0_1.md"
-install -m 0644 -- "$source_dir/hello.nx" "$staging/examples/hello.nx"
-install -m 0644 -- "$source_dir/hello.out" "$staging/examples/hello.out"
-for locale_file in "${locale_files[@]}"; do
-    install -m 0644 -- "$repo_root/naux-lang/locales/$locale_file" "$staging/locales/$locale_file"
-done
 
 files=(
     BUILD-SEED.tsv
     HOST-DEPENDENCIES.tsv
     LICENSE
-    README.md
     naux-learn-setup
-    assets/langnaux-learn.png
     bin/naux
     bin/nauxup
-    docs/LIMITATIONS.md
-    docs/RELEASE_DISCLOSURE.md
-    docs/s1_learn_batch_io.md
-    docs/s1_learn_diagnostics.md
-    docs/s1_learn_execution_envelope.md
-    docs/s1_learn_quick_reference_v0_1.md
-    examples/hello.nx
-    examples/hello.out
-    locales/SUPPORTED_LOCALES.tsv
-    locales/de.tsv
-    locales/en-US.tsv
-    locales/es.tsv
-    locales/fr.tsv
-    locales/ja-JP.tsv
-    locales/ko-KR.tsv
-    locales/pt-BR.tsv
-    locales/vi-VN.tsv
-    locales/zh-CN.tsv
 )
-modes=(0644 0644 0644 0644 0755 0644 0755 0755 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644 0644)
+modes=(0644 0644 0644 0755 0755 0755)
 
 {
     printf 'NAUX-S1-LEARN-BUNDLE\t1\n'

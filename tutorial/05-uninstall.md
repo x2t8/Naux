@@ -31,7 +31,7 @@ state directory. Listing this directory is not a machine-wide scan:
 ls "${XDG_STATE_HOME:-$HOME/.local/state}/naux/receipts"
 ```
 
-The current activation receipt is named `learn-0.1.1.tsv`; users normally do
+The current activation receipt is named `learn-0.1.2.tsv`; users normally do
 not need to pass it manually.
 
 ## Windows candidate

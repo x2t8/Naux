@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use naux::install_lifecycle::{
     execute_uninstall, install_with_receipt, plan_uninstall, read_installation_receipt,
 };
-use naux::learn_bundle::{install_learn_bundle, verify_learn_bundle};
+use naux::learn_bundle::{install_learn_bundle, verify_learn_bundle, S1_BUNDLE_VERSION};
 use naux::linux_distribution::{
     execute_linux_uninstall, install_linux_distribution, plan_linux_uninstall, LinuxInstallLayout,
 };
@@ -19,29 +19,9 @@ const FILES: &[(&str, u32)] = &[
     ("BUILD-SEED.tsv", 0o644),
     ("HOST-DEPENDENCIES.tsv", 0o644),
     ("LICENSE", 0o644),
-    ("README.md", 0o644),
     ("naux-learn-setup", 0o755),
-    ("assets/langnaux-learn.png", 0o644),
     ("bin/naux", 0o755),
     ("bin/nauxup", 0o755),
-    ("docs/LIMITATIONS.md", 0o644),
-    ("docs/RELEASE_DISCLOSURE.md", 0o644),
-    ("docs/s1_learn_batch_io.md", 0o644),
-    ("docs/s1_learn_diagnostics.md", 0o644),
-    ("docs/s1_learn_execution_envelope.md", 0o644),
-    ("docs/s1_learn_quick_reference_v0_1.md", 0o644),
-    ("examples/hello.nx", 0o644),
-    ("examples/hello.out", 0o644),
-    ("locales/SUPPORTED_LOCALES.tsv", 0o644),
-    ("locales/de.tsv", 0o644),
-    ("locales/en-US.tsv", 0o644),
-    ("locales/es.tsv", 0o644),
-    ("locales/fr.tsv", 0o644),
-    ("locales/ja-JP.tsv", 0o644),
-    ("locales/ko-KR.tsv", 0o644),
-    ("locales/pt-BR.tsv", 0o644),
-    ("locales/vi-VN.tsv", 0o644),
-    ("locales/zh-CN.tsv", 0o644),
 ];
 
 const WINDOWS_FILES: &[(&str, u32)] = &[
@@ -110,7 +90,12 @@ fn make_target_bundle(label: &str, target: &str, files: &[(&str, u32)]) -> TempT
     let temp = TempTree::new(label);
     let root = temp.bundle();
     fs::create_dir(&root).unwrap();
-    for directory in ["assets", "bin", "docs", "examples", "locales"] {
+    let directories: &[&str] = if target == "linux-x86_64-gnu" {
+        &["bin"]
+    } else {
+        &["assets", "bin", "docs", "examples", "locales"]
+    };
+    for directory in directories {
         fs::create_dir(root.join(directory)).unwrap();
     }
     for (relative, mode) in files {
@@ -215,7 +200,7 @@ fn verifies_and_installs_exact_inventory_into_a_new_prefix() {
     let temp = make_bundle("install");
     let bundle = temp.bundle();
     let verified = verify_learn_bundle(&bundle).unwrap();
-    assert_eq!(verified.file_count(), 27);
+    assert_eq!(verified.file_count(), 7);
     assert_eq!(verified.manifest_seal_hex().len(), 64);
 
     let prefix = temp.root.join("installed");
@@ -243,19 +228,27 @@ fn rejects_missing_extra_and_substituted_members() {
     assert!(verify_learn_bundle(&extra.bundle()).is_err());
 
     let substituted = make_bundle("substituted");
-    let readme = substituted.bundle().join("README.md");
-    let mut bytes = fs::read(&readme).unwrap();
+    let license = substituted.bundle().join("LICENSE");
+    let mut bytes = fs::read(&license).unwrap();
     bytes[0] ^= 1;
-    fs::write(readme, bytes).unwrap();
+    fs::write(license, bytes).unwrap();
     let error = verify_learn_bundle(&substituted.bundle()).unwrap_err();
     assert!(error.to_string().contains("SHA-256 mismatch"));
 
-    let translated = make_bundle("resealed-translated-catalog");
+    let translated = make_target_bundle(
+        "resealed-translated-catalog",
+        "windows-x86_64-gnu",
+        WINDOWS_FILES,
+    );
     let catalog = translated.bundle().join("locales/fr.tsv");
     let mut text = fs::read_to_string(&catalog).unwrap();
     text = text.replace("Installer NAUX Learn", "Installer autre chose");
     fs::write(&catalog, text).unwrap();
-    write_manifest(&translated.bundle(), &canonical_rows(&translated.bundle()));
+    write_target_manifest(
+        &translated.bundle(),
+        "windows-x86_64-gnu",
+        &canonical_rows_for(&translated.bundle(), WINDOWS_FILES),
+    );
     assert!(verify_learn_bundle(&translated.bundle())
         .unwrap_err()
         .to_string()
@@ -286,9 +279,9 @@ fn rejects_resealed_duplicate_and_traversing_manifest_rows() {
 #[test]
 fn rejects_symlink_oversize_and_mode_drift() {
     let symlinked = make_bundle("symlink");
-    let output = symlinked.bundle().join("examples/hello.out");
+    let output = symlinked.bundle().join("bin/nauxup");
     fs::remove_file(&output).unwrap();
-    symlink("hello.nx", &output).unwrap();
+    symlink("naux", &output).unwrap();
     assert!(verify_learn_bundle(&symlinked.bundle())
         .unwrap_err()
         .to_string()
@@ -308,7 +301,7 @@ fn rejects_symlink_oversize_and_mode_drift() {
 
     let mode = make_bundle("mode");
     fs::set_permissions(
-        mode.bundle().join("README.md"),
+        mode.bundle().join("LICENSE"),
         fs::Permissions::from_mode(0o600),
     )
     .unwrap();
@@ -328,7 +321,7 @@ fn lifecycle_receipt_binds_locale_prefix_and_exact_owned_paths() {
 
     assert_eq!(receipt.locale(), "vi-VN");
     assert_eq!(receipt.prefix(), prefix);
-    assert_eq!(receipt.file_count(), 27);
+    assert_eq!(receipt.file_count(), 7);
     assert_eq!(receipt.installation_id().len(), 64);
     assert_eq!(
         read_installation_receipt(receipt.receipt_path()).unwrap(),
@@ -336,8 +329,8 @@ fn lifecycle_receipt_binds_locale_prefix_and_exact_owned_paths() {
     );
 
     let plan = plan_uninstall(receipt.receipt_path()).unwrap();
-    assert_eq!(plan.files().len(), 27);
-    assert_eq!(plan.directories().len(), 6);
+    assert_eq!(plan.files().len(), 7);
+    assert_eq!(plan.directories().len(), 2);
     assert!(plan.files().iter().all(|path| path.starts_with(&prefix)));
     assert!(
         prefix.exists(),
@@ -358,7 +351,7 @@ fn lifecycle_refuses_changed_payload_and_corrupted_or_linked_receipt() {
         "en-US",
     )
     .unwrap();
-    fs::write(receipt.prefix().join("examples/hello.out"), b"changed\n").unwrap();
+    fs::write(receipt.prefix().join("LICENSE"), b"changed\n").unwrap();
     assert!(plan_uninstall(receipt.receipt_path())
         .unwrap_err()
         .to_string()
@@ -447,7 +440,9 @@ fn lifecycle_receipt_collision_rolls_back_new_exact_payload() {
 fn linux_distribution_installs_on_a_clean_home_and_uninstalls_exactly() {
     let temp = make_bundle("linux-clean-home");
     let home = temp.root.join("clean-home");
-    let prefix = home.join(".local/share/naux/toolchains/learn/0.1.1");
+    let prefix = home
+        .join(".local/share/naux/toolchains/learn")
+        .join(S1_BUNDLE_VERSION);
     let state = home.join(".local/state/naux/receipts");
     let bin = home.join(".local/bin");
     let layout = LinuxInstallLayout::new(prefix.clone(), state, bin.clone());
@@ -467,7 +462,7 @@ fn linux_distribution_installs_on_a_clean_home_and_uninstalls_exactly() {
     assert!(!receipt.created_directories().is_empty());
 
     let plan = plan_linux_uninstall(receipt.receipt_path()).unwrap();
-    assert_eq!(plan.core().files().len(), 27);
+    assert_eq!(plan.core().files().len(), 7);
     execute_linux_uninstall(receipt.receipt_path()).unwrap();
 
     assert!(!prefix.exists());
@@ -488,7 +483,9 @@ fn linux_distribution_refuses_launcher_collision_and_changed_activation() {
     let bin = home.join(".local/bin");
     fs::create_dir_all(&bin).unwrap();
     fs::write(bin.join("naux"), b"user-owned\n").unwrap();
-    let prefix = home.join(".local/share/naux/toolchains/learn/0.1.1");
+    let prefix = home
+        .join(".local/share/naux/toolchains/learn")
+        .join(S1_BUNDLE_VERSION);
     let layout =
         LinuxInstallLayout::new(prefix.clone(), home.join(".local/state/naux/receipts"), bin);
     let error = install_linux_distribution(&collision.bundle(), &layout, "en-US")
@@ -500,7 +497,8 @@ fn linux_distribution_refuses_launcher_collision_and_changed_activation() {
     let changed = make_bundle("linux-changed-launcher");
     let home = changed.root.join("home");
     let layout = LinuxInstallLayout::new(
-        home.join(".local/share/naux/toolchains/learn/0.1.1"),
+        home.join(".local/share/naux/toolchains/learn")
+            .join(S1_BUNDLE_VERSION),
         home.join(".local/state/naux/receipts"),
         home.join(".local/bin"),
     );

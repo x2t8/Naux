@@ -1,11 +1,11 @@
-# NAUX Learn 0.1.1 Windows bundle
+# NAUX Learn 0.1.2 Windows bundle
 
 ![NAUX Learn](../../../assets/langnaux-learn.png)
 
 > [!WARNING]
-> This Windows candidate was withdrawn and is not publicly distributed. The
-> bundle definition remains only as reproducible packaging infrastructure for
-> a future usability-corrected release.
+> This Windows candidate is not publicly distributed. The bundle definition
+> remains reproducible packaging infrastructure while the Linux candidate is
+> the active usability target.
 
 This is the experimental Windows x86-64 GNU bundle for guided programming and
 algorithm study. It contains a prebuilt `naux.exe`; using it does not require
@@ -42,13 +42,13 @@ From PowerShell in the extracted bundle directory:
 Setup asks for one of nine languages before installation, shows the localized
 experimental disclosure, asks for consent, and repeats the disclosure after
 success. The default prefix is
-%LOCALAPPDATA%\Programs\NAUX\Learn\0.1.1.
+%LOCALAPPDATA%\Programs\NAUX\Learn\0.1.2.
 
 Expected stdout is stored in `examples/hello.out`. For your own program:
 
 ```powershell
 Get-Content -Raw input.txt |
-  & "$env:LOCALAPPDATA\Programs\NAUX\Learn\0.1.1\bin\naux.exe" run solution.nx
+  & "$env:LOCALAPPDATA\Programs\NAUX\Learn\0.1.2\bin\naux.exe" run solution.nx
 ```
 
 The installed executable does not invoke Rust or Cargo. `BUILD-SEED.tsv`
