@@ -36,8 +36,8 @@ fn executable_bundle_seed_and_notes_share_one_release_identity() {
         .any(|line| line == format!("package\tnaux@{VERSION}")));
     let notes = read("distribution/s1-learn/RELEASE_NOTES.md");
     assert!(notes.starts_with(&format!("# NAUX Learn {VERSION}\n")));
-    assert!(notes.contains("Status: development candidate"));
-    assert!(notes.contains("not a public release"));
+    assert!(notes.contains("Status: experimental pre-release"));
+    assert!(notes.contains(&format!("v{VERSION}-learn/nauxup.sh")));
 
     let limitations = read("distribution/s1-learn/LIMITATIONS.md");
     let hello = read("distribution/s1-learn/hello.nx");

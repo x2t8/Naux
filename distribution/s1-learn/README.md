@@ -1,8 +1,8 @@
 # NAUX Learn Linux bundle definition
 
 > [!WARNING]
-> No public download or supported one-command installer currently exists. This
-> is the development definition for the next NAUX Learn Linux release.
+> NAUX Learn 0.1.2 is an unsigned experimental pre-release. It is not intended
+> for production, security-critical, or safety-critical use.
 
 This is the experimental Linux x86-64 GNU bundle for guided programming and
 algorithm study. It contains prebuilt NAUX, Setup, and lifecycle-manager
@@ -21,10 +21,20 @@ The supported WP6 host is Linux x86-64 with the GNU dynamic loader at
 listed in `HOST-DEPENDENCIES.tsv`, and ordinary UTF-8 terminal/file I/O.
 This bundle is dynamically linked; it is not a portable static executable.
 
-## Verify a locally built development bundle
+## Install the experimental pre-release
 
-There is no public installer for this definition. From an extracted bundle
-produced locally by the repository release tooling:
+The pinned Linux bootstrap downloads and verifies the canonical archive before
+running Setup:
+
+```bash
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.2-learn/nauxup.sh | sh
+```
+
+To inspect the bootstrap before executing it, download `nauxup.sh` from the
+[v0.1.2-learn release](https://github.com/x2t8/Naux/releases/tag/v0.1.2-learn),
+review it, then run `sh nauxup.sh`.
+
+From an extracted archive, verification and Setup remain explicit:
 
 From the bundle directory:
 

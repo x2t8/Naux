@@ -52,14 +52,19 @@ production-readiness or performance claim.
 
 ### Binary release status
 
-There is currently **no supported public NAUX binary release**. The earlier
-NAUX Learn prereleases were withdrawn while terminal input, learner-facing CLI
-scope, onboarding, and real-user acceptance gates are redesigned. Old release
-URLs and cached installer commands must not be used.
+NAUX Learn 0.1.2 is available for Linux x86-64 GNU as an **experimental
+pre-release**. It supports interactive keyboard input, deterministic redirected
+input, and receipt-backed installation and removal:
 
-The repository remains available as an experimental compiler/runtime research
-tree. Until a replacement prerelease passes the new usability gates, use the
-source workflow below.
+```bash
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.2-learn/nauxup.sh | sh
+```
+
+This unsigned artifact is dynamically linked against the declared GNU/Linux
+host boundary. It is not a production, security, sandbox, compatibility, or
+native-performance release. Review the script or use the archive and
+`SHA256SUMS` assets manually if piping a remote bootstrap is inappropriate for
+your trust policy.
 
 ### Build from source
 

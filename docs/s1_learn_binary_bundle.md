@@ -1,6 +1,6 @@
 # NAUX Learn minimal Linux binary bundle
 
-Status: implementation candidate\
+Status: experimental pre-release\
 Date: 2026-08-17\
 Scope: S1-WP6 / Linux x86-64 GNU learner distribution
 
@@ -183,5 +183,5 @@ The canonical archive has nine tar entries, 2,551,230 bytes, and SHA-256
 The no-toolchain clean-HOME carrier passes verification, Setup, launch,
 external-source execution, `nauxup doctor`, dry-run, exact uninstall, mutation
 rejection, and bootstrap checksum rejection. A real pseudo-terminal carrier
-passes keyboard input on both the VM and interpreter. These are development
-candidate results, not evidence that a public release exists.
+passes keyboard input on both the VM and interpreter. These are bounded
+pre-release results, not evidence of production readiness.

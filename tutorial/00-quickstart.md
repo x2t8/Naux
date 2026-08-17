@@ -2,9 +2,12 @@
 
 [Tutorial index](README.md) · [Language reference](../docs/s1_learn_quick_reference_v0_1.md)
 
-There is no active public binary release yet. These commands describe the
-learner experience being admitted for the next Linux bundle; repository
-developers can build the same `naux` executable from source.
+Install the Linux x86-64 GNU experimental pre-release first, or follow the
+[source build](../README.md#build-from-source):
+
+```sh
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.2-learn/nauxup.sh | sh
+```
 
 ## 1. Confirm NAUX
 
