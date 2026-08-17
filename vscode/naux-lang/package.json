@@ -7,10 +7,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/x2t8/Naux.git",
-    "directory": "vscode/naux-lang"
+    "url": "https://github.com/x2t8/naux-grammar.git"
   },
-  "homepage": "https://github.com/x2t8/Naux/tree/main/vscode/naux-lang",
+  "homepage": "https://github.com/x2t8/naux-grammar",
   "bugs": {
     "url": "https://github.com/x2t8/Naux/issues"
   },

@@ -1,8 +1,10 @@
 # NAUX language support
 
-This directory is the self-contained, MIT-licensed language-support package
-for NAUX source files. It can remain in the NAUX monorepo or be exported as a
-standalone grammar repository without changing its public identity.
+This is the self-contained, MIT-licensed language-support package for NAUX
+source files. Its canonical public home is
+[`x2t8/naux-grammar`](https://github.com/x2t8/naux-grammar); the NAUX compiler
+monorepo retains the synchronized source under `vscode/naux-lang` so grammar
+drift can be checked against the executable language surface.
 
 ## Locked language identity
 
@@ -49,6 +51,10 @@ npm test
 The validator checks that the package, grammar, icon theme, and Linguist
 candidate identity agree. Inside the NAUX monorepo it additionally derives the
 public builtin inventory from the Rust seed and rejects grammar drift.
+
+The package has no runtime or npm dependencies. GitHub Linguist may import this
+repository with its official `script/add-grammar` workflow once NAUX satisfies
+Linguist's independent real-world usage requirement.
 
 ## Install in VS Code locally
 

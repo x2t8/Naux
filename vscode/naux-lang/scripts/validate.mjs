@@ -33,6 +33,14 @@ for (const [field, expected] of Object.entries(expectedIdentity)) {
 assert.equal(packageJson.displayName, "NAUX Language");
 assert.equal(packageJson.publisher, "x2t8");
 assert.equal(packageJson.license, identity.license);
+assert.equal(packageJson.repository.url, "https://github.com/x2t8/naux-grammar.git");
+assert.equal(packageJson.homepage, "https://github.com/x2t8/naux-grammar");
+assert.equal(packageJson.dependencies, undefined, "grammar must remain dependency-free");
+assert.equal(packageJson.devDependencies, undefined, "grammar must remain dependency-free");
+assert.ok(
+  existsSync(join(packageRoot, ".github/workflows/validate.yml")),
+  "standalone validation workflow missing"
+);
 
 const language = packageJson.contributes.languages.find(({ id }) => id === "naux");
 assert.ok(language, "package must register the naux language id");
