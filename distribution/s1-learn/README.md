@@ -1,7 +1,7 @@
 # NAUX Learn Linux bundle definition
 
 > [!WARNING]
-> NAUX Learn 0.1.3 is an unsigned experimental pre-release. It is not intended
+> NAUX Learn 0.1.4 is an unsigned experimental pre-release. It is not intended
 > for production, security-critical, or safety-critical use.
 
 This is the experimental Linux x86-64 GNU bundle for guided programming and
@@ -27,11 +27,11 @@ The pinned Linux bootstrap downloads and verifies the canonical archive before
 running Setup:
 
 ```bash
-curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.3-learn/nauxup.sh | sh
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.4-learn/nauxup.sh | sh
 ```
 
 To inspect the bootstrap before executing it, download `nauxup.sh` from the
-[v0.1.3-learn release](https://github.com/x2t8/Naux/releases/tag/v0.1.3-learn),
+[v0.1.4-learn release](https://github.com/x2t8/Naux/releases/tag/v0.1.4-learn),
 review it, then run `sh nauxup.sh`.
 
 From an extracted archive, verification and Setup remain explicit:
@@ -44,8 +44,8 @@ From the bundle directory:
 ```
 
 The default versioned toolchain is
-`$XDG_DATA_HOME/naux/toolchains/learn/0.1.3` (or
-`~/.local/share/naux/toolchains/learn/0.1.3`). Stable `naux` and `nauxup`
+`$XDG_DATA_HOME/naux/toolchains/learn/0.1.4` (or
+`~/.local/share/naux/toolchains/learn/0.1.4`). Stable `naux` and `nauxup`
 launchers are placed in `~/.local/bin`; sealed ownership receipts live below
 `$XDG_STATE_HOME/naux/receipts` (or `~/.local/state/naux/receipts`). Missing
 directories are created on a clean machine. Existing prefixes or launchers
@@ -71,7 +71,7 @@ nauxup uninstall --dry-run
 nauxup uninstall
 ```
 
-`nauxup` 0.1.3 deliberately has no network update command. Repair, signed
+`nauxup` 0.1.4 deliberately has no network update command. Repair, signed
 channels, and rollback remain future lifecycle work.
 
 The installed executable does not invoke Rust or Cargo. `BUILD-SEED.tsv`

@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.3
+# NAUX Learn 0.1.4
 
 Status: experimental pre-release
 
@@ -9,11 +9,13 @@ the metadata required to verify their origin and host boundary.
 Install on Linux x86-64 GNU:
 
 ```sh
-curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.3-learn/nauxup.sh | sh
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.4-learn/nauxup.sh | sh
 ```
 
 Included changes:
 
+- the public `nauxup.sh` transport mode is canonical `0644`, matching GitHub
+  Release downloads and the documented explicit `sh nauxup.sh` entry path;
 - every public asset is bound to a canonical `PROVENANCE.tsv` record carrying
   the annotated tag, source commit/tree, pinned seed, release notes, inner
   bundle seal, byte length, and SHA-256 identity;

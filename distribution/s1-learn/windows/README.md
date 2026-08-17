@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.3 Windows bundle
+# NAUX Learn 0.1.4 Windows bundle
 
 ![NAUX Learn](../../../assets/langnaux-learn.png)
 
@@ -42,13 +42,13 @@ From PowerShell in the extracted bundle directory:
 Setup asks for one of nine languages before installation, shows the localized
 experimental disclosure, asks for consent, and repeats the disclosure after
 success. The default prefix is
-%LOCALAPPDATA%\Programs\NAUX\Learn\0.1.3.
+%LOCALAPPDATA%\Programs\NAUX\Learn\0.1.4.
 
 Expected stdout is stored in `examples/hello.out`. For your own program:
 
 ```powershell
 Get-Content -Raw input.txt |
-  & "$env:LOCALAPPDATA\Programs\NAUX\Learn\0.1.3\bin\naux.exe" run solution.nx
+  & "$env:LOCALAPPDATA\Programs\NAUX\Learn\0.1.4\bin\naux.exe" run solution.nx
 ```
 
 The installed executable does not invoke Rust or Cargo. `BUILD-SEED.tsv`

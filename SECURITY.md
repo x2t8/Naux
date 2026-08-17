@@ -8,7 +8,7 @@ production, security-critical, or safety-critical workloads.
 
 | Release | Status | Security support |
 |---|---|---|
-| NAUX Learn 0.1.3 | Experimental pre-release | Best-effort triage only |
+| NAUX Learn 0.1.4 | Experimental pre-release | Best-effort triage only |
 | Withdrawn or older builds | Unsupported | Upgrade or reproduce on the current release |
 
 Pre-1.0 syntax, semantics, CLI behavior, installation layout, and artifact

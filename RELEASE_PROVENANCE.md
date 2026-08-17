@@ -79,6 +79,10 @@ compatibility, and support policy files. The same gate reconstructs the bundle
 metrics and requires the public version, install URL, manifest seal, archive
 size, and archive hash to agree with the emitted artifact.
 
+Public release assets use mode `0644`, including `nauxup.sh`. GitHub's HTTP
+asset transport does not preserve an executable bit; the documented entry
+path is therefore `sh nauxup.sh` or piping reviewed bytes to `sh`.
+
 ## Explicit non-claims
 
 This record is not signing, key management, SLSA conformance, a hermetic build,

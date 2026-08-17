@@ -147,7 +147,7 @@ for asset in "$archive" "$checksum" "$bootstrap"; do
 done
 if [[ $(stat -c %a -- "$archive") != "644" \
     || $(stat -c %a -- "$checksum") != "644" \
-    || $(stat -c %a -- "$bootstrap") != "755" ]]; then
+    || $(stat -c %a -- "$bootstrap") != "644" ]]; then
     echo "preview asset mode differs from the canonical transport mode" >&2
     exit 1
 fi

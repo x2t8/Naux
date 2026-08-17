@@ -3,7 +3,7 @@
 NAUX exposes versioned, bounded profiles rather than promising that every
 repository experiment is one stable language.
 
-## NAUX Learn 0.1.3
+## NAUX Learn 0.1.4
 
 The public pre-release supports one binary host boundary:
 

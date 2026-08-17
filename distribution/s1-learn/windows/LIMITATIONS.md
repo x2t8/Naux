@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.3 Windows limitations
+# NAUX Learn 0.1.4 Windows limitations
 
 NAUX Learn is an experimental learner profile, not a stable general-purpose
 language release. This candidate targets deterministic programming and

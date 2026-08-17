@@ -114,6 +114,15 @@ if "$script_dir/verify_s2_preview_provenance.sh" \
     exit 1
 fi
 
+wrong_bootstrap_mode="$temp_root/wrong-bootstrap-mode"
+cp -a -- "$release_a" "$wrong_bootstrap_mode"
+chmod 0755 -- "$wrong_bootstrap_mode/nauxup.sh"
+if "$script_dir/verify_s2_preview_provenance.sh" \
+    "$wrong_bootstrap_mode" "$source_commit" "$source_tree" > /dev/null 2>&1; then
+    echo "preview verifier accepted a noncanonical public bootstrap mode" >&2
+    exit 1
+fi
+
 if "$script_dir/render_s2_preview_provenance.sh" \
     "$temp_root/release-without-provenance" "$source_commit" "$source_tree" \
     0000000000000000000000000000000000000000000000000000000000000000 \

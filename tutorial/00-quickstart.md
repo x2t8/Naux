@@ -6,7 +6,7 @@ Install the Linux x86-64 GNU experimental pre-release first, or follow the
 [source build](../README.md#build-from-source):
 
 ```sh
-curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.3-learn/nauxup.sh | sh
+curl -fsSL https://github.com/x2t8/Naux/releases/download/v0.1.4-learn/nauxup.sh | sh
 ```
 
 ## 1. Confirm NAUX

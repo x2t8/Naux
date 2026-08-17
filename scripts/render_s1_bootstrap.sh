@@ -92,7 +92,10 @@ fi
 
 if [[ "$platform" == linux ]]; then
     sh -n "$staging"
-    chmod 0755 -- "$staging"
+    # GitHub Release assets are downloaded as ordinary files. Keep the local
+    # producer byte-for-byte and mode-for-mode aligned with that transport;
+    # callers execute the reviewed bootstrap explicitly with `sh`.
+    chmod 0644 -- "$staging"
 else
     chmod 0644 -- "$staging"
 fi
