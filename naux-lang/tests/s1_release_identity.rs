@@ -38,7 +38,11 @@ fn executable_bundle_seed_and_notes_share_one_release_identity() {
     assert!(notes.starts_with(&format!("# NAUX Learn {VERSION}\n")));
     assert!(notes.contains("Status: experimental pre-release"));
     assert!(notes.contains(&format!("v{VERSION}-learn/nauxup.sh")));
+    assert!(notes.contains("`PROVENANCE.tsv`"));
 
+    let disclosure = read("distribution/s1-learn/RELEASE_DISCLOSURE.md");
+    assert!(disclosure.starts_with(&format!("# NAUX Learn {VERSION}\n")));
+    assert!(disclosure.contains("authenticate the publisher"));
     let limitations = read("distribution/s1-learn/LIMITATIONS.md");
     let hello = read("distribution/s1-learn/hello.nx");
     for source in [limitations, hello] {
@@ -101,6 +105,13 @@ fn windows_release_identity_is_target_exact_and_fail_closed() {
     assert!(seed.contains(
         "windows-icon-source-sha256\t506815be3785def4411675ffca7bbe89d18500f23e4dcea17a33a96e67cdde00"
     ));
+
+    let windows_readme = read("distribution/s1-learn/windows/README.md");
+    let windows_notes = read("distribution/s1-learn/windows/RELEASE_NOTES.md");
+    let windows_limits = read("distribution/s1-learn/windows/LIMITATIONS.md");
+    assert!(windows_readme.starts_with(&format!("# NAUX Learn {VERSION} Windows bundle\n")));
+    assert!(windows_notes.starts_with(&format!("# NAUX Learn {VERSION} for Windows\n")));
+    assert!(windows_limits.starts_with(&format!("# NAUX Learn {VERSION} Windows limitations\n")));
 
     let dependencies = read("distribution/s1-learn/windows/HOST-DEPENDENCIES.tsv");
     assert!(dependencies.contains("target\twindows-x86_64-gnu"));

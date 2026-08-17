@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.2
+# NAUX Learn 0.1.3
 
 **Experimental Learning Release**
 
@@ -19,6 +19,10 @@ Learners do not need Rust or Cargo to install or run this artifact. The current
 artifact is nevertheless produced by a Rust/Cargo seed and includes `egg` seed
 debt. It has not reached seed independence, self-generation, or compiler
 generation.
+
+The release checksum, bundle manifest, and outer provenance record detect
+content or source-identity drift. They are not digital signatures and do not
+authenticate the publisher.
 
 Future NAUX is intended to have a much broader scope than the Learn profile.
 Research directions are not promises of specific features or delivery dates.

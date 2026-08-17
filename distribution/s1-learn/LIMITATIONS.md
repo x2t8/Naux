@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.2 limitations
+# NAUX Learn 0.1.3 limitations
 
 NAUX Learn is an experimental learner profile, not a stable general-purpose
 language release. Its admitted use is deterministic programming and algorithm
@@ -16,8 +16,9 @@ exercises on the one declared Linux x86-64 GNU host boundary.
   GLIBC 2.39 interfaces.
 - Only Linux x86-64 GNU is admitted. There is no macOS, Windows, musl, other
   architecture, container-image, or cross-distribution compatibility claim.
-- The bundle has a SHA-256 integrity seal, not an author signature. It proves
-  internal consistency with its manifest, not publisher identity.
+- The bundle and outer release provenance have SHA-256 integrity seals, not
+  author signatures. They bind deterministic contents and source identities;
+  they do not authenticate the publisher.
 
 ## Language and execution limits
 

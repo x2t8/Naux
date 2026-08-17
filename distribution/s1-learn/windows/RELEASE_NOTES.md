@@ -1,4 +1,4 @@
-# NAUX Learn 0.1.2 for Windows
+# NAUX Learn 0.1.3 for Windows
 
 Status: development candidate — not a public release
 

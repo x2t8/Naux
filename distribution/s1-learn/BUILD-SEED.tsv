@@ -4,8 +4,8 @@ rustc-commit	ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96
 cargo-release	1.96.0
 cargo-commit	30a34c682
 host	x86_64-unknown-linux-gnu
-cargo-lock-sha256	d9172e56826cc72a24e3fa7e4de83b6fbc034496d24ca0e8a62dcaf835086bb6
-package	naux@0.1.2
+cargo-lock-sha256	17950876ed7727f1900d3de8fc072731faf09a26f9ff410b215700920183e8e3
+package	naux@0.1.3
 optimizer-seed-dependency	egg@0.10.0
 installer-locales	en-US,vi-VN,zh-CN,ja-JP,ko-KR,es,pt-BR,fr,de
 installer-locale-set-sha256	f1e95569c502d94cfdc7e0071e942ccab56ced89943b1d82eed8099a9d9941c1

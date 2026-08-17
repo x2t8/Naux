@@ -30,6 +30,10 @@ naux check hello.nx
 naux run hello.nx
 ```
 
+NAUX prints only explicit program output. `^ value` returns a value to the
+caller (or from the top-level entry) but does not print it. Use `!say value`
+whenever the result must appear in the terminal or an online judge's stdout.
+
 ## 4. Read from the keyboard
 
 Create `double.nx`:
