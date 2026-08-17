@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/nauxlang.png" alt="NAUX" width="220" />
 
-# Naux
+# NAUX
 
   <p><strong>An experimental programming language, compiler, runtime, and native-code laboratory.</strong></p>
 
@@ -21,14 +21,14 @@
   </p>
 </div>
 
-Naux is a hands-on language implementation covering the path from `.nx`
+NAUX is a hands-on language implementation covering the path from `.nx`
 source code to interpretation, bytecode execution, optimization, and
 experimental native execution. The repository includes the compiler/runtime
 source, integration tests, examples, developer tools, and a reproducible
 cross-language benchmark harness.
 
 > [!WARNING]
-> Naux is active experimental research software. It may contain incomplete
+> NAUX is active experimental research software. It may contain incomplete
 > features, undocumented behavior, and unsafe compiler/runtime experiments.
 > Do not use it for production or safety-critical systems.
 
@@ -215,7 +215,7 @@ Inside the IDE:
 
 ## Benchmarks
 
-The benchmark harness compares equivalent workloads across Naux, C, C++, Go,
+The benchmark harness compares equivalent workloads across NAUX, C, C++, Go,
 Rust, and Zig. Generated binaries, raw samples, and machine-local reports are
 excluded from Git.
 
@@ -238,6 +238,7 @@ Recommended checks:
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace
+npm --prefix vscode/naux-lang test
 ```
 
 Useful focused commands:
@@ -260,7 +261,7 @@ cargo run -p naux -- dev disasm naux-lang/examples/bench_sum_dense.nx
 |-- scripts/            Benchmark, validation, and reporting tools
 |-- tools/perf-gates/   Rust performance-gate utilities
 |-- naux-meta-coq/      Separate formal-model workspace
-|-- vscode/             VS Code language support
+|-- vscode/naux-lang/   MIT-licensed grammar and Linguist candidate identity
 |-- docs/               Active public language and benchmark documentation
 |-- tutorial/           Current learner-facing guides
 |-- assets/             Public project assets
@@ -301,10 +302,11 @@ naux-lang/tests/             Integration and parity evidence
 - [NAUX Learn supported-host bundle](docs/s1_learn_binary_bundle.md)
 - [Withdrawn release evidence](archive/README.md)
 - [Compiler IR specification](naux-lang/docs/IR_SPEC.md)
+- [NAUX grammar and Linguist candidate](vscode/naux-lang/README.md)
 
 Internal planning and unpublished research strategy are intentionally not part
 of the public repository surface.
 
 ## License
 
-Naux is licensed under the MIT License and provided without warranty.
+NAUX is licensed under the MIT License and provided without warranty.

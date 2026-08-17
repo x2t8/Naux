@@ -2,6 +2,7 @@
   "comments": {
     "lineComment": "#"
   },
+  "wordPattern": "\\$?[_\\p{L}][_\\p{L}\\p{N}]*|-?\\d+(?:\\.\\d+)?",
   "brackets": [
     ["{", "}"],
     ["[", "]"],
@@ -18,5 +19,15 @@
     {"open": "[", "close": "]"},
     {"open": "(", "close": ")"},
     {"open": "\"", "close": "\""}
-  ]
+  ],
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*~\\s*(rite|unsafe|fn|if|else|loop|each|while)\\b.*$",
+    "decreaseIndentPattern": "^\\s*~\\s*(else|end)\\b.*$"
+  },
+  "folding": {
+    "markers": {
+      "start": "^\\s*~\\s*(rite|unsafe|fn|if|loop|each|while)\\b",
+      "end": "^\\s*~\\s*end\\b"
+    }
+  }
 }

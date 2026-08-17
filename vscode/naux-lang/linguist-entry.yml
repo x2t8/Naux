@@ -1,0 +1,11 @@
+NAUX:
+  type: programming
+  color: "#FF304D"
+  aliases:
+  - naux
+  extensions:
+  - ".nx"
+  interpreters:
+  - naux
+  tm_scope: source.naux
+  ace_mode: text

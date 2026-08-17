@@ -1,21 +1,46 @@
 {
   "name": "naux-lang",
-  "displayName": "Naux Language",
-  "description": "Language support and file icon for Naux (.nx)",
-  "version": "0.0.1",
-  "publisher": "naux",
+  "displayName": "NAUX Language",
+  "description": "Language support, TextMate grammar, and file icon for NAUX (.nx)",
+  "version": "0.1.0",
+  "publisher": "x2t8",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/x2t8/Naux.git",
+    "directory": "vscode/naux-lang"
+  },
+  "homepage": "https://github.com/x2t8/Naux/tree/main/vscode/naux-lang",
+  "bugs": {
+    "url": "https://github.com/x2t8/Naux/issues"
+  },
+  "icon": "icons/nauxlang.png",
   "engines": {
     "vscode": "^1.80.0"
   },
-  "categories": ["Programming Languages"],
-  "activationEvents": ["onLanguage:naux"],
-  "main": "",
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "naux",
+    "nx",
+    "language",
+    "textmate"
+  ],
+  "scripts": {
+    "test": "node scripts/validate.mjs"
+  },
   "contributes": {
     "languages": [
       {
         "id": "naux",
-        "aliases": ["Naux", "naux"],
-        "extensions": [".nx"],
+        "aliases": [
+          "NAUX",
+          "naux"
+        ],
+        "extensions": [
+          ".nx"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -29,7 +54,7 @@
     "iconThemes": [
       {
         "id": "naux-icon-theme",
-        "label": "Naux Icons",
+        "label": "NAUX Icons",
         "path": "./icons/naux-icon-theme.json"
       }
     ]

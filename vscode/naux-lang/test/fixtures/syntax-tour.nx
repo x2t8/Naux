@@ -1,0 +1,16 @@
+# Representative grammar fixture; it is not Linguist usage evidence.
+~ fn gcd_local($left: I64, $right: I64) -> I64
+    ~ while $right != 0
+        $remainder = $left % $right
+        $left = $right
+        $right = $remainder
+    ~ end
+    ^ $left
+~ end
+
+~ rite
+    $dữ_liệu = <bytes:DE AD BE EF>
+    $metadata = {language: "NAUX", verified: true}
+    $kết_quả = gcd_local(84, 30)
+    !say $metadata.language + ": " + to_text($kết_quả)
+~ end

@@ -1,0 +1,5 @@
+.vscodeignore
+scripts/**
+test/**
+linguist-language.json
+linguist-entry.yml

@@ -1,14 +1,27 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "name": "Naux",
+  "name": "NAUX",
   "scopeName": "source.naux",
+  "fileTypes": [
+    "nx"
+  ],
   "patterns": [
-    {"include": "#comments"},
-    {"include": "#strings"},
-    {"include": "#numbers"},
-    {"include": "#keywords"},
-    {"include": "#builtins"},
-    {"include": "#variables"}
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#bytes" },
+    { "include": "#function-declarations" },
+    { "include": "#block-keywords" },
+    { "include": "#keywords" },
+    { "include": "#actions" },
+    { "include": "#types" },
+    { "include": "#constants" },
+    { "include": "#builtins" },
+    { "include": "#variables" },
+    { "include": "#map-keys" },
+    { "include": "#function-calls" },
+    { "include": "#numbers" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
   ],
   "repository": {
     "comments": {
@@ -26,31 +39,157 @@
           "begin": "\"",
           "end": "\"",
           "patterns": [
-            {"name": "constant.character.escape.naux", "match": "\\\\."}
+            {
+              "name": "constant.character.escape.naux",
+              "match": "\\\\(?:n|t|\"|\\\\|.)"
+            }
           ]
+        }
+      ]
+    },
+    "bytes": {
+      "patterns": [
+        {
+          "name": "meta.literal.bytes.naux",
+          "begin": "(<)(bytes)(:)",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.bytes.begin.naux" },
+            "2": { "name": "storage.type.bytes.naux" },
+            "3": { "name": "punctuation.separator.key-value.naux" }
+          },
+          "end": "(>)",
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.bytes.end.naux" }
+          },
+          "patterns": [
+            {
+              "name": "constant.numeric.hex.naux",
+              "match": "\\b[0-9A-Fa-f]{2}\\b"
+            }
+          ]
+        }
+      ]
+    },
+    "function-declarations": {
+      "patterns": [
+        {
+          "match": "(~)(\\s*)(fn)(\\s+)([_\\p{L}][_\\p{L}\\p{N}]*)",
+          "captures": {
+            "1": { "name": "punctuation.definition.block.naux" },
+            "3": { "name": "storage.type.function.naux" },
+            "5": { "name": "entity.name.function.naux" }
+          }
+        }
+      ]
+    },
+    "block-keywords": {
+      "patterns": [
+        {
+          "match": "(~)(\\s*)(rite|unsafe|if|else|loop|each|while|end)\\b",
+          "captures": {
+            "1": { "name": "punctuation.definition.block.naux" },
+            "3": { "name": "keyword.control.naux" }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.naux",
+          "match": "\\b(import|in)\\b"
+        }
+      ]
+    },
+    "actions": {
+      "patterns": [
+        {
+          "match": "(!)(say|ask|fetch|log|syscall)\\b",
+          "captures": {
+            "1": { "name": "punctuation.definition.action.naux" },
+            "2": { "name": "support.function.action.naux" }
+          }
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.naux",
+          "match": "\\b(Bool|I64|F64)\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.naux",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "builtins": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.naux",
+          "match": "\\b(assert_equal|dsu_find|dsu_new|dsu_union|fft_convolve|gcd|graph_add_edge|graph_articulation_points|graph_astar|graph_bfs|graph_bridges|graph_dials|graph_dijkstra|graph_floyd_warshall|graph_neighbors|graph_new|graph_scc|graph_toposort|graph_zero_one_bfs|is_prime|kmp_search|knapsack_01|lcm|len|lichao_add|lichao_new|lichao_query|lis_length|list_range|lower_bound|manacher_lps|ntt_convolve|pollard_rho|pow_mod|pq_new|pq_pop_min|pq_push|queue_new|queue_pop|queue_push|rabin_karp|read_int|read_line|read_token|rolling_hash_sub|rolling_hash_table|segtree_dynamic_add|segtree_dynamic_new|segtree_dynamic_query|segtree_lazy_add|segtree_lazy_new|segtree_lazy_query|segtree_new|segtree_query|segtree_update|set_add|set_contains|set_new|sieve|sparse_table_new|sparse_table_query|stack_new|stack_pop|stack_push|suffix_array|to_text|upper_bound|window_max|window_min|window_sum_fixed|z_function)\\b"
+        },
+        {
+          "name": "support.function.internal.naux",
+          "match": "\\b(__bit_shl|__bit_xor|__bytes|__call|__index|__loop_count|__setindex|__syscall)\\b"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.readwrite.naux",
+          "match": "\\$[_\\p{L}][_\\p{L}\\p{N}]*"
+        }
+      ]
+    },
+    "map-keys": {
+      "patterns": [
+        {
+          "name": "variable.other.property.naux",
+          "match": "\\b[_\\p{L}][_\\p{L}\\p{N}]*(?=\\s*:)"
+        }
+      ]
+    },
+    "function-calls": {
+      "patterns": [
+        {
+          "name": "entity.name.function.call.naux",
+          "match": "\\b[_\\p{L}][_\\p{L}\\p{N}]*(?=\\s*\\()"
         }
       ]
     },
     "numbers": {
       "patterns": [
-        {"name": "constant.numeric.naux", "match": "\\b-?(?:\\d+)(?:\\.\\d+)?\\b"}
+        {
+          "name": "constant.numeric.naux",
+          "match": "\\b\\d+(?:\\.\\d+)?\\b"
+        }
       ]
     },
-    "keywords": {
+    "operators": {
       "patterns": [
-        {"name": "keyword.control.naux", "match": "\\b(fn|if|else|loop|each|while|end|rite|unsafe|import)\\b"},
-        {"name": "constant.language.naux", "match": "\\b(true|false|null)\\b"}
+        {
+          "name": "keyword.operator.naux",
+          "match": "->|==|!=|>=|<=|&&|\\|\\||<<|[+\\-*/%<>=^!]"
+        }
       ]
     },
-    "builtins": {
+    "punctuation": {
       "patterns": [
-        {"name": "support.function.naux", "match": "\\b(len|to_text|queue_push|queue_pop|segtree_new|segtree_query|segtree_update|graph_new|graph_add_edge|graph_bfs|graph_dijkstra|lis_length|knapsack_01)\\b"}
-      ]
-    },
-    "variables": {
-      "patterns": [
-        {"name": "variable.other.naux", "match": "\\$[A-Za-z_][A-Za-z0-9_]*"},
-        {"name": "keyword.operator.naux", "match": "~|\^|!"}
+        {
+          "name": "punctuation.separator.naux",
+          "match": "[,.:]"
+        },
+        {
+          "name": "punctuation.section.group.naux",
+          "match": "[(){}\\[\\]]"
+        }
       ]
     }
   }

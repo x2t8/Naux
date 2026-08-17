@@ -23,6 +23,8 @@ jobs:
         with:
           toolchain: 1.96.0
           components: rustfmt, clippy
+      - name: NAUX grammar and Linguist identity
+        run: node vscode/naux-lang/scripts/validate.mjs
       - name: fmt
         run: cargo fmt --all -- --check
       - name: clippy
