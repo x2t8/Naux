@@ -1,10 +1,12 @@
 # NAUX language support
 
 This is the self-contained, MIT-licensed language-support package for NAUX
-source files. Its canonical public home is
-[`x2t8/naux-grammar`](https://github.com/x2t8/naux-grammar); the NAUX compiler
-monorepo retains the synchronized source under `vscode/naux-lang` so grammar
-drift can be checked against the executable language surface.
+source files. The official [NAUX programming language
+website](https://nauxlang.org) is the public project entry point, while
+[`x2t8/naux-grammar`](https://github.com/x2t8/naux-grammar) remains the
+canonical grammar repository. The NAUX compiler monorepo retains the
+synchronized source under `vscode/naux-lang` so grammar drift can be checked
+against the executable language surface.
 
 ## Locked language identity
 

@@ -13,6 +13,8 @@
   </p>
 
   <p>
+    <a href="https://nauxlang.org"><strong>Official website</strong></a>
+    ·
     <a href="#build-from-source"><strong>Build from source</strong></a>
     ·
     <a href="tutorial/README.md"><strong>Language tutorial</strong></a>
@@ -21,7 +23,9 @@
   </p>
 </div>
 
-NAUX is a hands-on language implementation covering the path from `.nx`
+The official home of the **NAUX programming language** is
+[nauxlang.org](https://nauxlang.org). NAUX is a hands-on language
+implementation covering the path from `.nx`
 source code to interpretation, bytecode execution, optimization, and
 experimental native execution. The repository includes the compiler/runtime
 source, integration tests, examples, developer tools, and a reproducible
