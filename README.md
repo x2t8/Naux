@@ -139,6 +139,13 @@ builtins. The grammar is technically prepared for GitHub Linguist, but NAUX is
 not yet a Linguist-recognized language; upstream submission remains gated by
 Linguist's independent real-world usage requirement.
 
+The Research Preview seals the exact canonical grammar tag, Git tree, and
+14-file mirror in
+[`distribution/s2-preview/LINGUIST-SURFACE.tsv`](distribution/s2-preview/LINGUIST-SURFACE.tsv).
+Run `python3 scripts/s2_linguist_surface.py` for the dependency-free local
+replay. This technical gate deliberately does not turn unrelated `.nx` files
+or raw GitHub search counts into an adoption claim.
+
 ## Current execution pipeline
 
 ```mermaid
@@ -318,6 +325,7 @@ naux-lang/tests/             Integration and parity evidence
 - [NAUX Learn bounded execution envelope](docs/s1_learn_execution_envelope.md)
 - [NAUX Learn supported-host bundle](docs/s1_learn_binary_bundle.md)
 - [Research Preview trust and provenance](RELEASE_PROVENANCE.md)
+- [Research Preview exit audit](docs/s2_research_preview_exit_audit.md)
 - [Security policy](SECURITY.md)
 - [Compatibility policy](COMPATIBILITY.md)
 - [Support and issue policy](SUPPORT.md)

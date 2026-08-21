@@ -79,7 +79,15 @@ fi
 
 mutated_seal="$temp_root/mutated-seal"
 cp -a -- "$release_a" "$mutated_seal"
-sed -i 's/^seal\t./seal\t0/' "$mutated_seal/PROVENANCE.tsv"
+seal_head=$(awk -F '\t' '$1 == "seal" { print substr($2, 1, 1); exit }' \
+    "$mutated_seal/PROVENANCE.tsv")
+if [[ "$seal_head" == 0 ]]; then
+    replacement_head=1
+else
+    replacement_head=0
+fi
+sed -i "s/^seal\\t$seal_head/seal\\t$replacement_head/" \
+    "$mutated_seal/PROVENANCE.tsv"
 if "$script_dir/verify_s2_preview_provenance.sh" \
     "$mutated_seal" "$source_commit" "$source_tree" > /dev/null 2>&1; then
     echo "preview verifier accepted a mutated provenance seal" >&2

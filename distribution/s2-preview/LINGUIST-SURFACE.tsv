@@ -1,0 +1,28 @@
+NAUX-S2-LINGUIST-SURFACE	1
+repository	https://github.com/x2t8/naux-grammar.git
+tag	v0.1.2
+tag-object	36e5eae4ddfe6db35d5a268cf36032cc4fcd12e1
+commit	124d72cc8ae4fdaef6413ef94e6cf895fb294a55
+tree	34f0f17115a5367c6ca20f445de3bd3fef835143
+package-version	0.1.2
+language	NAUX
+extension	.nx
+tm-scope	source.naux
+color	#FF304D
+public-builtins	71
+files	14
+file	0644	264	eb7a68efed6a9bec34286003dd427368b4e3a125cdca6de9cc0b94a75c926ea2	.github/workflows/validate.yml
+file	0644	86	e598ee334bda8738caeb61745a4d43b146d30d5d801f822728fb3f702e749acc	.vscodeignore
+file	0644	826	508f6410ecafda63fc89a8e743038c0b67ab717fb56e683a5a78642bc8ca6196	CHANGELOG.md
+file	0644	1068	2631cd0336d5597b274ad15c3c857596d39523e13b9209721d45274e701e7709	LICENSE
+file	0644	3534	6434346e68da22c1fa19115922cfdffd3d3d9e631aec32689110c3ade373a798	README.md
+file	0644	114169	f98b17efdbba335184f616175a52dce0ad296a2846bab23c32302afbc4dd80b9	icons/nauxlang.png
+file	0644	826	1fc2041c7cbd031191a851d42d70148e6c5f3f7ebcfcb15767e9f30211384060	language-configuration.json
+file	0644	155	9b5432108b4d634396a57c4299b38a190cd38c640c0edc44aa16690a60bd405b	linguist-entry.yml
+file	0644	348	46cea18a6c0415c7a10e0d2ae56d0a1a486eaeb55703affd0bec992c91ddf04d	linguist-language.json
+file	0644	1350	4dfc29e799a9e1c8701ad8be1e3b36228b3f76c6f76398eda8605a23e046a717	package.json
+file	0644	10042	4bb02b2796df942f81b2e37c7368df683508a039470781b3e9e7f1ab48e040dc	scripts/validate.mjs
+file	0644	2012	ebe414a8672063d727cf45dba395375fe77892092179456497a3038d4e65955f	snippets/naux.json
+file	0644	5725	eb3c3924bb2d33629437db227179255e858b0887143ce3ce3ef54daa2022111f	syntaxes/naux.tmLanguage.json
+file	0644	455	dfda124ef97d399dc7c3ee9f7ecfe68f8d791db459e1b45d42c85f34343397f0	test/fixtures/syntax-tour.nx
+seal	031d82feef5f7f9c0ddab11d58059d3ca99384e49aa6f62b43bc8626ed0ee7c9

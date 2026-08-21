@@ -26,6 +26,10 @@ jobs:
           rustup default 1.96.0
       - name: NAUX grammar and Linguist identity
         run: node vscode/naux-lang/scripts/validate.mjs
+      - name: Sealed S2 Linguist surface
+        run: python3 scripts/s2_linguist_surface.py
+      - name: Tracked Markdown link audit
+        run: python3 scripts/check_markdown_links.py
       - name: fmt
         run: cargo fmt --all -- --check
       - name: clippy
