@@ -6,6 +6,7 @@ use std::process::{Command, Stdio};
 const EXIT_USAGE: u8 = 64;
 const EXIT_WORKER: u8 = 70;
 const EXIT_OUTPUT: u8 = 74;
+#[cfg(debug_assertions)]
 const DEBUG_ENVIRONMENT: &str = "NAUX_TAIL_ENVELOPED_WORKER_DEBUG_PROBE";
 
 fn main() -> ExitCode {
