@@ -1,8 +1,9 @@
 # NAUX Research Preview exit audit
 
-Status: closure candidate; fresh public CI pending
+Status: complete
 
 Audit date: 2026-08-21
+Closure date: 2026-08-22
 
 Release under audit: NAUX Learn 0.1.4 / `linux-x86_64-gnu`
 
@@ -10,10 +11,13 @@ Scope authority: Scope 2 in `NAUX_SCOPE_LADDER.md`
 
 ## Decision
 
-Scope 2 is not yet recorded as complete. Its released artifact gates and local
-technical gates pass, but the closure commit must first pass one fresh public
-CI run containing the corrected provenance-mutation carrier and the new
-tracked-link and Linguist-surface gates.
+Scope 2 is complete for the bounded NAUX Research Preview described here.
+Commit `77a3477844d92a44f3bb70beb1b1f33aee8bae70` passed fresh public
+[CI run `32564625869`](https://github.com/x2t8/Naux/actions/runs/32564625869),
+including its downstream sanity-parity job. The run contains the corrected
+provenance-mutation carrier, exact public-release replay, tracked-link audit,
+sealed Linguist surface, full hermetic workspace tests, and compatibility
+checks on Linux, macOS, and Windows.
 
 GitHub Linguist recognition is not a Scope 2 exit gate. The grammar is ready
 for inspection, but an upstream PR must remain unopened until independent
@@ -24,7 +28,7 @@ real-world NAUX usage satisfies Linguist's policy.
 | Scope 2 exit gate | Result | Evidence |
 |---|---|---|
 | Clean supported machine installs and runs the preview | Pass | The public `v0.1.4-learn` assets completed a clean-HOME, no-Rust/Cargo install, run, doctor, and uninstall replay on `linux-x86_64-gnu`. |
-| Format, lint, tests, governance, and artifact-link audits pass | Local pass; public replay pending | `cargo fmt --all -- --check`, strict all-target/all-feature Clippy, focused release identity, terminal I/O, provenance mutation, grammar validation, Python governance/link tests, and the tracked-link audit pass locally. Public runs `32469453512`, `32472185638`, and `32564411521` exposed the carrier defects described below; none is borrowed as closure evidence. |
+| Format, lint, tests, governance, and artifact-link audits pass | Public pass | Fresh public run `32564625869` at exact head `77a3477844d92a44f3bb70beb1b1f33aee8bae70` passed format, strict Clippy, the hermetic all-feature workspace, terminal I/O, provenance, published-release replay, governance, Linux/macOS/Windows compatibility, VM/JIT sanity parity, and deterministic alias-mutation fuzz. Earlier red runs `32469453512`, `32472185638`, and `32564411521` are retained only as defect-discovery evidence and are not borrowed as closure evidence. |
 | Exact binaries and evidence bundles are reproducible | Pass | `v0.1.4-learn` binds source commit `393df085205f2d82c687a3a5fa677ff0854361c0`, source tree `680d83872f4107dbf05c4f9361190d75b4fa0cb2`, archive SHA-256 `13682a9825b37cd12bc010efbfd7d9dc1b9c7b711583615b52b078e397dc8f1b`, and provenance seal `56b9962a4d332baea18eb808a5a6b141b41d138c5bf37f6d33e39a992f5f1a6d`. Independently downloaded assets match the local producer. |
 | Limitations and seed dependencies are visible before install | Pass | The release disclosure, limitations, `BUILD-SEED.tsv`, `HOST-DEPENDENCIES.tsv`, README, support, compatibility, and security policies disclose the Rust/Cargo seed, `egg`, dynamic host, experimental status, and non-claims. |
 | Examples use real source-to-runtime paths | Pass | The installed first program and learner corpus execute through ordinary `naux run`; the release identity tests reject an example or launcher that bypasses the packaged runtime path. |
@@ -89,10 +93,15 @@ process-local atomic ordinal. This preserves the production rule that
 `naux new` refuses an existing directory while making concurrent test paths
 unique without relying on host clock resolution.
 
-## Closure condition
+## Closure evidence
 
-The owner may record Scope 2 complete only after the current closure repairs
-are committed and one fresh public CI run passes every job. A red, cancelled,
-or older run cannot be borrowed as closure evidence. Scope 3 remains queued
-until that event; the external Linguist adoption gate remains separate and may
-stay open indefinitely without reopening a completed Research Preview.
+The closure authority is exact commit
+`77a3477844d92a44f3bb70beb1b1f33aee8bae70` and public run
+[`32564625869`](https://github.com/x2t8/Naux/actions/runs/32564625869).
+The primary CI job completed in 44 minutes 12 seconds; downstream
+`sanity-parity` completed in 57 seconds. Performance jobs were intentionally
+skipped by their push policy and are not Scope 2 exit gates.
+
+Scope 3 may now become active. External Linguist adoption remains a separate
+ecosystem gate and may stay open indefinitely without reopening this completed
+Research Preview.
