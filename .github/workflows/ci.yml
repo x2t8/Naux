@@ -28,12 +28,20 @@ jobs:
         run: node vscode/naux-lang/scripts/validate.mjs
       - name: Sealed S2 Linguist surface
         run: python3 scripts/s2_linguist_surface.py
+      - name: Sealed S3 trusted-thesis audit inputs
+        run: python3 scripts/s3_thesis_audit.py --static-only
       - name: Tracked Markdown link audit
         run: python3 scripts/check_markdown_links.py
       - name: fmt
         run: cargo fmt --all -- --check
       - name: clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Build reviewed S3 evidence executables
+        run: >-
+          cargo build -p naux
+          --bin naux-surface-native-t1
+          --bin naux-surface-native-t1-worker
+          --bin naux-surface-native-t1-process
       - name: Hermetic workspace tests
         # Exact dependency-object fixtures are replayed by the controlled
         # release-host gate; ambient hosted-runner ELF files are not evidence.
@@ -47,6 +55,12 @@ jobs:
         run: bash scripts/test_s2_preview_provenance.sh
       - name: Published Research Preview replay
         run: bash scripts/test_s2_public_release.sh
+      - name: Independent S3 fixed-argv replay
+        run: >-
+          python3 scripts/s3_thesis_audit.py
+          --t1-binary target/debug/naux-surface-native-t1
+          --worker-binary target/debug/naux-surface-native-t1-worker
+          --process-binary target/debug/naux-surface-native-t1-process
       - name: performance governance tests
         run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 

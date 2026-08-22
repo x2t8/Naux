@@ -1,0 +1,24 @@
+NAUX-S3-TRUSTED-COMPUTING-BASE	1
+scope	S3
+profile	trusted-thesis-candidate
+target	x86_64-unknown-linux-gnu
+policy	1.0.0
+entries	17
+entry	01	build-seed	rustc	1.96.0	required	Current compiler seed; not part of the claimed future self-origin path.
+entry	02	build-seed	cargo	1.96.0	required	Current workspace and dependency builder.
+entry	03	build-seed	rust-standard-library	1.96.0	required	Linked Rust seed support used by the three reviewed evidence binaries.
+entry	04	build-seed	rust-llvm-backend	22.1.2	indirect-required	Rustc seed backend debt; NAUX does not directly call LLVM as its language backend.
+entry	05	build-seed	egg	0.10.0	required	Current equality-saturation source dependency and explicit seed debt.
+entry	06	runtime-tcb	naux-surface-native-t1	wp1	required	Produces the fixed in-process six-way carrier report.
+entry	07	runtime-tcb	naux-surface-native-t1-worker	wp2	required	Executes exactly one canonical ordinal and emits one fixed binary frame.
+entry	08	runtime-tcb	naux-surface-native-t1-process	wp2	required	Reconstructs the carrier and admits fresh-child observations.
+entry	09	host-abi	linux-x86-64	wp1-wp2	required	Only admitted operating-system and architecture pair for this evidence.
+entry	10	host-abi	x86-64-sse2-mxcsr	wp1-wp2	required	Floating-point ABI and control-state assumptions used by native execution.
+entry	11	host-abi	mmap-mprotect-munmap	wp1-wp2	required	Host memory mapping primitives used by the W-to-X lifecycle.
+entry	12	host-abi	process-lifecycle-and-pipes	wp2	required	Fresh child creation, bounded collection, exit status, stdout, and stderr.
+entry	13	host-abi	dynamic-loader-libc-libgcc	build-host	required-if-linked	Exact produced-binary dependencies remain build-host facts and are not attested here.
+entry	14	evaluator	python-standard-library	3.11+	required	Independent parser, hash reconstruction, fixed-argv replay, and audit report.
+entry	15	evaluator	github-actions-ubuntu	pinned-actions	required-for-public-ci	Public evaluator environment; not the compiler or runtime semantic authority.
+entry	16	optional-tool	git	unspecified	optional	Repository inspection only; never required by static or binary replay admission.
+entry	17	optional-tool	gh	unspecified	optional	Public CI observation only; never required by static or binary replay admission.
+seal	4c4bce2f769042e1b9d21cf4b11a71c70168eb73651a63fa6d266959eda6e874

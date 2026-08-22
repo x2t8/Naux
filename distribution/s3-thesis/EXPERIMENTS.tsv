@@ -1,0 +1,25 @@
+NAUX-S3-THESIS-EXPERIMENTS	1
+scope	S3
+profile	trusted-thesis-candidate
+policy	1.0.0
+steps	19
+step	01	positive	wp1-six-way-semantic-agreement	admitted	Surface Core SSA Machine-IR target-plan and native agree on the fixed twelve-case corpus.
+step	02	positive	wp1-regenerative-evidence	admitted	Canonical reconstruction rejects locally resealed observation order and cardinality drift.
+step	03	positive	wp2-fresh-process-isolation	admitted	One fresh child per ordinal emits an exact bounded binary frame for parent reconstruction.
+step	04	positive	wp3-static-bundle-admission	required	Sealed audit TCB experiment and file inventories must pass without building Rust.
+step	05	positive	wp3-fixed-argv-replay	required	The evaluator must replay the three reviewed binaries without a shell.
+step	06	positive	wp3-deterministic-double-replay	required	Text reports and all twelve worker frames must be byte-identical across two runs.
+step	07	positive	wp3-public-ci	required	The final tracked commit must pass the public pinned-toolchain CI run.
+step	08	negative	carrier-reseal-mutation	admitted	Coherently resealed value provenance order and cardinality mutations are rejected.
+step	09	negative	process-abnormal-child	admitted	Timeout abort nonzero exit missing output diagnostics overflow and descendant pipe retention are rejected.
+step	10	negative	process-frame-structure	admitted	Malformed oversized truncated trailing and double frames are rejected.
+step	11	negative	process-resealed-frame	admitted	Wrong ordinal observation identity and W-to-X mapping mutations remain rejected after resealing.
+step	12	negative	wp3-manifest-mutation	required	Schema order count hash path mode seal and inventory mutations must fail closed.
+step	13	negative	wp3-stale-root-mutation	required	A correctly resealed bundle with a non-admitted semantic root must still be rejected.
+step	14	negative	wp3-command-injection-mutation	required	Unknown or command-shaped step identifiers must be rejected as data.
+step	15	unsupported	unsupported-host	explicit	The carrier is refused outside Linux x86-64 rather than silently weakened.
+step	16	nonclaim	performance-leadership	not-claimed	No C C++ Rust or general performance comparison is admitted by this bundle.
+step	17	nonclaim	sandbox-or-executable-attestation	not-claimed	Fresh-process isolation does not attest executable bytes dependencies identity or sandbox strength.
+step	18	nonclaim	general-language-correctness	not-claimed	The fixed T1 corpus is not a proof of all NAUX programs or compiler passes.
+step	19	nonclaim	self-origin-p2-p3	not-claimed	Seed-debt removal Nauxogenesis Futamura P2 and Futamura P3 remain future work.
+seal	ae20b0164a4ff6705e7b5174fd4f824501bea1d7c5b6cec48e8589d4bba8f3ab
