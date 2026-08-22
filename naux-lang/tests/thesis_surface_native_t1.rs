@@ -1,12 +1,13 @@
 #![cfg(all(target_arch = "x86_64", target_os = "linux"))]
 
 use naux::elaboration::NormalizedScalar;
-#[cfg(debug_assertions)]
-use naux::thesis_surface_native::probe_surface_native_t1_resealed_observation_mutation;
 use naux::thesis_surface_native::{
     canonical_surface_native_t1_cases, emit_surface_native_t1, render_surface_native_t1_report,
-    surface_native_t1_report_hash, verify_surface_native_t1, SurfaceNativeT1Error,
-    SURFACE_NATIVE_T1_CASES,
+    surface_native_t1_report_hash, verify_surface_native_t1, SURFACE_NATIVE_T1_CASES,
+};
+#[cfg(debug_assertions)]
+use naux::thesis_surface_native::{
+    probe_surface_native_t1_resealed_observation_mutation, SurfaceNativeT1Error,
 };
 use std::process::Command;
 
