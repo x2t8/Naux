@@ -44,8 +44,8 @@ AUDIT_METADATA = (
     ("ipc-schema", "1.0.0"),
     ("cases", "12"),
     ("frame-bytes", "715"),
-    ("wp1-commit", "75e6278fe5159d170c655375897f15dc50a7ecf9"),
-    ("wp1-ci-run", "32484663017"),
+    ("wp1-commit", "b9a08dfa8504a444c5274ead25fc72d3f67d0ac7"),
+    ("wp1-ci-run", "32567172382"),
     ("wp2-commit", "8df287de8e03619df13f93ec775be2d2e86ec0f8"),
     ("wp2-ci-run", "32571897151"),
 )
