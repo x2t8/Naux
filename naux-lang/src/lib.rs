@@ -19,6 +19,7 @@ pub mod region;
 pub mod renderer;
 pub mod runtime;
 pub mod stdlib;
+pub mod thesis_surface_native;
 pub mod token;
 pub mod typecheck;
 pub mod vm;

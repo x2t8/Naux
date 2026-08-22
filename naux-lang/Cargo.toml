@@ -44,5 +44,9 @@ path = "src/bin/naux_tail_enveloped_worker.rs"
 test = false
 bench = false
 
+[[bin]]
+name = "naux-surface-native-t1"
+path = "src/bin/naux_surface_native_t1.rs"
+
 [dependencies]
 egg = "0.10"

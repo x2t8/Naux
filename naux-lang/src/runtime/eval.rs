@@ -49,6 +49,19 @@ pub fn eval_script_with_bindings(
     eval_script_with_context(stmts, None, bindings, ScriptInput::None, None)
 }
 
+/// Evaluate a Surface program with explicit pre-bound scalar inputs and a
+/// fail-closed execution envelope.
+///
+/// Thesis and differential carriers use this entry point when their request
+/// identity commits to exact Surface work and call-depth limits.
+pub(crate) fn eval_script_with_bindings_and_limits(
+    stmts: &[Stmt],
+    bindings: &[(String, Value)],
+    limits: ExecutionLimits,
+) -> (Env, Vec<RuntimeEvent>, Vec<RuntimeError>) {
+    eval_script_with_context(stmts, None, bindings, ScriptInput::None, Some(limits))
+}
+
 pub fn eval_script_with_base_dir(
     stmts: &[Stmt],
     base_dir: Option<&Path>,
