@@ -1,7 +1,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+static NEXT_TEMP_PROJECT: AtomicU64 = AtomicU64::new(0);
 
 struct TempProject {
     path: PathBuf,
@@ -13,11 +16,13 @@ impl TempProject {
             .duration_since(UNIX_EPOCH)
             .expect("system clock")
             .as_nanos();
+        let ordinal = NEXT_TEMP_PROJECT.fetch_add(1, Ordering::Relaxed);
         Self {
             path: std::env::temp_dir().join(format!(
-                "naux_verify_{}_{}",
+                "naux_verify_{}_{}_{}",
                 std::process::id(),
-                stamp
+                stamp,
+                ordinal
             )),
         }
     }
