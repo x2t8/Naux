@@ -36,7 +36,7 @@ assert.equal(packageJson.license, identity.license);
 assert.equal(packageJson.preview, true, "Marketplace package must remain experimental");
 assert.deepEqual(packageJson.galleryBanner, { color: "#111318", theme: "dark" });
 assert.equal(packageJson.repository.url, "https://github.com/x2t8/naux-grammar.git");
-assert.equal(packageJson.homepage, "https://nauxlang.org");
+assert.equal(packageJson.homepage, "https://github.com/x2t8/naux-grammar");
 assert.equal(packageJson.dependencies, undefined, "grammar must remain dependency-free");
 assert.equal(packageJson.devDependencies, undefined, "grammar must remain dependency-free");
 for (const field of [

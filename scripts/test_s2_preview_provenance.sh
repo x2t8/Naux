@@ -148,27 +148,6 @@ grep -F -- '--engine vm' "$repo_root/SUPPORT.md" > /dev/null
 test -s "$repo_root/.github/ISSUE_TEMPLATE/bug_report.yml"
 test -s "$repo_root/.github/ISSUE_TEMPLATE/config.yml"
 
-bundle_contract="$repo_root/docs/s1_learn_binary_bundle.md"
-contract_flat=$(tr '\n' ' ' < "$bundle_contract" | tr -d ',')
-archive_bytes=$(stat -c %s -- "$release_a/$archive_name")
-archive_hash=$(sha256sum -- "$release_a/$archive_name" | awk '{print $1}')
-expanded_bytes=$(
-    tar --list --verbose --numeric-owner --gzip --file "$release_a/$archive_name" \
-        | awk '{ total += $3 } END { print total }'
-)
-for expected_contract_fragment in \
-    "package \`naux@$version\`" \
-    "bundle<TAB>$version" \
-    "$expanded_bytes admitted bytes" \
-    "manifest seal \`$manifest_seal\`" \
-    "$archive_bytes bytes" \
-    "SHA-256 \`$archive_hash\`"; do
-    if [[ "$contract_flat" != *"$expected_contract_fragment"* ]]; then
-        echo "binary-bundle contract differs from release evidence: $expected_contract_fragment" >&2
-        exit 1
-    fi
-done
-
 public_version_files=(
     README.md
     SECURITY.md
@@ -194,4 +173,4 @@ grep -F "placeholder: naux $version" \
 printf 'S2 preview provenance determinism: PASS\n'
 printf 'S2 preview source/tree/all-assets/seal/inventory/link/mode mutation rejection: PASS\n'
 printf 'S2 preview public policy presence: PASS\n'
-printf 'S2 preview public version and bundle-evidence synchronization: PASS\n'
+printf 'S2 preview public version synchronization: PASS\n'
