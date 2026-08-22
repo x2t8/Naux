@@ -102,6 +102,25 @@ EXPECTED_TCB_KEYS = (
     ("16", "optional-tool", "git", "unspecified", "optional"),
     ("17", "optional-tool", "gh", "unspecified", "optional"),
 )
+EXPECTED_TCB_DESCRIPTIONS = (
+    "Current compiler seed; not part of the claimed future self-origin path.",
+    "Current workspace and dependency builder.",
+    "Linked Rust seed support used by the three reviewed evidence binaries.",
+    "Rustc seed backend debt; NAUX does not directly call LLVM as its language backend.",
+    "Current equality-saturation source dependency and explicit seed debt.",
+    "Produces the fixed in-process six-way carrier report.",
+    "Executes exactly one canonical ordinal and emits one fixed binary frame.",
+    "Reconstructs the carrier and admits fresh-child observations.",
+    "Only admitted operating-system and architecture pair for this evidence.",
+    "Floating-point ABI and control-state assumptions used by native execution.",
+    "Host memory mapping primitives used by the W-to-X lifecycle.",
+    "Fresh child creation, bounded collection, exit status, stdout, and stderr.",
+    "Exact produced-binary dependencies remain build-host facts and are not attested here.",
+    "Independent parser, hash reconstruction, fixed-argv replay, and audit report.",
+    "Public evaluator environment; not the compiler or runtime semantic authority.",
+    "Repository inspection only; never required by static or binary replay admission.",
+    "Public CI observation only; never required by static or binary replay admission.",
+)
 EXPECTED_EXPERIMENT_KEYS = (
     ("01", "positive", "wp1-six-way-semantic-agreement", "admitted"),
     ("02", "positive", "wp1-regenerative-evidence", "admitted"),
@@ -122,6 +141,27 @@ EXPECTED_EXPERIMENT_KEYS = (
     ("17", "nonclaim", "sandbox-or-executable-attestation", "not-claimed"),
     ("18", "nonclaim", "general-language-correctness", "not-claimed"),
     ("19", "nonclaim", "self-origin-p2-p3", "not-claimed"),
+)
+EXPECTED_EXPERIMENT_DESCRIPTIONS = (
+    "Surface Core SSA Machine-IR target-plan and native agree on the fixed twelve-case corpus.",
+    "Canonical reconstruction rejects locally resealed observation order and cardinality drift.",
+    "One fresh child per ordinal emits an exact bounded binary frame for parent reconstruction.",
+    "Sealed audit TCB experiment and file inventories must pass without building Rust.",
+    "The evaluator must replay the three reviewed binaries without a shell.",
+    "Text reports and all twelve worker frames must be byte-identical across two runs.",
+    "The final tracked commit must pass the public pinned-toolchain CI run.",
+    "Coherently resealed value provenance order and cardinality mutations are rejected.",
+    "Timeout abort nonzero exit missing output diagnostics overflow and descendant pipe retention are rejected.",
+    "Malformed oversized truncated trailing and double frames are rejected.",
+    "Wrong ordinal observation identity and W-to-X mapping mutations remain rejected after resealing.",
+    "Schema order count hash path mode seal and inventory mutations must fail closed.",
+    "A correctly resealed bundle with a non-admitted semantic root must still be rejected.",
+    "Unknown or command-shaped step identifiers must be rejected as data.",
+    "The carrier is refused outside Linux x86-64 rather than silently weakened.",
+    "No C C++ Rust or general performance comparison is admitted by this bundle.",
+    "Fresh-process isolation does not attest executable bytes dependencies identity or sandbox strength.",
+    "The fixed T1 corpus is not a proof of all NAUX programs or compiler passes.",
+    "Seed-debt removal Nauxogenesis Futamura P2 and Futamura P3 remain future work.",
 )
 HASH_RE = re.compile(r"[0-9a-f]{64}\Z")
 STEP_RE = re.compile(r"[a-z0-9][a-z0-9-]*\Z")
@@ -234,15 +274,19 @@ def parse_tcb(path: Path) -> str:
     if lines[1:6] != expected_header or len(lines) != 6 + len(EXPECTED_TCB_KEYS):
         raise AuditError("TCB header or count drift")
     keys = []
+    descriptions = []
     classes = set()
     for line in lines[6:]:
         fields = line.split("\t")
         if len(fields) != 7 or fields[0] != "entry" or not fields[6].strip():
             raise AuditError("malformed TCB entry")
         keys.append(tuple(fields[1:6]))
+        descriptions.append(fields[6])
         classes.add(fields[2])
     if tuple(keys) != EXPECTED_TCB_KEYS:
         raise AuditError("TCB identity, order, or status drift")
+    if tuple(descriptions) != EXPECTED_TCB_DESCRIPTIONS:
+        raise AuditError("TCB description drift")
     if classes != {"build-seed", "runtime-tcb", "host-abi", "evaluator", "optional-tool"}:
         raise AuditError("TCB classes are incomplete")
     return seal
@@ -254,6 +298,7 @@ def parse_experiments(path: Path) -> str:
     if lines[1:5] != expected_header or len(lines) != 5 + len(EXPECTED_EXPERIMENT_KEYS):
         raise AuditError("experiment header or count drift")
     keys = []
+    descriptions = []
     for line in lines[5:]:
         fields = line.split("\t")
         if len(fields) != 6 or fields[0] != "step" or not fields[5].strip():
@@ -261,8 +306,11 @@ def parse_experiments(path: Path) -> str:
         if not STEP_RE.fullmatch(fields[3]):
             raise AuditError("experiment step identifier is not data-only")
         keys.append(tuple(fields[1:5]))
+        descriptions.append(fields[5])
     if tuple(keys) != EXPECTED_EXPERIMENT_KEYS:
         raise AuditError("experiment identity, order, kind, or status drift")
+    if tuple(descriptions) != EXPECTED_EXPERIMENT_DESCRIPTIONS:
+        raise AuditError("experiment description drift")
     return seal
 
 
