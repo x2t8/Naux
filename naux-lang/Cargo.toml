@@ -48,5 +48,15 @@ bench = false
 name = "naux-surface-native-t1"
 path = "src/bin/naux_surface_native_t1.rs"
 
+[[bin]]
+name = "naux-surface-native-t1-worker"
+path = "src/bin/naux_surface_native_t1_worker.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "naux-surface-native-t1-process"
+path = "src/bin/naux_surface_native_t1_process.rs"
+
 [dependencies]
 egg = "0.10"

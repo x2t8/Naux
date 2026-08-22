@@ -840,7 +840,7 @@ fn run_worker_case(
 
 /// Shared reviewed child-process lifecycle for fixed NAUX native workers.
 /// Protocol owners retain their own strict decoders and identity checks.
-pub(super) fn run_x64_worker_frame_bounded(
+pub(crate) fn run_x64_worker_frame_bounded(
     worker_path: &Path,
     case_ordinal: u32,
     timeout: Duration,

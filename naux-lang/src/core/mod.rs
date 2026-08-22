@@ -449,6 +449,7 @@ pub use x64_native_ipc::{
 #[cfg(debug_assertions)]
 #[doc(hidden)]
 pub use x64_native_process::probe_x64_native_worker_debug_r1_s7bc;
+pub(crate) use x64_native_process::run_x64_worker_frame_bounded;
 pub use x64_native_process::{
     emit_x64_native_process_evidence_r1_s7bc, emit_x64_native_worker_frame_r1_s7bc,
     execute_x64_native_worker_case_r1_s7bc, verify_x64_native_process_evidence_r1_s7bc,

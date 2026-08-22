@@ -9,17 +9,18 @@ use crate::core::encoding::sha256;
 use crate::core::{
     evaluate, evaluate_core_ssa_translation, evaluate_machine_ir_translation,
     evaluate_x64_target_translation, execute_x64_native_r1_s7b, lower_core_ssa_r1_s5,
-    lower_machine_ir_r1_s6, lower_x64_target_r1_s7a, verify_x64_target_source, Evaluation,
-    EvaluationBudget, EvaluationOutcome, SemanticHash, X64TargetAbi,
+    lower_machine_ir_r1_s6, lower_x64_target_r1_s7a, verify_x64_target_source, CoreSsaArtifact,
+    CoreValue, Evaluation, EvaluationBudget, EvaluationOutcome, MachineIrArtifact, SemanticHash,
+    X64NativeMappingState, X64TargetAbi, X64TargetArtifact,
 };
 use crate::elaboration::{
     bind_surface_t2a_inputs, elaborate_surface_t2a, normalize_core_scalar,
-    normalize_surface_scalar, ElaborationBudget, NormalizedScalar, SurfaceInput, SurfaceScalarType,
-    SurfaceScalarValue, T2A_MAX_CORE_NODES, T2A_MAX_SOURCE_STEPS,
+    normalize_surface_scalar, ElaborationBudget, ElaborationReport, NormalizedScalar, SurfaceInput,
+    SurfaceScalarType, SurfaceScalarValue, T2A_MAX_CORE_NODES, T2A_MAX_SOURCE_STEPS,
 };
 use crate::runtime::budget::ExecutionLimits;
 use crate::runtime::eval::eval_script_with_bindings_and_limits;
-use crate::{lexer, parser};
+use crate::{ast::Stmt, lexer, parser};
 use std::fmt;
 
 pub const SURFACE_NATIVE_T1_SCHEMA_VERSION: (u16, u16, u16) = (0, 1, 0);
@@ -82,6 +83,86 @@ pub struct SurfaceNativeT1Evidence {
     pub records: Vec<SurfaceNativeT1Record>,
     pub results_hash: SemanticHash,
     pub evidence_hash: SemanticHash,
+}
+
+/// Reconstructed fixed translation chain shared by the in-process T1 emitter
+/// and its later process worker. This stays crate-private so no caller can
+/// substitute source, corpus, budgets, or targets.
+#[derive(Clone, Debug)]
+pub(crate) struct PreparedSurfaceNativeT1 {
+    pub(crate) statements: Vec<Stmt>,
+    pub(crate) inputs: Vec<SurfaceInput>,
+    pub(crate) report: ElaborationReport,
+    pub(crate) ssa: CoreSsaArtifact,
+    pub(crate) machine_ir: MachineIrArtifact,
+    pub(crate) target: X64TargetArtifact,
+    pub(crate) cases: Vec<SurfaceNativeT1Case>,
+    pub(crate) source_hash: SemanticHash,
+    pub(crate) request_hash: SemanticHash,
+    pub(crate) corpus_hash: SemanticHash,
+}
+
+/// Parent-reconstructible case observation that deliberately stops before
+/// native execution. The expected native value is the already source-bound
+/// target-plan value, but a child still has to demonstrate it independently.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct SurfaceNativeT1ExpectedCase {
+    pub(crate) ordinal: u32,
+    pub(crate) name: &'static str,
+    pub(crate) input_hash: SemanticHash,
+    pub(crate) surface: NormalizedScalar,
+    pub(crate) core: NormalizedScalar,
+    pub(crate) ssa: NormalizedScalar,
+    pub(crate) machine_ir: NormalizedScalar,
+    pub(crate) target_plan: NormalizedScalar,
+    pub(crate) core_arguments: Vec<CoreValue>,
+}
+
+impl SurfaceNativeT1ExpectedCase {
+    pub(crate) fn expected_record(&self) -> SurfaceNativeT1Record {
+        let native = self.target_plan;
+        SurfaceNativeT1Record {
+            ordinal: self.ordinal,
+            name: self.name,
+            input_hash: self.input_hash,
+            surface: self.surface,
+            core: self.core,
+            ssa: self.ssa,
+            machine_ir: self.machine_ir,
+            target_plan: self.target_plan,
+            native,
+            record_hash: surface_native_t1_record_hash(
+                self.ordinal,
+                self.input_hash,
+                self.surface,
+                self.core,
+                self.ssa,
+                self.machine_ir,
+                self.target_plan,
+                native,
+            ),
+        }
+    }
+}
+
+/// Exact native facts exported to the fixed process frame. These values are
+/// observations, not independent authority; the parent compares them with
+/// its own reconstructed T1 chain.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct SurfaceNativeT1ExecutedCase {
+    pub(crate) record: SurfaceNativeT1Record,
+    pub(crate) target_artifact_hash: SemanticHash,
+    pub(crate) target_plan_hash: SemanticHash,
+    pub(crate) source_machine_ir_hash: SemanticHash,
+    pub(crate) verified_code_hash: SemanticHash,
+    pub(crate) copied_rw_code_hash: SemanticHash,
+    pub(crate) readback_rx_code_hash: SemanticHash,
+    pub(crate) mapping_trace: [X64NativeMappingState; 4],
+    pub(crate) input_lanes: u8,
+    pub(crate) mxcsr_before: u32,
+    pub(crate) mxcsr_after: u32,
+    pub(crate) fallback: bool,
+    pub(crate) effect_count: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -250,10 +331,19 @@ pub fn canonical_surface_native_t1_cases() -> Vec<SurfaceNativeT1Case> {
 /// to one versioned source program, manifest, corpus, budget, and Linux x86-64
 /// native authority.
 pub fn emit_surface_native_t1() -> Result<SurfaceNativeT1Evidence, SurfaceNativeT1Error> {
+    let prepared = prepare_surface_native_t1()?;
+    let mut records = Vec::with_capacity(prepared.cases.len());
+    for ordinal in 0..prepared.cases.len() {
+        let ordinal = u32::try_from(ordinal).map_err(|_| SurfaceNativeT1Error::EvidenceMismatch)?;
+        records.push(execute_prepared_surface_native_t1_case(&prepared, ordinal)?.record);
+    }
+    Ok(seal_surface_native_t1_evidence(&prepared, records))
+}
+
+pub(crate) fn prepare_surface_native_t1() -> Result<PreparedSurfaceNativeT1, SurfaceNativeT1Error> {
     if !cfg!(all(target_arch = "x86_64", target_os = "linux")) {
         return Err(SurfaceNativeT1Error::UnsupportedHost);
     }
-
     let tokens = lexer::lex(SURFACE_NATIVE_T1_SOURCE)
         .map_err(|error| stage(SurfaceNativeT1Stage::Lex, None, error))?;
     let statements = parser::parse_script(&tokens)
@@ -266,240 +356,316 @@ pub fn emit_surface_native_t1() -> Result<SurfaceNativeT1Evidence, SurfaceNative
         ElaborationBudget::new(T2A_MAX_SOURCE_STEPS, T2A_MAX_CORE_NODES),
     )
     .map_err(|error| stage(SurfaceNativeT1Stage::Elaborate, None, error))?;
-    let core = &report.artifact;
-    let ssa = lower_core_ssa_r1_s5(core)
+    let ssa = lower_core_ssa_r1_s5(&report.artifact)
         .map_err(|error| stage(SurfaceNativeT1Stage::SsaLower, None, error))?;
-    let machine_ir = lower_machine_ir_r1_s6(&ssa, core)
+    let machine_ir = lower_machine_ir_r1_s6(&ssa, &report.artifact)
         .map_err(|error| stage(SurfaceNativeT1Stage::MachineIrLower, None, error))?;
-    let target = lower_x64_target_r1_s7a(&machine_ir, &ssa, core)
+    let target = lower_x64_target_r1_s7a(&machine_ir, &ssa, &report.artifact)
         .map_err(|error| stage(SurfaceNativeT1Stage::TargetLower, None, error))?;
-
     let source_hash = hash_domain(SOURCE_DOMAIN, SURFACE_NATIVE_T1_SOURCE.as_bytes());
     let request_hash = surface_native_t1_request_hash(source_hash, &inputs);
     let cases = canonical_surface_native_t1_cases();
     let corpus_hash = surface_native_t1_corpus_hash(&cases);
-    let mut records = Vec::with_capacity(cases.len());
-    for case in &cases {
-        let bound = bind_surface_t2a_inputs(&report, &case.arguments)
-            .map_err(|error| stage(SurfaceNativeT1Stage::Bind, Some(case.ordinal), error))?;
-        let surface_limits = ExecutionLimits {
-            max_work: SURFACE_NATIVE_T1_MAX_EXECUTION_STEPS,
-            max_call_depth: SURFACE_NATIVE_T1_MAX_CALL_DEPTH as usize,
-        };
-        let (surface_env, _surface_events, surface_errors) = eval_script_with_bindings_and_limits(
-            &statements,
-            &bound.surface_bindings,
-            surface_limits,
-        );
-        if !surface_errors.is_empty() {
-            return Err(SurfaceNativeT1Error::Stage {
-                stage: SurfaceNativeT1Stage::Surface,
-                case_ordinal: Some(case.ordinal),
-                message: format!("Surface oracle produced {} error(s)", surface_errors.len()),
-            });
-        }
-        let surface_value = surface_env.get(SURFACE_NATIVE_T1_RESULT).ok_or(
-            SurfaceNativeT1Error::MissingSurfaceResult {
-                case_ordinal: case.ordinal,
-            },
-        )?;
-        let surface = normalize_surface_scalar(&surface_value)
-            .map_err(|error| stage(SurfaceNativeT1Stage::Surface, Some(case.ordinal), error))?;
+    Ok(PreparedSurfaceNativeT1 {
+        statements,
+        inputs,
+        report,
+        ssa,
+        machine_ir,
+        target,
+        cases,
+        source_hash,
+        request_hash,
+        corpus_hash,
+    })
+}
 
-        let core_evaluation = evaluate(
-            core,
-            bound.core_arguments.clone(),
-            surface_native_t1_evaluation_budget(),
-        )
-        .map_err(|error| stage(SurfaceNativeT1Stage::Core, Some(case.ordinal), error))?;
-        let core_result =
-            normalize_evaluation(SurfaceNativeT1Stage::Core, case.ordinal, &core_evaluation)?;
-        require_match(
-            case.ordinal,
-            SurfaceNativeT1Stage::Core,
-            surface,
-            core_result,
-        )?;
-
-        let ssa_evaluation = evaluate_core_ssa_translation(
-            &ssa,
-            core,
-            bound.core_arguments.clone(),
-            surface_native_t1_evaluation_budget(),
-        )
-        .map_err(|error| stage(SurfaceNativeT1Stage::Ssa, Some(case.ordinal), error))?;
-        let ssa_result =
-            normalize_evaluation(SurfaceNativeT1Stage::Ssa, case.ordinal, &ssa_evaluation)?;
-        require_match(case.ordinal, SurfaceNativeT1Stage::Ssa, surface, ssa_result)?;
-
-        let machine_evaluation = evaluate_machine_ir_translation(
-            &machine_ir,
-            &ssa,
-            core,
-            bound.core_arguments.clone(),
-            surface_native_t1_evaluation_budget(),
-        )
-        .map_err(|error| stage(SurfaceNativeT1Stage::MachineIr, Some(case.ordinal), error))?;
-        let machine_result = normalize_evaluation(
-            SurfaceNativeT1Stage::MachineIr,
-            case.ordinal,
-            &machine_evaluation,
-        )?;
-        require_match(
-            case.ordinal,
-            SurfaceNativeT1Stage::MachineIr,
-            surface,
-            machine_result,
-        )?;
-
-        let target_evaluation = evaluate_x64_target_translation(
-            &target,
-            &machine_ir,
-            &ssa,
-            core,
-            bound.core_arguments.clone(),
-            surface_native_t1_evaluation_budget(),
-        )
-        .map_err(|error| stage(SurfaceNativeT1Stage::TargetPlan, Some(case.ordinal), error))?;
-        let target_result = normalize_evaluation(
-            SurfaceNativeT1Stage::TargetPlan,
-            case.ordinal,
-            &target_evaluation,
-        )?;
-        require_match(
-            case.ordinal,
-            SurfaceNativeT1Stage::TargetPlan,
-            surface,
-            target_result,
-        )?;
-
-        let source_bound = verify_x64_target_source(&target, &machine_ir, &ssa, core)
-            .map_err(|error| stage(SurfaceNativeT1Stage::Native, Some(case.ordinal), error))?;
-        let native_execution = execute_x64_native_r1_s7b(source_bound, &bound.core_arguments)
-            .map_err(|error| stage(SurfaceNativeT1Stage::Native, Some(case.ordinal), error))?;
-        if native_execution.fallback() {
-            return Err(SurfaceNativeT1Error::NativeFallback {
-                case_ordinal: case.ordinal,
-            });
-        }
-        const MXCSR_STATUS_FLAGS: u32 = 0x3f;
-        let canonical_mxcsr = X64TargetAbi::r1_s7a().canonical_mxcsr;
-        let mxcsr_before = native_execution.mxcsr_before();
-        if mxcsr_before & !MXCSR_STATUS_FLAGS != canonical_mxcsr & !MXCSR_STATUS_FLAGS
-            || native_execution.mxcsr_after() != mxcsr_before
-        {
-            return Err(SurfaceNativeT1Error::NativeIdentityMismatch {
-                case_ordinal: case.ordinal,
-                field: "canonical MXCSR control and restored status",
-            });
-        }
-        if native_execution.input_lanes() != inputs.len() as u8 {
-            return Err(SurfaceNativeT1Error::NativeIdentityMismatch {
-                case_ordinal: case.ordinal,
-                field: "five-lane entry ABI",
-            });
-        }
-        for (field, actual, expected) in [
-            (
-                "target artifact hash",
-                native_execution.target_artifact_hash(),
-                target.semantic_hash,
-            ),
-            (
-                "target plan hash",
-                native_execution.target_plan_hash(),
-                target.program.plan_hash,
-            ),
-            (
-                "source Machine IR hash",
-                native_execution.source_machine_ir_hash(),
-                machine_ir.semantic_hash,
-            ),
-            (
-                "verified code hash",
-                native_execution.verified_code_hash(),
-                target.program.code_hash,
-            ),
-            (
-                "copied RW code hash",
-                native_execution.copied_rw_code_hash(),
-                target.program.code_hash,
-            ),
-            (
-                "readback RX code hash",
-                native_execution.readback_rx_code_hash(),
-                target.program.code_hash,
-            ),
-        ] {
-            if actual != expected {
-                return Err(SurfaceNativeT1Error::NativeIdentityMismatch {
-                    case_ordinal: case.ordinal,
-                    field,
-                });
-            }
-        }
-        if !native_execution.effect_trace().is_empty() {
-            return Err(SurfaceNativeT1Error::ObservableEffects {
-                stage: SurfaceNativeT1Stage::Native,
-                case_ordinal: case.ordinal,
-            });
-        }
-        let native_result = normalize_outcome(
-            SurfaceNativeT1Stage::Native,
-            case.ordinal,
-            native_execution.outcome(),
-        )?;
-        require_match(
-            case.ordinal,
-            SurfaceNativeT1Stage::Native,
-            surface,
-            native_result,
-        )?;
-
-        let input_hash = surface_native_t1_case_hash(case);
-        let record_hash = surface_native_t1_record_hash(
-            case.ordinal,
-            input_hash,
-            surface,
-            core_result,
-            ssa_result,
-            machine_result,
-            target_result,
-            native_result,
-        );
-        records.push(SurfaceNativeT1Record {
-            ordinal: case.ordinal,
-            name: case.name,
-            input_hash,
-            surface,
-            core: core_result,
-            ssa: ssa_result,
-            machine_ir: machine_result,
-            target_plan: target_result,
-            native: native_result,
-            record_hash,
+pub(crate) fn observe_prepared_surface_native_t1_case(
+    prepared: &PreparedSurfaceNativeT1,
+    case_ordinal: u32,
+) -> Result<SurfaceNativeT1ExpectedCase, SurfaceNativeT1Error> {
+    let case = prepared
+        .cases
+        .get(case_ordinal as usize)
+        .filter(|case| case.ordinal == case_ordinal)
+        .ok_or(SurfaceNativeT1Error::EvidenceMismatch)?;
+    let bound = bind_surface_t2a_inputs(&prepared.report, &case.arguments)
+        .map_err(|error| stage(SurfaceNativeT1Stage::Bind, Some(case.ordinal), error))?;
+    let surface_limits = ExecutionLimits {
+        max_work: SURFACE_NATIVE_T1_MAX_EXECUTION_STEPS,
+        max_call_depth: SURFACE_NATIVE_T1_MAX_CALL_DEPTH as usize,
+    };
+    let (surface_env, _surface_events, surface_errors) = eval_script_with_bindings_and_limits(
+        &prepared.statements,
+        &bound.surface_bindings,
+        surface_limits,
+    );
+    if !surface_errors.is_empty() {
+        return Err(SurfaceNativeT1Error::Stage {
+            stage: SurfaceNativeT1Stage::Surface,
+            case_ordinal: Some(case.ordinal),
+            message: format!("Surface oracle produced {} error(s)", surface_errors.len()),
         });
     }
+    let surface_value = surface_env.get(SURFACE_NATIVE_T1_RESULT).ok_or(
+        SurfaceNativeT1Error::MissingSurfaceResult {
+            case_ordinal: case.ordinal,
+        },
+    )?;
+    let surface = normalize_surface_scalar(&surface_value)
+        .map_err(|error| stage(SurfaceNativeT1Stage::Surface, Some(case.ordinal), error))?;
+    let core = &prepared.report.artifact;
+    let core_result = normalize_evaluation(
+        SurfaceNativeT1Stage::Core,
+        case.ordinal,
+        &evaluate(
+            core,
+            bound.core_arguments.clone(),
+            surface_native_t1_evaluation_budget(),
+        )
+        .map_err(|error| stage(SurfaceNativeT1Stage::Core, Some(case.ordinal), error))?,
+    )?;
+    require_match(
+        case.ordinal,
+        SurfaceNativeT1Stage::Core,
+        surface,
+        core_result,
+    )?;
+    let ssa_result = normalize_evaluation(
+        SurfaceNativeT1Stage::Ssa,
+        case.ordinal,
+        &evaluate_core_ssa_translation(
+            &prepared.ssa,
+            core,
+            bound.core_arguments.clone(),
+            surface_native_t1_evaluation_budget(),
+        )
+        .map_err(|error| stage(SurfaceNativeT1Stage::Ssa, Some(case.ordinal), error))?,
+    )?;
+    require_match(case.ordinal, SurfaceNativeT1Stage::Ssa, surface, ssa_result)?;
+    let machine_result = normalize_evaluation(
+        SurfaceNativeT1Stage::MachineIr,
+        case.ordinal,
+        &evaluate_machine_ir_translation(
+            &prepared.machine_ir,
+            &prepared.ssa,
+            core,
+            bound.core_arguments.clone(),
+            surface_native_t1_evaluation_budget(),
+        )
+        .map_err(|error| stage(SurfaceNativeT1Stage::MachineIr, Some(case.ordinal), error))?,
+    )?;
+    require_match(
+        case.ordinal,
+        SurfaceNativeT1Stage::MachineIr,
+        surface,
+        machine_result,
+    )?;
+    let target_result = normalize_evaluation(
+        SurfaceNativeT1Stage::TargetPlan,
+        case.ordinal,
+        &evaluate_x64_target_translation(
+            &prepared.target,
+            &prepared.machine_ir,
+            &prepared.ssa,
+            core,
+            bound.core_arguments.clone(),
+            surface_native_t1_evaluation_budget(),
+        )
+        .map_err(|error| stage(SurfaceNativeT1Stage::TargetPlan, Some(case.ordinal), error))?,
+    )?;
+    require_match(
+        case.ordinal,
+        SurfaceNativeT1Stage::TargetPlan,
+        surface,
+        target_result,
+    )?;
+    Ok(SurfaceNativeT1ExpectedCase {
+        ordinal: case.ordinal,
+        name: case.name,
+        input_hash: surface_native_t1_case_hash(case),
+        surface,
+        core: core_result,
+        ssa: ssa_result,
+        machine_ir: machine_result,
+        target_plan: target_result,
+        core_arguments: bound.core_arguments,
+    })
+}
 
+pub(crate) fn execute_prepared_surface_native_t1_case(
+    prepared: &PreparedSurfaceNativeT1,
+    case_ordinal: u32,
+) -> Result<SurfaceNativeT1ExecutedCase, SurfaceNativeT1Error> {
+    let expected = observe_prepared_surface_native_t1_case(prepared, case_ordinal)?;
+    let source_bound = verify_x64_target_source(
+        &prepared.target,
+        &prepared.machine_ir,
+        &prepared.ssa,
+        &prepared.report.artifact,
+    )
+    .map_err(|error| stage(SurfaceNativeT1Stage::Native, Some(case_ordinal), error))?;
+    let native_execution = execute_x64_native_r1_s7b(source_bound, &expected.core_arguments)
+        .map_err(|error| stage(SurfaceNativeT1Stage::Native, Some(case_ordinal), error))?;
+    if native_execution.fallback() {
+        return Err(SurfaceNativeT1Error::NativeFallback { case_ordinal });
+    }
+    const MXCSR_STATUS_FLAGS: u32 = 0x3f;
+    let canonical_mxcsr = X64TargetAbi::r1_s7a().canonical_mxcsr;
+    let mxcsr_before = native_execution.mxcsr_before();
+    if mxcsr_before & !MXCSR_STATUS_FLAGS != canonical_mxcsr & !MXCSR_STATUS_FLAGS
+        || native_execution.mxcsr_after() != mxcsr_before
+    {
+        return Err(SurfaceNativeT1Error::NativeIdentityMismatch {
+            case_ordinal,
+            field: "canonical MXCSR control and restored status",
+        });
+    }
+    if native_execution.input_lanes() != prepared.inputs.len() as u8 {
+        return Err(SurfaceNativeT1Error::NativeIdentityMismatch {
+            case_ordinal,
+            field: "five-lane entry ABI",
+        });
+    }
+    let mapping_trace = native_execution.mapping_trace();
+    if mapping_trace
+        != [
+            X64NativeMappingState::Unmapped,
+            X64NativeMappingState::ReadWrite,
+            X64NativeMappingState::ReadExecute,
+            X64NativeMappingState::Unmapped,
+        ]
+    {
+        return Err(SurfaceNativeT1Error::NativeIdentityMismatch {
+            case_ordinal,
+            field: "W^X mapping lifecycle",
+        });
+    }
+    for (field, actual, wanted) in [
+        (
+            "target artifact hash",
+            native_execution.target_artifact_hash(),
+            prepared.target.semantic_hash,
+        ),
+        (
+            "target plan hash",
+            native_execution.target_plan_hash(),
+            prepared.target.program.plan_hash,
+        ),
+        (
+            "source Machine IR hash",
+            native_execution.source_machine_ir_hash(),
+            prepared.machine_ir.semantic_hash,
+        ),
+        (
+            "verified code hash",
+            native_execution.verified_code_hash(),
+            prepared.target.program.code_hash,
+        ),
+        (
+            "copied RW code hash",
+            native_execution.copied_rw_code_hash(),
+            prepared.target.program.code_hash,
+        ),
+        (
+            "readback RX code hash",
+            native_execution.readback_rx_code_hash(),
+            prepared.target.program.code_hash,
+        ),
+    ] {
+        if actual != wanted {
+            return Err(SurfaceNativeT1Error::NativeIdentityMismatch {
+                case_ordinal,
+                field,
+            });
+        }
+    }
+    let effect_count = u32::try_from(native_execution.effect_trace().len())
+        .map_err(|_| SurfaceNativeT1Error::EvidenceMismatch)?;
+    if effect_count != 0 {
+        return Err(SurfaceNativeT1Error::ObservableEffects {
+            stage: SurfaceNativeT1Stage::Native,
+            case_ordinal,
+        });
+    }
+    let native_result = normalize_outcome(
+        SurfaceNativeT1Stage::Native,
+        case_ordinal,
+        native_execution.outcome(),
+    )?;
+    require_match(
+        case_ordinal,
+        SurfaceNativeT1Stage::Native,
+        expected.surface,
+        native_result,
+    )?;
+    let mut record = expected.expected_record();
+    record.native = native_result;
+    record.record_hash = surface_native_t1_record_hash(
+        record.ordinal,
+        record.input_hash,
+        record.surface,
+        record.core,
+        record.ssa,
+        record.machine_ir,
+        record.target_plan,
+        record.native,
+    );
+    Ok(SurfaceNativeT1ExecutedCase {
+        record,
+        target_artifact_hash: native_execution.target_artifact_hash(),
+        target_plan_hash: native_execution.target_plan_hash(),
+        source_machine_ir_hash: native_execution.source_machine_ir_hash(),
+        verified_code_hash: native_execution.verified_code_hash(),
+        copied_rw_code_hash: native_execution.copied_rw_code_hash(),
+        readback_rx_code_hash: native_execution.readback_rx_code_hash(),
+        mapping_trace,
+        input_lanes: native_execution.input_lanes(),
+        mxcsr_before,
+        mxcsr_after: native_execution.mxcsr_after(),
+        fallback: native_execution.fallback(),
+        effect_count,
+    })
+}
+
+/// Reconstruct the complete accepted T1 evidence without executing native
+/// bytes in the caller. This is crate-private and is useful only after a
+/// process child independently supplies and passes the native observation for
+/// every exact case.
+pub(crate) fn expected_surface_native_t1_evidence(
+    prepared: &PreparedSurfaceNativeT1,
+) -> Result<SurfaceNativeT1Evidence, SurfaceNativeT1Error> {
+    let mut records = Vec::with_capacity(prepared.cases.len());
+    for ordinal in 0..prepared.cases.len() {
+        let ordinal = u32::try_from(ordinal).map_err(|_| SurfaceNativeT1Error::EvidenceMismatch)?;
+        records.push(observe_prepared_surface_native_t1_case(prepared, ordinal)?.expected_record());
+    }
+    Ok(seal_surface_native_t1_evidence(prepared, records))
+}
+
+fn seal_surface_native_t1_evidence(
+    prepared: &PreparedSurfaceNativeT1,
+    records: Vec<SurfaceNativeT1Record>,
+) -> SurfaceNativeT1Evidence {
     let results_hash = surface_native_t1_results_hash(&records);
     let mut evidence = SurfaceNativeT1Evidence {
         schema_version: SURFACE_NATIVE_T1_SCHEMA_VERSION,
         policy_version: SURFACE_NATIVE_T1_POLICY_VERSION,
-        source_hash,
-        request_hash,
-        corpus_hash,
-        core_hash: core.semantic_hash,
-        ssa_hash: ssa.semantic_hash,
-        machine_ir_hash: machine_ir.semantic_hash,
-        target_hash: target.semantic_hash,
-        target_plan_hash: target.program.plan_hash,
-        target_code_hash: target.program.code_hash,
+        source_hash: prepared.source_hash,
+        request_hash: prepared.request_hash,
+        corpus_hash: prepared.corpus_hash,
+        core_hash: prepared.report.artifact.semantic_hash,
+        ssa_hash: prepared.ssa.semantic_hash,
+        machine_ir_hash: prepared.machine_ir.semantic_hash,
+        target_hash: prepared.target.semantic_hash,
+        target_plan_hash: prepared.target.program.plan_hash,
+        target_code_hash: prepared.target.program.code_hash,
         records,
         results_hash,
         evidence_hash: SemanticHash::ZERO,
     };
     evidence.evidence_hash = surface_native_t1_evidence_hash(&evidence);
-    Ok(evidence)
+    evidence
 }
 
 /// Regenerate the fixed carrier from canonical source and compare every field.
