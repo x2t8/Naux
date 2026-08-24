@@ -9,6 +9,7 @@ meta	runtime-region	allocation-initialization-kernel-checksum-teardown
 meta	separate-costs	compile-specialize-startup-runtime-memory-code-size
 meta	fast-math	forbidden
 meta	closed-form-replacement	forbidden
+meta	semantic-validation-max-work	10000000
 meta	residual-max-specialized-ratio	1.10
 meta	residual-min-generic-speedup	1.25
 meta	result-requirements	raw-samples-toolchains-flags-host-fingerprint
@@ -28,4 +29,4 @@ metric	08	instructions	count	median	supporting	runtime-region
 metric	09	branches	count	median	supporting	runtime-region
 metric	10	branch-misses	count	median	supporting	runtime-region
 metric	11	cache-misses	count	median	supporting	runtime-region
-seal	6e367a30e0f65073299219613893f15f5bed90ff4f1cd077d06fcc8e27a25618
+seal	cb4eed65d6c7c51980d26403afea121621b75f47830921f588d1fcaccb81bc4b

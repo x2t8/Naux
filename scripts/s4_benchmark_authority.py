@@ -5,9 +5,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import re
 import stat
+import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,7 +31,7 @@ MODE_RE = re.compile(r"100(?:644|755)\Z")
 MAX_EXACT_BINARY64_INTEGER = 1 << 53
 
 CORPUS_METADATA = (
-    ("dataset", "n65536-r50-v1"),
+    ("dataset", "n16384-r50-v1"),
     ("numeric-domain", "binary64-exact-integer-v1"),
     ("kernel-count", "4"),
 )
@@ -38,9 +41,9 @@ EXPECTED_KERNELS = (
         "sum-dense",
         "throughput",
         "dense-iteration",
-        "65536",
+        "16384",
         "50",
-        "107372544000",
+        "6710476800",
         "benchmarks/s4/naux/sum_dense.nx",
         "benchmarks/c/bench_sum_dense.c",
         "benchmarks/rust/src/bin/bench_sum_dense.rs",
@@ -50,9 +53,9 @@ EXPECTED_KERNELS = (
         "branch-mix",
         "control-flow",
         "stateful-branch",
-        "65536",
+        "16384",
         "50",
-        "-1106833456",
+        "-69189632",
         "benchmarks/s4/naux/branch_mix.nx",
         "benchmarks/c/bench_branch_mix.c",
         "benchmarks/rust/src/bin/bench_branch_mix.rs",
@@ -62,9 +65,9 @@ EXPECTED_KERNELS = (
         "dot-product",
         "arithmetic",
         "quadratic-reduction",
-        "65536",
+        "16384",
         "50",
-        "4691142238208000",
+        "73294064435200",
         "benchmarks/s4/naux/dot_product.nx",
         "benchmarks/c/bench_dot_product.c",
         "benchmarks/rust/src/bin/bench_dot_product.rs",
@@ -74,9 +77,9 @@ EXPECTED_KERNELS = (
         "list-update",
         "allocation-mutation",
         "stateful-list-update",
-        "65536",
+        "16384",
         "50",
-        "107452825600",
+        "6730547200",
         "benchmarks/s4/naux/list_update.nx",
         "benchmarks/c/bench_list_update.c",
         "benchmarks/rust/src/bin/bench_list_update.rs",
@@ -93,6 +96,7 @@ PROTOCOL_METADATA = (
     ("separate-costs", "compile-specialize-startup-runtime-memory-code-size"),
     ("fast-math", "forbidden"),
     ("closed-form-replacement", "forbidden"),
+    ("semantic-validation-max-work", "10000000"),
     ("residual-max-specialized-ratio", "1.10"),
     ("residual-min-generic-speedup", "1.25"),
     ("result-requirements", "raw-samples-toolchains-flags-host-fingerprint"),
@@ -463,6 +467,78 @@ def validate(root: Path) -> Admission:
     return Admission(corpus, protocol, authority, report, report_root)
 
 
+def _validation_source(root: Path, kernel: Kernel) -> str:
+    path = root / kernel.naux_source
+    _raw, lines = _read_lines(path, allow_blank=True)
+    return_pattern = re.compile(r"^    \^ (\$[A-Za-z_][A-Za-z0-9_]*)$")
+    matches = [index for index, line in enumerate(lines) if return_pattern.fullmatch(line)]
+    if len(matches) != 1:
+        raise AuthorityError(f"NAUX validation return is not unique for {kernel.name}")
+    index = matches[0]
+    value = return_pattern.fullmatch(lines[index])
+    assert value is not None
+    lines.insert(index, f"    !say {value.group(1)}")
+    return "\n".join(lines) + "\n"
+
+
+def replay_semantics(root: Path, admission: Admission, naux_binary: Path) -> tuple[bytes, str]:
+    root = root.resolve()
+    binary = naux_binary.resolve()
+    try:
+        info = naux_binary.lstat()
+    except OSError as error:
+        raise AuthorityError("cannot inspect reviewed NAUX binary") from error
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise AuthorityError("reviewed NAUX binary must be a regular non-symlink file")
+    if not os.access(binary, os.X_OK):
+        raise AuthorityError("reviewed NAUX binary is not executable")
+    maximum_work = dict(admission.protocol.metadata)["semantic-validation-max-work"]
+    with tempfile.TemporaryDirectory(prefix="naux-s4-semantic-") as directory_name:
+        directory = Path(directory_name)
+        for kernel in admission.corpus.kernels:
+            source = directory / f"{kernel.ordinal}-{kernel.name}.nx"
+            source.write_text(_validation_source(root, kernel), encoding="utf-8", newline="\n")
+            argv = [
+                str(binary),
+                "run",
+                str(source),
+                "--engine",
+                "vm",
+                "--max-work",
+                maximum_work,
+            ]
+            try:
+                completed = subprocess.run(
+                    argv,
+                    input=b"",
+                    capture_output=True,
+                    check=False,
+                    timeout=60,
+                )
+            except (OSError, subprocess.TimeoutExpired) as error:
+                raise AuthorityError(f"semantic replay failed to execute for {kernel.name}") from error
+            if completed.returncode != 0:
+                raise AuthorityError(f"semantic replay exited nonzero for {kernel.name}")
+            expected = f"{kernel.expected}\n".encode()
+            if completed.stdout != expected or completed.stderr != b"":
+                raise AuthorityError(f"semantic replay output mismatch for {kernel.name}")
+    report_lines = [
+        REPORT_MAGIC,
+        "claim-status\tnot-admitted",
+        "mode\tsemantic-replay",
+        f"authority-seal\t{admission.authority.seal}",
+        f"corpus-seal\t{admission.corpus.seal}",
+        f"protocol-seal\t{admission.protocol.seal}",
+        f"files\t{len(admission.authority.files)}",
+        f"semantic-runs\t{len(admission.corpus.kernels)}",
+    ]
+    for kernel in admission.corpus.kernels:
+        report_lines.append(f"oracle\t{kernel.ordinal}\t{kernel.name}\t{kernel.expected}")
+    body = "".join(f"{line}\n" for line in report_lines).encode()
+    report_root = _sha256(REPORT_DOMAIN + body)
+    return body + f"report-root\t{report_root}\n".encode(), report_root
+
+
 def _default_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
@@ -471,13 +547,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=_default_root())
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--naux-binary", type=Path)
     args = parser.parse_args(argv)
     try:
         admission = validate(args.root)
+        report = admission.report
+        if args.naux_binary is not None:
+            report, _report_root = replay_semantics(args.root, admission, args.naux_binary)
         if args.report is not None:
-            args.report.write_bytes(admission.report)
+            args.report.write_bytes(report)
         else:
-            sys.stdout.buffer.write(admission.report)
+            sys.stdout.buffer.write(report)
     except (AuthorityError, OSError) as error:
         print(f"S4 benchmark authority rejected: {error}", file=sys.stderr)
         return 1

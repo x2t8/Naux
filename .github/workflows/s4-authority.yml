@@ -17,3 +17,13 @@ jobs:
         run: python3 scripts/s4_benchmark_authority.py
       - name: Reject benchmark-authority mutations
         run: python3 -m unittest -v scripts.tests.test_s4_benchmark_authority
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.96.0 --profile minimal
+          rustup default 1.96.0
+      - name: Build reviewed NAUX semantic carrier
+        run: cargo build -p naux --bin naux
+      - name: Replay exact kernel semantics through canonical VM
+        run: >-
+          python3 scripts/s4_benchmark_authority.py
+          --naux-binary target/debug/naux

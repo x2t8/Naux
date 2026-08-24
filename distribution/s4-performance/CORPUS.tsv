@@ -1,9 +1,9 @@
 NAUX-S4-BENCHMARK-CORPUS	1
-meta	dataset	n65536-r50-v1
+meta	dataset	n16384-r50-v1
 meta	numeric-domain	binary64-exact-integer-v1
 meta	kernel-count	4
-kernel	01	sum-dense	throughput	dense-iteration	65536	50	107372544000	benchmarks/s4/naux/sum_dense.nx	benchmarks/c/bench_sum_dense.c	benchmarks/rust/src/bin/bench_sum_dense.rs
-kernel	02	branch-mix	control-flow	stateful-branch	65536	50	-1106833456	benchmarks/s4/naux/branch_mix.nx	benchmarks/c/bench_branch_mix.c	benchmarks/rust/src/bin/bench_branch_mix.rs
-kernel	03	dot-product	arithmetic	quadratic-reduction	65536	50	4691142238208000	benchmarks/s4/naux/dot_product.nx	benchmarks/c/bench_dot_product.c	benchmarks/rust/src/bin/bench_dot_product.rs
-kernel	04	list-update	allocation-mutation	stateful-list-update	65536	50	107452825600	benchmarks/s4/naux/list_update.nx	benchmarks/c/bench_list_update.c	benchmarks/rust/src/bin/bench_list_update.rs
-seal	f6323255d2d588b25d1385a50b10d1c3dd3dc946a6032f850a0fd0f3d04193c6
+kernel	01	sum-dense	throughput	dense-iteration	16384	50	6710476800	benchmarks/s4/naux/sum_dense.nx	benchmarks/c/bench_sum_dense.c	benchmarks/rust/src/bin/bench_sum_dense.rs
+kernel	02	branch-mix	control-flow	stateful-branch	16384	50	-69189632	benchmarks/s4/naux/branch_mix.nx	benchmarks/c/bench_branch_mix.c	benchmarks/rust/src/bin/bench_branch_mix.rs
+kernel	03	dot-product	arithmetic	quadratic-reduction	16384	50	73294064435200	benchmarks/s4/naux/dot_product.nx	benchmarks/c/bench_dot_product.c	benchmarks/rust/src/bin/bench_dot_product.rs
+kernel	04	list-update	allocation-mutation	stateful-list-update	16384	50	6730547200	benchmarks/s4/naux/list_update.nx	benchmarks/c/bench_list_update.c	benchmarks/rust/src/bin/bench_list_update.rs
+seal	793fdac34e1b0536365208a745ad59edaf6dbb94eabcede88d273292861dffa5

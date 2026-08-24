@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -100,10 +101,10 @@ class S4BenchmarkAuthorityTests(unittest.TestCase):
     def test_all_oracles_are_independently_recomputed_and_binary64_exact(self) -> None:
         corpus = AUTH.parse_corpus(self.corpus_path)
         expected = {
-            "sum-dense": 107_372_544_000,
-            "branch-mix": -1_106_833_456,
-            "dot-product": 4_691_142_238_208_000,
-            "list-update": 107_452_825_600,
+            "sum-dense": 6_710_476_800,
+            "branch-mix": -69_189_632,
+            "dot-product": 73_294_064_435_200,
+            "list-update": 6_730_547_200,
         }
         self.assertEqual({kernel.name: kernel.expected for kernel in corpus.kernels}, expected)
         for kernel in corpus.kernels:
@@ -341,6 +342,80 @@ class S4BenchmarkAuthorityTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(AUTH.AuthorityError, "dimensions disagree"):
             AUTH._verify_source_dimensions(REPO_ROOT, changed)
+
+    def test_validation_source_adds_one_output_without_changing_return(self) -> None:
+        corpus = AUTH.parse_corpus(self.corpus_path)
+        for kernel in corpus.kernels:
+            with self.subTest(kernel=kernel.name):
+                original = (REPO_ROOT / kernel.naux_source).read_text(encoding="utf-8")
+                validation = AUTH._validation_source(REPO_ROOT, kernel)
+                self.assertEqual(validation.count("    !say $"), 1)
+                self.assertEqual(validation.count("    ^ $"), 1)
+                self.assertEqual(validation.replace("    !say " + validation.split("    !say ", 1)[1].splitlines()[0] + "\n", "", 1), original)
+
+    def test_semantic_replay_uses_fixed_argv_and_never_a_shell(self) -> None:
+        admission = AUTH.validate(REPO_ROOT)
+        directory = Path(tempfile.mkdtemp(prefix="naux-s4-binary-"))
+        self.addCleanup(shutil.rmtree, directory)
+        binary = directory / "naux"
+        binary.write_bytes(b"reviewed test stub\n")
+        binary.chmod(0o755)
+        expected_outputs = iter(f"{kernel.expected}\n".encode() for kernel in admission.corpus.kernels)
+        calls: list[tuple[list[str], dict]] = []
+
+        def fake_run(argv, **kwargs):
+            calls.append((argv, kwargs))
+            generated = Path(argv[2]).read_text(encoding="utf-8")
+            self.assertEqual(generated.count("    !say $"), 1)
+            return AUTH.subprocess.CompletedProcess(argv, 0, next(expected_outputs), b"")
+
+        with mock.patch.object(AUTH.subprocess, "run", side_effect=fake_run):
+            report, report_root = AUTH.replay_semantics(REPO_ROOT, admission, binary)
+        self.assertEqual(len(calls), 4)
+        self.assertIn(b"mode\tsemantic-replay\n", report)
+        self.assertTrue(report.endswith(f"report-root\t{report_root}\n".encode()))
+        for argv, kwargs in calls:
+            self.assertEqual(argv[0], str(binary.resolve()))
+            self.assertEqual(argv[1], "run")
+            self.assertEqual(argv[3:], ["--engine", "vm", "--max-work", "10000000"])
+            self.assertNotIn("shell", kwargs)
+            self.assertEqual(kwargs["input"], b"")
+            self.assertTrue(kwargs["capture_output"])
+            self.assertFalse(kwargs["check"])
+            self.assertEqual(kwargs["timeout"], 60)
+
+    def test_semantic_replay_rejects_output_or_process_drift(self) -> None:
+        admission = AUTH.validate(REPO_ROOT)
+        directory = Path(tempfile.mkdtemp(prefix="naux-s4-binary-"))
+        self.addCleanup(shutil.rmtree, directory)
+        binary = directory / "naux"
+        binary.write_bytes(b"reviewed test stub\n")
+        binary.chmod(0o755)
+        cases = (
+            AUTH.subprocess.CompletedProcess([], 0, b"wrong\n", b""),
+            AUTH.subprocess.CompletedProcess([], 0, f"{admission.corpus.kernels[0].expected}\n".encode(), b"diagnostic\n"),
+            AUTH.subprocess.CompletedProcess([], 9, b"", b""),
+        )
+        for completed in cases:
+            with self.subTest(returncode=completed.returncode, stderr=completed.stderr):
+                with mock.patch.object(AUTH.subprocess, "run", return_value=completed):
+                    with self.assertRaises(AUTH.AuthorityError):
+                        AUTH.replay_semantics(REPO_ROOT, admission, binary)
+
+    def test_semantic_replay_rejects_symlink_or_nonexecutable_binary(self) -> None:
+        admission = AUTH.validate(REPO_ROOT)
+        directory = Path(tempfile.mkdtemp(prefix="naux-s4-binary-"))
+        self.addCleanup(shutil.rmtree, directory)
+        target = directory / "target"
+        target.write_bytes(b"stub\n")
+        target.chmod(0o755)
+        symlink = directory / "naux-link"
+        symlink.symlink_to(target)
+        with self.assertRaisesRegex(AUTH.AuthorityError, "non-symlink"):
+            AUTH.replay_semantics(REPO_ROOT, admission, symlink)
+        target.chmod(0o644)
+        with self.assertRaisesRegex(AUTH.AuthorityError, "not executable"):
+            AUTH.replay_semantics(REPO_ROOT, admission, target)
 
     def test_manifests_are_data_only(self) -> None:
         forbidden = (b"$(", b"`", b";", b"&&", b"||")

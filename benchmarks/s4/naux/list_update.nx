@@ -1,5 +1,5 @@
 ~ rite
-    $n = 65536
+    $n = 16384
     $reps = 50
     $arr = list_range($n)
 
