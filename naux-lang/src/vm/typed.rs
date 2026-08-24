@@ -8041,6 +8041,10 @@ mod tests {
     use crate::{lexer, parser};
     use std::collections::HashMap;
 
+    #[cfg_attr(
+        any(not(target_arch = "x86_64"), not(target_os = "linux")),
+        ignore = "typed native path observation requires Linux x86-64"
+    )]
     #[test]
     fn untimed_run_collects_path_facts_without_clock_samples() {
         let source = "~ rite\n    $items = list_range(4)\n    ^ len($items)\n~ end\n";
