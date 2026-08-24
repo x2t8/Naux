@@ -1,0 +1,23 @@
+NAUX-S4-REFERENCE-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP2
+meta	authority-id	s4-reference-baselines-v1
+meta	target	x86_64-unknown-linux-gnu
+meta	claim-status	not-admitted
+meta	kernel-count	4
+meta	role-count	2
+meta	file-count	11
+component	baselines	distribution/s4-performance/BASELINES.tsv	7ea919d8a35dd3ebf4b604458e511d1117c4365fef2b847de9c4d74f06198888
+parent	benchmark-authority	distribution/s4-performance/AUTHORITY.tsv	b23533c4e96ec9e3b66482e96b79fdeb5985c823ce012d827e69eb1c14a4b659
+file	100644	719	4ca435e5ab9f3c216d87f50979921589e31130dbea42cac77c9c82ecfebf0dff	.github/workflows/s4-reference-baselines.yml
+file	100644	2568	f423bfa4056f1b0bacb5885904cecfbdd95b5be6d2f207b331dc3a71909e69b7	benchmarks/s4/c/baseline.h
+file	100644	980	bb2e483e5f6348a42e58071550fa3b7bbfcf63df4602f879596f42a0ae716e3f	benchmarks/s4/c/branch_mix.c
+file	100644	848	94b43148194dfca1a0c9ad571402d338a745cbc57d7e083fd6b4f63a82f52a4d	benchmarks/s4/c/dot_product.c
+file	100644	877	0b9bb17070f3a6528d8aa26b4d7b86f446d858e8aa6ed1ac9d8c64ad3fd41eb4	benchmarks/s4/c/list_update.c
+file	100644	798	e86ca5f94eaecfe1d3af03260141639b81291198eed97afe804a4991b5204de6	benchmarks/s4/c/sum_dense.c
+file	100644	1069	d9c3ead1687484c10b01c7c4a821f6eebc26df1e9b68e128c025b7de7b214ffa	distribution/s4-performance/BASELINES.tsv
+file	100644	664	5f53898f308d051ac97659b024340981cf224556b40f443827e643350ba70bcc	distribution/s4-performance/WP2-NONCLAIMS.md
+file	100644	811	49a7f01067d177eb255e93bdf825b64c3840e24b3e39e31deeea71db0e0959cb	distribution/s4-performance/WP2-README.md
+file	100644	21625	4a023439d572bce684c67a62d1d81a407c8b23cc337e3e1d3d5583fb4a113089	scripts/s4_reference_baselines.py
+file	100644	12689	4e9b967b6813b5bda4771527173e5fbb5aff22378c962e531bcaa358c961c987	scripts/tests/test_s4_reference_baselines.py
+seal	0361c1e0d90bc3ba8d9a1e0bead7466bd71be3e3a723d605606730144ae7db6a

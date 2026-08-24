@@ -1,0 +1,24 @@
+name: S4 Reference Baselines
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  reference-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate sealed S4-WP1 parent and S4-WP2 authority
+        run: python3 scripts/s4_reference_baselines.py
+      - name: Reject reference-baseline mutations
+        run: python3 -m unittest -v scripts.tests.test_s4_reference_baselines
+      - name: Replay exact untimed C generic and specialized parity
+        run: python3 scripts/s4_reference_baselines.py --cc cc
+      - name: Reject whitespace damage
+        run: git diff --check

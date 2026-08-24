@@ -1,0 +1,30 @@
+NAUX-S4-REFERENCE-BASELINES	1
+meta	policy-version	1.0.0
+meta	wp1-authority-seal	b23533c4e96ec9e3b66482e96b79fdeb5985c823ce012d827e69eb1c14a4b659
+meta	claim-status	not-admitted
+meta	target	x86_64-unknown-linux-gnu
+meta	dataset	n16384-r50-v1
+meta	language	c17
+meta	n	16384
+meta	reps	50
+meta	kernel-count	4
+meta	role-count	2
+role	01	c-generic	runtime-n-and-reps
+role	02	c-specialized	static-n-and-reps
+flag	01	common	-D_POSIX_C_SOURCE=200809L
+flag	02	common	-std=c17
+flag	03	common	-O3
+flag	04	common	-fno-fast-math
+flag	05	common	-fno-lto
+flag	06	common	-Wall
+flag	07	common	-Wextra
+flag	08	common	-Werror
+flag	09	common	-Wpedantic
+flag	10	specialized	-DNAUX_S4_SPECIALIZED=1
+flag	11	specialized	-DNAUX_S4_N=16384
+flag	12	specialized	-DNAUX_S4_REPS=50
+kernel	01	sum-dense	6710476800	benchmarks/s4/c/sum_dense.c
+kernel	02	branch-mix	-69189632	benchmarks/s4/c/branch_mix.c
+kernel	03	dot-product	73294064435200	benchmarks/s4/c/dot_product.c
+kernel	04	list-update	6730547200	benchmarks/s4/c/list_update.c
+seal	7ea919d8a35dd3ebf4b604458e511d1117c4365fef2b847de9c4d74f06198888
