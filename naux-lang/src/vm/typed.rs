@@ -2497,6 +2497,65 @@ fn find_loop_exit(code: &[Instr], start: usize, end: usize) -> Option<usize> {
     exit
 }
 
+fn trace_exit_live_locals(code: &[Instr], exit_target: usize) -> std::collections::BTreeSet<usize> {
+    if exit_target >= code.len() {
+        return std::collections::BTreeSet::new();
+    }
+
+    // Classical backward may-liveness over bytecode control flow. In
+    // particular this follows an enclosing loop's backward edge, which a
+    // linear suffix scan would miss. A trace optimization may remove a local
+    // store only when that local is absent from live-in at the trace exit.
+    let mut live_in = vec![std::collections::BTreeSet::new(); code.len()];
+    loop {
+        let mut changed = false;
+        for ip in (0..code.len()).rev() {
+            let instruction = &code[ip];
+            let mut next_live = std::collections::BTreeSet::new();
+            let mut merge_successor = |target: usize| {
+                if let Some(successor_live) = live_in.get(target) {
+                    next_live.extend(successor_live.iter().copied());
+                }
+            };
+            match instruction {
+                Instr::Jump(target) => merge_successor(*target),
+                Instr::JumpIfFalse(target) | Instr::JumpLocalIfFalse(_, target) => {
+                    merge_successor(*target);
+                    merge_successor(ip.saturating_add(1));
+                }
+                Instr::Return => {}
+                _ => merge_successor(ip.saturating_add(1)),
+            }
+
+            match instruction {
+                Instr::StoreLocal(local) | Instr::StoreLocalKeep(local) => {
+                    next_live.remove(local);
+                }
+                Instr::AddLocalConst(local, _) => {
+                    next_live.insert(*local);
+                }
+                _ => {}
+            }
+            match instruction {
+                Instr::LoadLocal(local) | Instr::JumpLocalIfFalse(local, _) => {
+                    next_live.insert(*local);
+                }
+                _ => {}
+            }
+
+            if live_in[ip] != next_live {
+                live_in[ip] = next_live;
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+
+    live_in[exit_target].clone()
+}
+
 fn find_unsupported_internal_backedge(
     code: &[Instr],
     start: usize,
@@ -3460,7 +3519,10 @@ fn rewrite_map_const_slot_ptr_stable(
     (out, stable_maps, rewrite_count)
 }
 
-fn rewrite_map_stable_add_local(ops: &[jit::TraceOp]) -> (Vec<jit::TraceOp>, u64) {
+fn rewrite_map_stable_add_local(
+    ops: &[jit::TraceOp],
+    exit_live_locals: &std::collections::BTreeSet<usize>,
+) -> (Vec<jit::TraceOp>, u64) {
     let mut out: Vec<jit::TraceOp> = Vec::with_capacity(ops.len());
     let mut i = 0usize;
     let mut rewrite_count: u64 = 0;
@@ -3491,6 +3553,7 @@ fn rewrite_map_stable_add_local(ops: &[jit::TraceOp]) -> (Vec<jit::TraceOp>, u64
                     && key_local == key_idx
                     && tmp_local_a == tmp_local_b
                     && *tmp_local_a != *acc_local
+                    && !exit_live_locals.contains(tmp_local_a)
                     && !temp_local_reused_before_overwrite(ops, i + 6, *tmp_local_a) =>
                 {
                     out.push(jit::TraceOp::LoadLocal(*map_local));
@@ -3536,6 +3599,13 @@ fn temp_local_reused_before_overwrite(ops: &[jit::TraceOp], start: usize, tmp: u
 }
 
 fn rewrite_map_stable_cmp_branch(ops: &[jit::TraceOp]) -> (Vec<jit::TraceOp>, u64) {
+    rewrite_map_stable_cmp_branch_with_live_out(ops, &std::collections::BTreeSet::new())
+}
+
+fn rewrite_map_stable_cmp_branch_with_live_out(
+    ops: &[jit::TraceOp],
+    exit_live_locals: &std::collections::BTreeSet<usize>,
+) -> (Vec<jit::TraceOp>, u64) {
     let mut out: Vec<jit::TraceOp> = Vec::with_capacity(ops.len());
     let mut i = 0usize;
     let mut rewrite_count: u64 = 0;
@@ -3593,6 +3663,10 @@ fn rewrite_map_stable_cmp_branch(ops: &[jit::TraceOp]) -> (Vec<jit::TraceOp>, u6
                     out.push(jit::TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(
                         *map_idx, *key_idx, *key_bits, *deopt_ip, *value_ptr,
                     ));
+                    if exit_live_locals.contains(tmp_local_a) {
+                        out.push(jit::TraceOp::Dup);
+                        out.push(jit::TraceOp::StoreLocal(*tmp_local_a));
+                    }
                     out.push(jit::TraceOp::ConstNum(*cmp_rhs));
                     out.push(cmp_op.clone());
                     out.push(guard_op.clone());
@@ -3641,6 +3715,10 @@ fn rewrite_map_stable_cmp_branch(ops: &[jit::TraceOp]) -> (Vec<jit::TraceOp>, u6
                     out.push(jit::TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(
                         *map_idx, *key_idx, *key_bits, *deopt_ip, *value_ptr,
                     ));
+                    if exit_live_locals.contains(tmp_local) {
+                        out.push(jit::TraceOp::Dup);
+                        out.push(jit::TraceOp::StoreLocal(*tmp_local));
+                    }
                     out.push(jit::TraceOp::ConstNum(*cmp_rhs));
                     out.push(cmp_op.clone());
                     out.push(guard_op.clone());
@@ -3658,6 +3736,13 @@ fn rewrite_map_stable_cmp_branch(ops: &[jit::TraceOp]) -> (Vec<jit::TraceOp>, u6
 }
 
 fn rewrite_map_stable_mul_acc(ops: &[jit::TraceOp]) -> (Vec<jit::TraceOp>, u64) {
+    rewrite_map_stable_mul_acc_with_live_out(ops, &std::collections::BTreeSet::new())
+}
+
+fn rewrite_map_stable_mul_acc_with_live_out(
+    ops: &[jit::TraceOp],
+    exit_live_locals: &std::collections::BTreeSet<usize>,
+) -> (Vec<jit::TraceOp>, u64) {
     let mut out: Vec<jit::TraceOp> = Vec::with_capacity(ops.len());
     let mut i = 0usize;
     let mut rewrite_count: u64 = 0;
@@ -3702,6 +3787,8 @@ fn rewrite_map_stable_mul_acc(ops: &[jit::TraceOp]) -> (Vec<jit::TraceOp>, u64) 
                     && *tmp_mul_a != *key_local
                     && *tmp_val_a != *acc_local
                     && *tmp_mul_a != *acc_local
+                    && !exit_live_locals.contains(tmp_val_a)
+                    && !exit_live_locals.contains(tmp_mul_a)
                     && !temp_local_reused_before_overwrite(ops, i + 10, *tmp_val_a)
                     && !temp_local_reused_before_overwrite(ops, i + 10, *tmp_mul_a) =>
                 {
@@ -3730,6 +3817,7 @@ fn apply_fusion_tier(
     ops: &[jit::TraceOp],
     mutated_maps: &std::collections::BTreeSet<usize>,
     locals: &[f64],
+    exit_live_locals: &std::collections::BTreeSet<usize>,
 ) -> FusionTierResult {
     let rules = [
         FusionRuleId::MapConstSlotStable,
@@ -3755,7 +3843,7 @@ fn apply_fusion_tier(
                 }
             }
             FusionRuleId::MapStableAddLocal => {
-                let (next_ops, count) = rewrite_map_stable_add_local(&state.ops);
+                let (next_ops, count) = rewrite_map_stable_add_local(&state.ops, exit_live_locals);
                 state.ops = next_ops;
                 state.hits.map_stable_add_local =
                     state.hits.map_stable_add_local.saturating_add(count);
@@ -3764,7 +3852,8 @@ fn apply_fusion_tier(
                 }
             }
             FusionRuleId::MapStableCmpBranch => {
-                let (next_ops, count) = rewrite_map_stable_cmp_branch(&state.ops);
+                let (next_ops, count) =
+                    rewrite_map_stable_cmp_branch_with_live_out(&state.ops, exit_live_locals);
                 state.ops = next_ops;
                 state.hits.map_stable_cmp_branch =
                     state.hits.map_stable_cmp_branch.saturating_add(count);
@@ -3773,7 +3862,8 @@ fn apply_fusion_tier(
                 }
             }
             FusionRuleId::MapStableMulAcc => {
-                let (next_ops, count) = rewrite_map_stable_mul_acc(&state.ops);
+                let (next_ops, count) =
+                    rewrite_map_stable_mul_acc_with_live_out(&state.ops, exit_live_locals);
                 state.ops = next_ops;
                 state.hits.map_stable_mul_acc = state.hits.map_stable_mul_acc.saturating_add(count);
                 if trace_debug() && count > 0 {
@@ -4477,8 +4567,15 @@ fn rewrite_dot_product_multi_accum(
 }
 
 fn eliminate_dead_stores(ops: &[jit::TraceOp]) -> Vec<jit::TraceOp> {
+    eliminate_dead_stores_with_live_out(ops, &std::collections::BTreeSet::new())
+}
+
+fn eliminate_dead_stores_with_live_out(
+    ops: &[jit::TraceOp],
+    exit_live_locals: &std::collections::BTreeSet<usize>,
+) -> Vec<jit::TraceOp> {
     let mut dead_stores: std::collections::HashSet<usize> = std::collections::HashSet::new();
-    let mut used: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    let mut used: std::collections::HashSet<usize> = exit_live_locals.iter().copied().collect();
     if ops.iter().any(|op| matches!(op, jit::TraceOp::JumpStart)) {
         // A trace is cyclic: values read near the beginning are live across the
         // backedge, so the final store in the body must survive DSE.
@@ -6195,6 +6292,9 @@ fn build_trace_plan(
     runtime: &jit::JitRuntime,
     unsafe_flags: &[bool],
 ) -> Option<TracePlan> {
+    let exit_live_locals = find_loop_exit(code, start, end)
+        .map(|exit_target| trace_exit_live_locals(code, exit_target))
+        .unwrap_or_default();
     let bounds_guards = analyze_bounds_guards(code, start, end, locals, runtime)?;
     let mut uses_bounds_guards = false;
     let mut ops: Vec<jit::TraceOp> = Vec::new();
@@ -6912,7 +7012,7 @@ fn build_trace_plan(
         }
         let optimized = rewrite_lenlist_const(&ops, locals, runtime);
         let optimized = specialize_list_data_ptr(&optimized, locals, runtime);
-        let fusion_result = apply_fusion_tier(&optimized, &mutated_maps, locals);
+        let fusion_result = apply_fusion_tier(&optimized, &mutated_maps, locals, &exit_live_locals);
         let optimized = fusion_result.ops;
         for idx in &fusion_result.stable_const_slot_maps {
             pic_map_locals.remove(idx);
@@ -6965,12 +7065,12 @@ fn build_trace_plan(
     let (optimized, merge_locals_dot) = rewrite_dot_product_multi_accum(&optimized);
     let mut merge_locals = merge_locals;
     merge_locals.extend(merge_locals_dot);
-    let fusion_result = apply_fusion_tier(&optimized, &mutated_maps, locals);
+    let fusion_result = apply_fusion_tier(&optimized, &mutated_maps, locals, &exit_live_locals);
     let optimized = fusion_result.ops;
     for idx in &fusion_result.stable_const_slot_maps {
         pic_map_locals.remove(idx);
     }
-    let optimized = eliminate_dead_stores(&optimized);
+    let optimized = eliminate_dead_stores_with_live_out(&optimized, &exit_live_locals);
     let optimized = rewrite_loop_bounds_guard(&optimized);
     let optimized = insert_dot_product_noalias_guard(&optimized);
     let optimized = canonicalize_loop_form(&optimized);
@@ -8029,9 +8129,11 @@ fn guard_profile(
 mod tests {
     use super::{
         analyze_bounds_guards, bounds_guard_covers_list, build_trace_plan, eliminate_dead_stores,
-        expand_profiled_mutation_aliases, find_unsupported_internal_backedge, guard_profile,
-        mark_temp_allocs, optimize_trace_ops, record_speculative_deopt,
-        rewrite_map_stable_cmp_branch, rewrite_map_stable_mul_acc, unroll_list_update_x4,
+        eliminate_dead_stores_with_live_out, expand_profiled_mutation_aliases,
+        find_unsupported_internal_backedge, guard_profile, mark_temp_allocs, optimize_trace_ops,
+        record_speculative_deopt, rewrite_map_stable_add_local, rewrite_map_stable_cmp_branch,
+        rewrite_map_stable_cmp_branch_with_live_out, rewrite_map_stable_mul_acc,
+        rewrite_map_stable_mul_acc_with_live_out, trace_exit_live_locals, unroll_list_update_x4,
         LocalGuard, ShapeGuard, TraceProfile, TraceTelemetryTotals, TypedRunner,
     };
     use crate::vm::bytecode::Instr;
@@ -8418,6 +8520,20 @@ mod tests {
     }
 
     #[test]
+    fn dead_store_elimination_preserves_exit_live_store() {
+        let ops = vec![
+            TraceOp::ConstNum(96.0),
+            TraceOp::StoreLocal(2),
+            TraceOp::JumpStart,
+        ];
+        let live = std::collections::BTreeSet::from([2]);
+
+        let optimized = eliminate_dead_stores_with_live_out(&ops, &live);
+
+        assert!(matches!(optimized[1], TraceOp::StoreLocal(2)));
+    }
+
+    #[test]
     fn trace_optimizer_reaches_fixed_point_for_identity_store_chain() {
         let ops = vec![
             TraceOp::LoadLocal(0),
@@ -8493,6 +8609,21 @@ mod tests {
     }
 
     #[test]
+    fn trace_exit_liveness_includes_continuation_reads() {
+        let code = vec![
+            Instr::Jump(0),
+            Instr::LoadLocal(7),
+            Instr::StoreLocal(8),
+            Instr::AddLocalConst(9, 1.0),
+            Instr::Return,
+        ];
+
+        let live = trace_exit_live_locals(&code, 1);
+
+        assert_eq!(live.into_iter().collect::<Vec<_>>(), vec![7, 9]);
+    }
+
+    #[test]
     fn optimize_trace_ops_fuses_index_ptr_off_accumulate_roundtrip() {
         let ops = vec![
             TraceOp::LoadLocal(6),
@@ -8553,6 +8684,52 @@ mod tests {
         assert!(matches!(out[4], TraceOp::GtNum));
         assert!(matches!(out[5], TraceOp::GuardFalse));
         assert!(matches!(out[6], TraceOp::JumpStart));
+    }
+
+    #[test]
+    fn rewrite_map_stable_cmp_branch_materializes_exit_live_tmp() {
+        let ops = vec![
+            TraceOp::LoadLocal(0),
+            TraceOp::LoadLocal(1),
+            TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(0, 1, 123, 77, 0xCAFE),
+            TraceOp::StoreLocal(2),
+            TraceOp::LoadLocal(2),
+            TraceOp::ConstNum(64.0),
+            TraceOp::GtNum,
+            TraceOp::GuardFalse,
+            TraceOp::JumpStart,
+        ];
+        let live = std::collections::BTreeSet::from([2]);
+
+        let (out, hits) = rewrite_map_stable_cmp_branch_with_live_out(&ops, &live);
+
+        assert_eq!(hits, 1);
+        assert_eq!(out.len(), 9);
+        assert!(matches!(out[3], TraceOp::Dup));
+        assert!(matches!(out[4], TraceOp::StoreLocal(2)));
+        assert!(matches!(out[5], TraceOp::ConstNum(v) if (v - 64.0).abs() < f64::EPSILON));
+        assert!(matches!(out[6], TraceOp::GtNum));
+        assert!(matches!(out[7], TraceOp::GuardFalse));
+        assert!(matches!(out[8], TraceOp::JumpStart));
+    }
+
+    #[test]
+    fn rewrite_map_stable_add_local_refuses_exit_live_tmp() {
+        let ops = vec![
+            TraceOp::LoadLocal(0),
+            TraceOp::LoadLocal(1),
+            TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(0, 1, 123, 77, 0xCAFE),
+            TraceOp::StoreLocal(2),
+            TraceOp::LoadLocal(2),
+            TraceOp::AddLocalFromStack(3),
+            TraceOp::JumpStart,
+        ];
+        let live = std::collections::BTreeSet::from([2]);
+
+        let (out, hits) = rewrite_map_stable_add_local(&ops, &live);
+
+        assert_eq!(hits, 0);
+        assert_eq!(format!("{out:?}"), format!("{ops:?}"));
     }
 
     #[test]
@@ -8695,6 +8872,29 @@ mod tests {
         assert!(matches!(out[4], TraceOp::MulNum));
         assert!(matches!(out[5], TraceOp::AddLocalFromStack(4)));
         assert!(matches!(out[6], TraceOp::JumpStart));
+    }
+
+    #[test]
+    fn rewrite_map_stable_mul_acc_refuses_exit_live_tmp() {
+        let ops = vec![
+            TraceOp::LoadLocal(0),
+            TraceOp::LoadLocal(1),
+            TraceOp::MapGetTextKeyConstSlotPtrStableNoVer(0, 1, 123, 77, 0xCAFE),
+            TraceOp::StoreLocal(2),
+            TraceOp::LoadLocal(2),
+            TraceOp::ConstNum(1.5),
+            TraceOp::MulNum,
+            TraceOp::StoreLocal(3),
+            TraceOp::LoadLocal(3),
+            TraceOp::AddLocalFromStack(4),
+            TraceOp::JumpStart,
+        ];
+        let live = std::collections::BTreeSet::from([2]);
+
+        let (out, hits) = rewrite_map_stable_mul_acc_with_live_out(&ops, &live);
+
+        assert_eq!(hits, 0);
+        assert_eq!(format!("{out:?}"), format!("{ops:?}"));
     }
 
     #[test]
