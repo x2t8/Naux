@@ -18,6 +18,7 @@ pub mod refinement;
 pub mod region;
 pub mod renderer;
 pub mod runtime;
+pub mod s4_native_carrier;
 pub mod stdlib;
 pub mod thesis_surface_native;
 pub mod thesis_surface_native_process;

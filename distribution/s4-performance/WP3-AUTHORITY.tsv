@@ -1,0 +1,50 @@
+NAUX-S4-NATIVE-CARRIER-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP3
+meta	authority-id	s4-naux-native-carrier-v1
+meta	target	x86_64-unknown-linux-gnu
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	kernel-count	4
+meta	file-count	38
+parent	benchmark-authority	distribution/s4-performance/AUTHORITY.tsv	b23533c4e96ec9e3b66482e96b79fdeb5985c823ce012d827e69eb1c14a4b659
+parent	reference-authority	distribution/s4-performance/WP2-AUTHORITY.tsv	0361c1e0d90bc3ba8d9a1e0bead7466bd71be3e3a723d605606730144ae7db6a
+file	100644	1152	3e89422cbe22ec0bb22810e044e4070c29471de6697958e2da4d1253ab0baf64	.github/workflows/s4-native-carrier.yml
+file	100644	23078	834d5158b49ccbb5cf62f36de3c9a9b431c027bba27cf6bfa66a22c30167ea11	Cargo.lock
+file	100644	1062	5e57d2f6c272250b04ea2bf69f9c783e9904537039fa62106ec0c578c3366285	naux-lang/Cargo.toml
+file	100644	669	557d9107bdf6e308f9c0d182b8909b6a7c5e8f7c1034d78b96e3d6e454787b0e	naux-lang/examples/naux_s4_native_carrier.rs
+file	100644	75	d1ef696f541c41dcbb367cf247517a6c9d0749bdf343aec33779c6358a9d8377	naux-lang/src/ask/mod.rs
+file	100644	139	af082e8504c6b917fd3743931e9042b9b3c23df4f2ab484e8fdc94c22a0abbdb	naux-lang/src/ask/stub.rs
+file	100644	3831	f7d36dcbe5ee593ee3183717177d8f97ac2da4ab0f114551c060debe922d47d0	naux-lang/src/ast.rs
+file	100644	37092	11f1c960b5fb55323c047e02b9bf5306a14f1096d389271c8d1936efbb438bf5	naux-lang/src/core/encoding.rs
+file	100644	65540	55986bec90bbb318979269014a09837afad80b91204ab6cb5869e72faf07ccc2	naux-lang/src/core/mod.rs
+file	100644	7652	3f4eee326a41905da89323006a1af9f7f2f6bcbc60784cef283592bd89691b61	naux-lang/src/core/schema.rs
+file	100644	6518	f34c25d4d624e2b384b8af4c5b7bc37d80c8b7f297e0d92a5cda6d1aa78a7769	naux-lang/src/diagnostic.rs
+file	100644	16675	338f7c469df31ea8c3eeb39aed94c3c8a8d65b800853f7de0b10eaaa5a4aae00	naux-lang/src/lexer.rs
+file	100644	983	91863a19badbe423e40154cc3f0799750ea9c1732e9ae0f8607e0bf136ceaabf	naux-lang/src/lib.rs
+file	100644	859	3a345aa490cf469af8cb1a9274731b9bf08590ced88c82af9aca6dcd9a04ff1b	naux-lang/src/parser/error.rs
+file	100644	365	be354f585010b615de3acd9e32e1717f18a6456d7c16463f551d412567b1fae6	naux-lang/src/parser/mod.rs
+file	100644	28162	0a2fc419b900bd6356e0cf5777c3daac5fa5da94a4ab344e2070c079f8759534	naux-lang/src/parser/parser.rs
+file	100644	127	63b1caf9d81f44b7e4ab8cbeb8ba5723d56994b16ce9c63afdddf1a3504d8d58	naux-lang/src/parser/utils.rs
+file	100644	19513	cfa45c693663572cd7b0499b8074f2d8ecd6b68448a330d41ced1789cdb542f4	naux-lang/src/runtime/env.rs
+file	100644	3480	ef1859ed0f7b06695bf7d0e1b38e24a7a82887d8f6c8b7bc0f45e51af4d34776	naux-lang/src/runtime/error.rs
+file	100644	340	f6d80702a7d41ee5cd5b001eb62c75bfb660fb2aab860653aacc6bf9fffd8d82	naux-lang/src/runtime/events.rs
+file	100644	478	04e810691c8c979aadca7b8d1c62c609ca2977091ea6485c356eda4f2d7fed99	naux-lang/src/runtime/mod.rs
+file	100644	15625	787315a9d515a2a517bef3182aa2e31e6b76dd2938ba525f9528057588d99dad	naux-lang/src/runtime/value.rs
+file	100644	23129	c479b2cb9d585da38bc3a225466e51c550ddfabe4598a86cf535499aac420e6c	naux-lang/src/s4_native_carrier.rs
+file	100644	986	64b2efc071efef4eae440e9b34d69a5d325ff696dd1283e3df7435e38b454a9a	naux-lang/src/token.rs
+file	100644	19593	c16f08e28e8150cd36b5c8c0c7b6f2a9a5e8b11fc04bb6d3a93771b9b19cdd7b	naux-lang/src/typecheck.rs
+file	100644	4953	1ace133af80d5818cf7c2566b48424c969f40de4b411788dade8f7c0a334df4e	naux-lang/src/vm/bytecode.rs
+file	100644	119838	d0da7317d68e844b378c6bd42dad8245ac2252f3644451d01b7940a903eb489f	naux-lang/src/vm/compiler.rs
+file	100644	59711	8d9b87533798a945142c4ce0e407d9465464c5e1d3ad7c5c2b4ac754a20bfe7d	naux-lang/src/vm/egraph.rs
+file	100644	25783	6a5713ff9559cedd42687683433b662a8f528aea42f78f01f921e0216f5bb7e1	naux-lang/src/vm/ir.rs
+file	100644	297611	c2e1575f5619eccae9bed79775c8d4441cd5b6ddc11caa0bf95daf39678dc0af	naux-lang/src/vm/jit.rs
+file	100644	184	35880dbee4be7d08e1bbe09dc49b961cfb82f63e2df96e38c34b779b8fe6777e	naux-lang/src/vm/mod.rs
+file	100644	125391	aeff24cdfa02b5992fe511eee779f104d1c836047afaa60365a8a85b75e08bbb	naux-lang/src/vm/ssa.rs
+file	100644	341202	0b4046ca5c0d863beb81ad9058e91eaa4499ca2e007bd2d3408811806dcbb6dc	naux-lang/src/vm/typed.rs
+file	100644	5560	bed569ccbb60b7dcd521561b8c58c1ae46b98ffe87bc0dfa97aeca38cc9cef34	naux-lang/src/vm/value_bits.rs
+file	100644	717	f45739f4a0654031d2f0e0c03df347d44262fa98388695ee4c54611d0b05ec81	distribution/s4-performance/WP3-NONCLAIMS.md
+file	100644	1003	1f918f156ae4d9875e1b4129df2ab79042328d1a416ed9341e47cf96aa720347	distribution/s4-performance/WP3-README.md
+file	100644	23195	691db2e2c88a76e945b96d96c9f3459c0087fad0625f527027718631832c7ed7	scripts/s4_native_carrier.py
+file	100644	9251	b5eb8e0839ae6af6c9861e45007a13e7701d42a5722d50f2bb0092dfb97a73e1	scripts/tests/test_s4_native_carrier.py
+seal	8a68afedff9274c5c2143062c0993ea8e53430f7609f5b9126eb4f4f6c1e4c4d

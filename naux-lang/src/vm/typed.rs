@@ -725,6 +725,18 @@ pub struct RunTiming {
     pub interp_index_elements: u64,
 }
 
+/// Path facts from a run that deliberately does not observe a clock.
+///
+/// This is a correctness/provenance surface, not a benchmark surface. In
+/// particular it contains no elapsed duration and cannot be converted into a
+/// throughput or latency claim.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct UntimedRunObservation {
+    pub list_range_calls: u64,
+    pub avx_dot_elements: u64,
+    pub interp_index_elements: u64,
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TraceOnlyPrep {
     pub trace_count: usize,
@@ -839,18 +851,41 @@ impl TypedRunner {
 
     pub fn run(&mut self, prog: &Program) -> VmResult<(Value, Vec<RuntimeEvent>)> {
         self.trace_replay = None;
-        self.run_internal(prog, None)
+        self.run_internal(prog, None, true)
+    }
+
+    /// Execute through the typed engine while collecting path counts only.
+    ///
+    /// Unlike [`Self::run`], this entry point does not sample total, setup, or
+    /// compute time. It exists so semantic/native admission can precede and
+    /// remain separate from controlled performance measurement.
+    pub fn run_untimed(
+        &mut self,
+        prog: &Program,
+    ) -> VmResult<(Value, Vec<RuntimeEvent>, UntimedRunObservation)> {
+        self.trace_replay = None;
+        let (value, events) = self.run_internal(prog, None, false)?;
+        Ok((
+            value,
+            events,
+            UntimedRunObservation {
+                list_range_calls: self.last_run_timing.list_range_calls,
+                avx_dot_elements: self.last_run_timing.avx_dot_elements,
+                interp_index_elements: self.last_run_timing.interp_index_elements,
+            },
+        ))
     }
 
     fn run_internal(
         &mut self,
         prog: &Program,
         capture: Option<&mut TraceExecCapture>,
+        collect_timing: bool,
     ) -> VmResult<(Value, Vec<RuntimeEvent>)> {
         if !is_supported_program(prog) {
             return Err("typed VM only supports numeric/list/text/map subset".into());
         }
-        let run_start = Instant::now();
+        let run_start = collect_timing.then(Instant::now);
         let mut run_timing = RunTiming::default();
         let mut events: Vec<RuntimeEvent> = Vec::new();
         let mut locals = vec![0.0f64; prog.main_locals.len().max(1)];
@@ -873,6 +908,7 @@ impl TypedRunner {
             &mut self.hot_counters,
             &mut self.telemetry_totals,
             &mut run_timing,
+            collect_timing,
             capture,
         )?;
 
@@ -892,8 +928,10 @@ impl TypedRunner {
         run_timing.avx_dot_elements = run_avx_dot_elements;
         run_timing.interp_index_elements = run_interp_index_elements;
 
-        run_timing.total_ns = run_start.elapsed().as_nanos();
-        run_timing.compute_ns = run_timing.total_ns.saturating_sub(run_timing.setup_ns);
+        if let Some(run_start) = run_start {
+            run_timing.total_ns = run_start.elapsed().as_nanos();
+            run_timing.compute_ns = run_timing.total_ns.saturating_sub(run_timing.setup_ns);
+        }
         self.last_run_timing = run_timing;
 
         Ok((value, events))
@@ -914,7 +952,7 @@ impl TypedRunner {
 
         if self.trace_cache.is_empty() {
             for _ in 0..HOT_THRESHOLD.saturating_add(4) {
-                let _ = self.run_internal(prog, None)?;
+                let _ = self.run_internal(prog, None, true)?;
                 if !self.trace_cache.is_empty() {
                     break;
                 }
@@ -926,7 +964,7 @@ impl TypedRunner {
         };
 
         let mut capture = TraceExecCapture::for_key(Some(key));
-        let _ = self.run_internal(prog, Some(&mut capture))?;
+        let _ = self.run_internal(prog, Some(&mut capture), true)?;
         if capture.captured_key != Some(key) {
             return Err("trace-only failed to capture trace entry state".into());
         }
@@ -1297,6 +1335,7 @@ struct CallContext {
     trace_cache: *mut HashMap<TraceKey, TraceEntry>,
     hot_counters: *mut HashMap<TraceKey, u32>,
     telemetry_totals: *mut TraceTelemetryTotals,
+    collect_timing: bool,
 }
 
 extern "C" fn call_user_fn(
@@ -1367,6 +1406,7 @@ extern "C" fn call_user_fn(
         hot_counters,
         telemetry_totals,
         &mut run_timing,
+        ctx.collect_timing,
         None,
     ) {
         Ok(bits) => bits,
@@ -1475,6 +1515,7 @@ pub fn run_typed_with_trace(prog: &Program) -> VmResult<(Value, Vec<RuntimeEvent
         trace_cache: &mut trace_cache as *mut HashMap<TraceKey, TraceEntry>,
         hot_counters: &mut hot_counters as *mut HashMap<TraceKey, u32>,
         telemetry_totals: &mut telemetry_totals as *mut TraceTelemetryTotals,
+        collect_timing: true,
     });
     runtime.call_ctx = (&mut *call_ctx) as *mut CallContext as *mut std::ffi::c_void;
     runtime.call_user = Some(call_user_fn);
@@ -1492,6 +1533,7 @@ pub fn run_typed_with_trace(prog: &Program) -> VmResult<(Value, Vec<RuntimeEvent
         &mut hot_counters,
         &mut telemetry_totals,
         &mut run_timing,
+        true,
         None,
     )?;
 
@@ -1577,6 +1619,7 @@ fn run_block(
     hot_counters: &mut HashMap<TraceKey, u32>,
     telemetry_totals: &mut TraceTelemetryTotals,
     timing: &mut RunTiming,
+    collect_timing: bool,
     mut capture: Option<&mut TraceExecCapture>,
 ) -> VmResult<u64> {
     let mut ip: usize = 0;
@@ -1586,6 +1629,33 @@ fn run_block(
     let mut internal_branch_handoff: Option<InternalBranchHandoff> = None;
 
     while ip < code.len() {
+        // A trace is first discovered at a loop back-edge, but subsequent
+        // entries can arrive directly at the loop header (for example when an
+        // enclosing loop starts its next iteration). Route that already
+        // compiled entry through the ordinary back-edge dispatch so the first
+        // scalar iteration is not needlessly interpreted. The trace itself
+        // still executes the header condition and all existing profile guards;
+        // no source or kernel-specific shortcut is introduced here.
+        if *sp == 0 {
+            let entry_key = (code_id, ip);
+            let scalar_handoff_active = scalar_tail_handoff
+                .as_ref()
+                .is_some_and(|handoff| handoff.key == entry_key);
+            let branch_handoff_active = internal_branch_handoff
+                .as_ref()
+                .is_some_and(|handoff| handoff.key == entry_key);
+            if !scalar_handoff_active && !branch_handoff_active {
+                let cached_back_edge = trace_cache.get(&entry_key).and_then(|entry| {
+                    code.get(entry.back_edge).and_then(|instruction| {
+                        matches!(instruction, Instr::Jump(target) if *target == ip)
+                            .then_some(entry.back_edge)
+                    })
+                });
+                if let Some(back_edge) = cached_back_edge {
+                    ip = back_edge;
+                }
+            }
+        }
         match &code[ip] {
             Instr::ConstNum(n) => push(stack, sp, *n),
             Instr::ConstBool(b) => push(stack, sp, if *b { 1.0 } else { 0.0 }),
@@ -2165,7 +2235,7 @@ fn run_block(
                 push(stack, sp, out);
             }
             Instr::CallBuiltin(name, argc) if name == "list_range" && *argc == 1 => {
-                let setup_start = Instant::now();
+                let setup_start = collect_timing.then(Instant::now);
                 let len_bits = pop_bits(stack, sp)?;
                 if !is_number(len_bits) {
                     return Err("list_range expects number".into());
@@ -2186,9 +2256,11 @@ fn run_block(
                 }
                 push_bits(stack, sp, bits);
                 timing.list_range_calls = timing.list_range_calls.saturating_add(1);
-                timing.setup_ns = timing
-                    .setup_ns
-                    .saturating_add(setup_start.elapsed().as_nanos());
+                if let Some(setup_start) = setup_start {
+                    timing.setup_ns = timing
+                        .setup_ns
+                        .saturating_add(setup_start.elapsed().as_nanos());
+                }
             }
             Instr::CallBuiltin(name, argc) if name == "to_text" && *argc == 1 => {
                 let target_bits = pop_bits(stack, sp)?;
@@ -2228,6 +2300,7 @@ fn run_block(
                     hot_counters,
                     telemetry_totals,
                     timing,
+                    collect_timing,
                     None,
                 )?;
                 push_bits(stack, sp, ret_bits);
@@ -7959,12 +8032,38 @@ mod tests {
         expand_profiled_mutation_aliases, find_unsupported_internal_backedge, guard_profile,
         mark_temp_allocs, optimize_trace_ops, record_speculative_deopt,
         rewrite_map_stable_cmp_branch, rewrite_map_stable_mul_acc, unroll_list_update_x4,
-        LocalGuard, ShapeGuard, TraceProfile, TraceTelemetryTotals,
+        LocalGuard, ShapeGuard, TraceProfile, TraceTelemetryTotals, TypedRunner,
     };
     use crate::vm::bytecode::Instr;
+    use crate::vm::compiler::compile_script;
     use crate::vm::jit::TraceOp;
     use crate::vm::{jit, value_bits as vb};
+    use crate::{lexer, parser};
     use std::collections::HashMap;
+
+    #[test]
+    fn untimed_run_collects_path_facts_without_clock_samples() {
+        let source = "~ rite\n    $items = list_range(4)\n    ^ len($items)\n~ end\n";
+        let tokens = lexer::lex(source).expect("source should lex");
+        let statements = parser::parse_script(&tokens).expect("source should parse");
+        let program = compile_script(&statements);
+        let mut runner = TypedRunner::new(&program);
+
+        let (value, events, observation) = runner
+            .run_untimed(&program)
+            .expect("untimed typed execution should succeed");
+        let timing = runner.last_run_timing();
+
+        assert_eq!(value.as_f64(), Some(4.0));
+        assert!(events.is_empty());
+        assert_eq!(observation.list_range_calls, 1);
+        assert_eq!(observation.avx_dot_elements, 0);
+        assert_eq!(observation.interp_index_elements, 0);
+        assert_eq!(timing.total_ns, 0);
+        assert_eq!(timing.setup_ns, 0);
+        assert_eq!(timing.compute_ns, 0);
+        runner.cleanup();
+    }
 
     fn map_profile(indices: &[usize], map_bits: u64, runtime: &jit::JitRuntime) -> TraceProfile {
         let elem = runtime

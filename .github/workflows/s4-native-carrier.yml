@@ -1,0 +1,34 @@
+name: S4 NAUX Native Carrier
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  untimed-native-carrier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.96.0 --profile minimal
+          rustup default 1.96.0
+      - name: Validate sealed S4 parent authorities and WP3 source boundary
+        run: python3 scripts/s4_native_carrier.py
+      - name: Build reviewed untimed carrier
+        run: cargo build --release --locked -p naux --example naux_s4_native_carrier
+      - name: Reject S4 native-carrier mutations
+        env:
+          NAUX_S4_CARRIER_BINARY: target/release/examples/naux_s4_native_carrier
+        run: python3 -m unittest -v scripts.tests.test_s4_native_carrier
+      - name: Replay exact NAUX corpus without timing
+        run: >-
+          python3 scripts/s4_native_carrier.py
+          --binary target/release/examples/naux_s4_native_carrier
+      - name: Reject whitespace damage
+        run: git diff --check
