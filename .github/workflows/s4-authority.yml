@@ -1,0 +1,19 @@
+name: S4 Benchmark Authority
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authority:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate sealed benchmark authority
+        run: python3 scripts/s4_benchmark_authority.py
+      - name: Reject benchmark-authority mutations
+        run: python3 -m unittest -v scripts.tests.test_s4_benchmark_authority

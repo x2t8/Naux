@@ -1,0 +1,31 @@
+NAUX-S4-BENCHMARK-PROTOCOL	1
+meta	policy-version	1.0.0
+meta	claim-status	not-admitted
+meta	minimum-warmup-ms	100
+meta	measured-samples	30
+meta	maximum-cv-percent	5
+meta	outlier-policy	report-all-no-hidden-drop
+meta	runtime-region	allocation-initialization-kernel-checksum-teardown
+meta	separate-costs	compile-specialize-startup-runtime-memory-code-size
+meta	fast-math	forbidden
+meta	closed-form-replacement	forbidden
+meta	residual-max-specialized-ratio	1.10
+meta	residual-min-generic-speedup	1.25
+meta	result-requirements	raw-samples-toolchains-flags-host-fingerprint
+role	01	naux-residual	comparison	required	static-n-and-reps
+role	02	c-generic	baseline	required	runtime-n-and-reps
+role	03	c-specialized	baseline	required	static-n-and-reps
+role	04	rust-generic	supporting	optional	runtime-n-and-reps
+role	05	rust-specialized	supporting	optional	static-n-and-reps
+metric	01	runtime-ns	ns	median	required	runtime-region
+metric	02	compile-ns	ns	median	required	compiler-only
+metric	03	specialization-ns	ns	median	required	specializer-only
+metric	04	startup-ns	ns	median	required	process-start-to-ready
+metric	05	peak-rss-bytes	bytes	maximum	required	whole-process
+metric	06	code-size-bytes	bytes	exact	required	emitted-text-and-rodata
+metric	07	cycles	count	median	supporting	runtime-region
+metric	08	instructions	count	median	supporting	runtime-region
+metric	09	branches	count	median	supporting	runtime-region
+metric	10	branch-misses	count	median	supporting	runtime-region
+metric	11	cache-misses	count	median	supporting	runtime-region
+seal	6e367a30e0f65073299219613893f15f5bed90ff4f1cd077d06fcc8e27a25618
