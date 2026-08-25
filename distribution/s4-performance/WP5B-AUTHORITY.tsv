@@ -1,0 +1,21 @@
+NAUX-S4-STRUCTURAL-RESIDUAL-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP5B
+meta	authority-id	s4-structural-residual-v1
+meta	residual-status	structural-residual-admitted
+meta	native-status	unavailable
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	kernel-count	4
+meta	file-count	8
+component	structural-residual-contract	distribution/s4-performance/WP5B-RESIDUAL.tsv	e59b2e72eb8379839af99c2e3f923d8e531a5c2079885155794fcc0e843d1b9a
+parent	specialization-request-authority	distribution/s4-performance/WP5A-AUTHORITY.tsv	e86fa78b86865b389493a6f8cf4abae5acd8403c6413ec14d04ecb61eeef8d9e
+file	100644	1387	e7a7ff61d50f29c32b02a3fb1a56606e024d699e9a3041dcd45516e536cffdee	.github/workflows/s4-structural-residual.yml
+file	100644	732	1d465ebbc708f79479f118d1756e22f0b649f7c18005bc87812d7f84ad3ea168	distribution/s4-performance/WP5B-NONCLAIMS.md
+file	100644	995	78a3478639c8e0ec91c3b44e3b81d9eaf17f6795f8eb6a73858a91c1eca722be	distribution/s4-performance/WP5B-README.md
+file	100644	1933	41baa70f119628955f8309a20b0eee6dc002758ce2d276b49a6ffb066f5f0919	distribution/s4-performance/WP5B-RESIDUAL.tsv
+file	100644	3817	9046a7bb4782ab3ce59750ba1e1333d96bafedc12e798af9242cc9e8273ab2e0	naux-lang/examples/naux_s4_structural_residual.rs
+file	100644	33768	884c3aef0970a51b52ba6f024b5145493e42c7051a10970bcf06cc36525d058b	naux-lang/examples/support/s4_whole_program_residual.rs
+file	100644	27487	94190068a8c1c397fe33b39bb615e7a4fd740c9ec20b1c69cb3951c7e1f54625	scripts/s4_structural_residual.py
+file	100644	7445	4a8af13c043c13cc00fa1ec5ccc6bc5aaeddf8779203927b9f21164d1aba8110	scripts/tests/test_s4_structural_residual.py
+seal	f41ed069566b2017aae0cce074df6f2b4d3aba3b1402e0bc50da285a62fb9cc7
