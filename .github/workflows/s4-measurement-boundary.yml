@@ -1,0 +1,21 @@
+name: S4 Controlled Measurement Boundary
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate accepted parent authorities and WP4 boundary
+        run: python3 scripts/s4_measurement_boundary.py
+      - name: Run WP4 mutation tests
+        run: python3 -m unittest scripts.tests.test_s4_measurement_boundary

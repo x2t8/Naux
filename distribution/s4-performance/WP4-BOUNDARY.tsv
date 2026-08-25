@@ -1,0 +1,22 @@
+NAUX-S4-MEASUREMENT-BOUNDARY	1
+meta	policy-version	1.0.0
+meta	claim-status	not-admitted
+meta	available-naux-role	naux-trace-carrier-observation
+meta	required-naux-role	naux-residual
+meta	runtime-region	allocation-initialization-kernel-checksum-teardown
+meta	minimum-warmup-ms	100
+meta	measured-samples	30
+meta	sample-policy	retain-all-in-collection-order
+meta	maximum-cv-percent	5
+gate	01	parent-authorities	required	exact-wp1-wp2-wp3
+gate	02	semantic-parity	required	every-sample
+gate	03	native-path	required	zero-fallback-deopt-side-exit-guard-failure-interpreter-index
+gate	04	host-control	required	clean-sha-affinity-performance-governor-turbo-off-monotonic-clock
+gate	05	role-completeness	required	naux-residual-c-generic-c-specialized
+gate	06	raw-samples	required	ordered-complete-no-drop-no-retry
+gate	07	cost-separation	required	compile-specialize-startup-runtime-memory-code-size
+gate	08	independent-replay	required	structure-arithmetic-seals
+blocker	01	naux-residual-unavailable
+blocker	02	controlled-host-unavailable
+blocker	03	measurement-runner-unavailable
+seal	fefb9c12bdb7c8178e333145361afd63f805bf98ce7f28d20dc44876e656f18e

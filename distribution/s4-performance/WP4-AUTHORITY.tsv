@@ -1,0 +1,18 @@
+NAUX-S4-MEASUREMENT-BOUNDARY-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP4
+meta	authority-id	s4-controlled-measurement-boundary-v1
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	file-count	6
+component	measurement-boundary	distribution/s4-performance/WP4-BOUNDARY.tsv	fefb9c12bdb7c8178e333145361afd63f805bf98ce7f28d20dc44876e656f18e
+parent	benchmark-authority	distribution/s4-performance/AUTHORITY.tsv	b23533c4e96ec9e3b66482e96b79fdeb5985c823ce012d827e69eb1c14a4b659
+parent	reference-authority	distribution/s4-performance/WP2-AUTHORITY.tsv	0361c1e0d90bc3ba8d9a1e0bead7466bd71be3e3a723d605606730144ae7db6a
+parent	native-carrier-authority	distribution/s4-performance/WP3-AUTHORITY.tsv	7a853a68da91a4d41f3fe6f7b9e9e21dd254a4d4ac36b248007e506bd046c9ab
+file	100644	533	a6273ceecf2677aebc7d1bba65e69db8e8832c55331967881deab9b5e3333c06	.github/workflows/s4-measurement-boundary.yml
+file	100644	1140	ed99a274af475cd629238bceeba9c15c584747eeb56a465bf23897f243d08e08	distribution/s4-performance/WP4-BOUNDARY.tsv
+file	100644	594	90c771cf076fa6b389390d361ad04052d3ef734a1d8e869a15a91b8198a9a1a6	distribution/s4-performance/WP4-NONCLAIMS.md
+file	100644	764	b011e9192fdc867c367e44a290b5e25a389145a899811f332aedbab375697f2a	distribution/s4-performance/WP4-README.md
+file	100644	14085	2117151d91fe5a9ae4fc270ac7c5282393660a5f741becfa50364e69ea0c30ec	scripts/s4_measurement_boundary.py
+file	100644	6783	1947c4392a1854a634e59bf952b671781413db17912ebd705541791b5527739b	scripts/tests/test_s4_measurement_boundary.py
+seal	bda4409f32e1afe162b68401529d127cf4a77077df000826823d2660ee4ade26
