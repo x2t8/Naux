@@ -1,0 +1,20 @@
+NAUX-S4-SPECIALIZATION-REQUEST-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP5A
+meta	authority-id	s4-specialization-request-v1
+meta	request-status	admitted
+meta	residual-status	unavailable
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	kernel-count	4
+meta	file-count	7
+component	specialization-request-contract	distribution/s4-performance/WP5A-REQUEST.tsv	ad9a01b87fb973c4fe629bf2d69190edec82af865bebd4f9168b4bc3849d4da7
+parent	residual-role-authority	distribution/s4-performance/WP5-AUTHORITY.tsv	93353f2d40cb1217b4b37a30f04c9807ecde9d98d7e4e370a99286fbe355bf5d
+file	100644	1360	0cfaf318168b6e96e138f3d77d2f5b01150e678f9d0ac777650b87228f9a0ca4	.github/workflows/s4-specialization-request.yml
+file	100644	708	bac332b95608f647ea32d3878c7364d96ba66269ee11885848f2f56c5576ea59	distribution/s4-performance/WP5A-NONCLAIMS.md
+file	100644	918	762e6ce46cafc332f865c6d9f9672aabe604384aebe8471817ef63ba3ea22d80	distribution/s4-performance/WP5A-README.md
+file	100644	1799	679c8ab93d192cc863a694d9549c41a4edcee79ed3dff9ec89cdf6e32bc5397c	distribution/s4-performance/WP5A-REQUEST.tsv
+file	100644	21547	4418572e040307e6afa05e47aa29f17c72373d4659c7da3f1d30e1ae3eb31c5c	naux-lang/examples/naux_s4_specialization_request.rs
+file	100644	24146	491df1fdb413e9b9f4036e18e6404dc14052d92a21e23b96003d012bf3cabd57	scripts/s4_specialization_request.py
+file	100644	9305	69b84e098762f7d20ce538e80d7efa1cac0121b1444cecb90306da401b2ad6e2	scripts/tests/test_s4_specialization_request.py
+seal	e86fa78b86865b389493a6f8cf4abae5acd8403c6413ec14d04ecb61eeef8d9e

@@ -1,0 +1,18 @@
+NAUX-S4-SPECIALIZATION-REQUEST-CONTRACT	1
+meta	policy-version	1.0.0
+meta	request-status	admitted
+meta	residual-status	unavailable
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	target	x86_64-unknown-linux-gnu
+meta	dataset	static-n16384-r50
+meta	frontend	ordinary-naux-frontend
+meta	pipeline	single-general-future-residual-pipeline
+meta	kernel-count	4
+meta	corpus-seal	793fdac34e1b0536365208a745ad59edaf6dbb94eabcede88d273292861dffa5
+meta	work-obligations	allocation-initialization-kernel-checksum-teardown
+kernel	01	sum-dense	benchmarks/s4/naux/sum_dense.nx	7517f1ece97466b4fae733e86896d1018534984f5c2935a7d89bf87d63756aae	16384	50	6710476800	owned-runtime-list	range-zero-through-n-minus-one	reps-times-full-n-source-semantics	exact-corpus-oracle-after-dynamic-work	release-owned-list-before-completion
+kernel	02	branch-mix	benchmarks/s4/naux/branch_mix.nx	50d12844761d241edbdcf2d2b8f59f2bbc0887863f77a294233b6ed2b011b331	16384	50	-69189632	owned-runtime-list	range-zero-through-n-minus-one	reps-times-full-n-source-semantics	exact-corpus-oracle-after-dynamic-work	release-owned-list-before-completion
+kernel	03	dot-product	benchmarks/s4/naux/dot_product.nx	b1f2a9510500753b8a3e0d09db5b62d791dace828d9ad9ee430f1d8cfc433a44	16384	50	73294064435200	owned-runtime-list	range-zero-through-n-minus-one	reps-times-full-n-source-semantics	exact-corpus-oracle-after-dynamic-work	release-owned-list-before-completion
+kernel	04	list-update	benchmarks/s4/naux/list_update.nx	7ce1f52fb4b7abea9af1d44d2e00d05a31235e0ca40336b8e47a74ca23a60d10	16384	50	6730547200	owned-runtime-list	range-zero-through-n-minus-one	reps-times-full-n-source-semantics	exact-corpus-oracle-after-dynamic-work	release-owned-list-before-completion
+seal	ad9a01b87fb973c4fe629bf2d69190edec82af865bebd4f9168b4bc3849d4da7
