@@ -1,0 +1,40 @@
+name: S4 Residual Machine IR
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  untimed-residual-machine-ir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.96.0 --profile minimal
+          rustup default 1.96.0
+      - name: Validate parent authorities and WP5C contract
+        run: python3 scripts/s4_residual_machine_ir.py
+      - name: Build reviewed Machine IR emitter
+        run: >-
+          cargo build --release --locked -p naux
+          --example naux_s4_residual_machine_ir
+      - name: Test generic lowering and fail-closed mutations
+        run: >-
+          cargo test --locked -p naux
+          --example naux_s4_residual_machine_ir
+      - name: Replay typed Machine IR independently
+        env:
+          NAUX_S4_RESIDUAL_MACHINE_IR_BINARY: target/release/examples/naux_s4_residual_machine_ir
+        run: python3 -m unittest -v scripts.tests.test_s4_residual_machine_ir
+      - name: Replay exact residual Machine IR without timing
+        run: >-
+          python3 scripts/s4_residual_machine_ir.py
+          --binary target/release/examples/naux_s4_residual_machine_ir
+      - name: Reject whitespace damage
+        run: git diff --check

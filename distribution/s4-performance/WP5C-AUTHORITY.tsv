@@ -1,0 +1,21 @@
+NAUX-S4-RESIDUAL-MACHINE-IR-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP5C
+meta	authority-id	s4-residual-machine-ir-v1
+meta	machine-status	residual-machine-ir-admitted
+meta	elf-status	unavailable
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	kernel-count	4
+meta	file-count	8
+component	residual-machine-ir-contract	distribution/s4-performance/WP5C-MACHINE-IR.tsv	9f556f5be30117786140726553d4490fb233ca81a47d5ba57f7d835ff742e449
+parent	structural-residual-authority	distribution/s4-performance/WP5B-AUTHORITY.tsv	f41ed069566b2017aae0cce074df6f2b4d3aba3b1402e0bc50da285a62fb9cc7
+file	100644	1384	9fdfe5590c2b05a82c194e1aa7f2ca1a0b7b62dbaa870dacba5ba313be432744	.github/workflows/s4-residual-machine-ir.yml
+file	100644	726	1bd63333aa3ac767bca455e761a872a754fbc271b8d4ee5ef7d5d220d197bad8	distribution/s4-performance/WP5C-NONCLAIMS.md
+file	100644	986	f615dcbad5c5779f0b496c446a8dae5b84b7882f3d40df0b1d22704952f44ee1	distribution/s4-performance/WP5C-README.md
+file	100644	1807	57945197d20e759698aa5dbc9879b999663387a7f4f133c3b70e8c333d31fb68	distribution/s4-performance/WP5C-MACHINE-IR.tsv
+file	100644	5574	c3a59f9b275b5ba98c166f4ef35281e67ac18d330cd7c02138fc51e343dbfbc2	naux-lang/examples/naux_s4_residual_machine_ir.rs
+file	100644	47309	b0b9803aeb9844235649426e365b26131abfe17082e5ec32a5b51bccf31eafc5	naux-lang/examples/support/s4_residual_machine_ir.rs
+file	100644	38892	f8433c9fd0cc5006d59171687188089bc7e02954119adffc54fc330cd5a1935d	scripts/s4_residual_machine_ir.py
+file	100644	7555	7723f28a6d3c70667986cfd9b8584fb843d3da9518a10f9e8cf3aa625572f14e	scripts/tests/test_s4_residual_machine_ir.py
+seal	bcb4aab033397092049e9fcaf32aba9e615d3029789dafdc2dfb32ea3324860f
