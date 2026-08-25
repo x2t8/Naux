@@ -1,0 +1,16 @@
+NAUX-S4-RESIDUAL-ROLE-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP5
+meta	authority-id	s4-whole-program-residual-role-v1
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	file-count	6
+component	residual-role-contract	distribution/s4-performance/WP5-RESIDUAL-ROLE.tsv	dca95743972986a51096dee608b3112171397addefd0137aa0a6133f8657199b
+parent	measurement-boundary-authority	distribution/s4-performance/WP4-AUTHORITY.tsv	bda4409f32e1afe162b68401529d127cf4a77077df000826823d2660ee4ade26
+file	100644	535	c5d467d8c1b415bc79dd5ecd28b4c241f7be7dfec9cba0318b870c9ed30a2080	.github/workflows/s4-residual-role.yml
+file	100644	583	4b5b55c37637c9b48f753b67bc26afbaf40defd9a4eab9ebf78b6abaaff268da	distribution/s4-performance/WP5-NONCLAIMS.md
+file	100644	699	cddb3ef92e6d58140c292a07528cfc8925835cfea94e009a7ee4f8567da37f02	distribution/s4-performance/WP5-README.md
+file	100644	2051	89e4b5cdc65f2250eec180a7fc4d7a5377749989ffc34e4b7fc24f8291a8c3af	distribution/s4-performance/WP5-RESIDUAL-ROLE.tsv
+file	100644	14696	a5277dfe53db957dd510634a66f953f29996aaad401a1e4f837788fffef2ee9f	scripts/s4_residual_role.py
+file	100644	6821	9a99b8d78b22f676b60883d1e81a3e99d822b094816971bb30f43cd39ad1bc64	scripts/tests/test_s4_residual_role.py
+seal	93353f2d40cb1217b4b37a30f04c9807ecde9d98d7e4e370a99286fbe355bf5d

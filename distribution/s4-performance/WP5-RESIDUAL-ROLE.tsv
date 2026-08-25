@@ -1,0 +1,47 @@
+NAUX-S4-RESIDUAL-ROLE	1
+meta	policy-version	1.0.0
+meta	contract-status	contract-only
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	required-role	naux-residual
+meta	target	x86_64-unknown-linux-gnu
+meta	artifact	linker-free-standalone-elf64
+meta	dataset	static-n16384-r50
+meta	frontend	ordinary-naux-frontend
+meta	generator	single-general-pipeline
+meta	dynamic-work	preserved
+meta	runtime-envelope	no-vm-jit-libc-system-linker
+origin	01	surface	exact-accepted-naux-source
+origin	02	specialization-request	sealed-static-n-and-reps
+origin	03	residual-ir	verified-and-source-bound
+origin	04	machine-ir	verified-lowering
+origin	05	target-plan	x86-64-source-bound
+origin	06	native-bytes	naux-owned-encoding
+origin	07	artifact	direct-elf64-writer
+work	01	allocation	retained
+work	02	initialization	exact-n-elements
+work	03	kernel	exact-n-times-reps-traversal
+work	04	checksum	exact-oracle-result
+work	05	teardown	mandatory-before-completion
+gate	01	parent-authorities	required	exact-wp1-wp2-wp3-wp4
+gate	02	source-identity	required	ordinary-frontend-no-benchmark-parser
+gate	03	specialization	required	explicit-sealed-n-and-reps
+gate	04	work-preservation	required	allocation-init-kernel-checksum-teardown
+gate	05	generator-generality	required	one-pipeline-four-kernels
+gate	06	artifact-sovereignty	required	no-vm-jit-libc-system-linker
+gate	07	fresh-process-parity	required	four-exact-results-no-fallback
+gate	08	independent-replay	required	source-residual-plan-bytes-elf-result
+forbid	01	trace-role-substitution
+forbid	02	direct-oracle-literal
+forbid	03	whole-program-precomputation
+forbid	04	closed-form-replacement
+forbid	05	lookup-table-trivialization
+forbid	06	kernel-name-dispatch
+forbid	07	per-kernel-native-template
+forbid	08	copied-reference-loop
+forbid	09	dynamic-dependency
+forbid	10	fallback-deopt-side-exit-interpreter-entry
+blocker	01	residual-generator-unavailable
+blocker	02	four-artifact-replay-unavailable
+blocker	03	untimed-role-admission-unavailable
+seal	dca95743972986a51096dee608b3112171397addefd0137aa0a6133f8657199b
