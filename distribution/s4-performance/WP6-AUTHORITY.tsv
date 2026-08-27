@@ -1,0 +1,20 @@
+NAUX-S4-CONTROLLED-HOST-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP6
+meta	authority-id	s4-controlled-host-protocol-v1
+meta	protocol-status	controlled-host-protocol-admitted
+meta	host-status	runtime-attestation-required
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	file-count	7
+component	host-contract	distribution/s4-performance/WP6-HOST.tsv	0a243e91062061450d88085f0089b93660834b14359ad1b01d7f575d336f995e
+parent	measurement-boundary-authority	distribution/s4-performance/WP4-AUTHORITY.tsv	bda4409f32e1afe162b68401529d127cf4a77077df000826823d2660ee4ade26
+parent	residual-role-admission-authority	distribution/s4-performance/WP5F-AUTHORITY.tsv	702ba39892da6817ce5ed6d0c23c4a454b4adeb7e5053cf8d10b1cc21cba1fc0
+file	100644	1050	7e9017d8abb66196f8a2ae1f176f2858a36a6443c4529a172c9183d55ee5aae0	.github/workflows/s4-controlled-host.yml	host-protocol
+file	100644	1901	e9ab60164fbb4ad156bb235e02d4d9de76856bc5d7fe1d232c57f0e0eb4807ae	distribution/s4-performance/WP6-HOST.tsv	host-protocol
+file	100644	829	28be30d6754097d2984649b2e55d3118ef32a5352b28a3adf35ff184cb178b32	distribution/s4-performance/WP6-NONCLAIMS.md	host-protocol
+file	100644	900	c653f2bdfd2daea57e168d47ebb8c8797179eb7580e1deb9ebbc69d1ed628d54	distribution/s4-performance/WP6-README.md	host-protocol
+file	100644	20887	d22a4e4dd5b8a56265ea6d5bdeff57355a6b035a14e5f7d89afab38735116e68	scripts/s4_controlled_host.py	host-protocol
+file	100644	4218	a9de59bf440efdb15d0845f80da103ab94ddf5b986f0bbb814b6aff86f7c3618	scripts/tests/test_s4_controlled_host.py	host-protocol
+file	100644	3951	bf7a2a3f7cc11073e0b90aac9e5180443531f427521b05799db45f85ddb20515	scripts/tests/test_s4_controlled_host_static.py	host-protocol
+seal	9cc57ce48ec67d92724b417d43d9556e0e8446e5dfe2770b3d68ffd5dfe49b59

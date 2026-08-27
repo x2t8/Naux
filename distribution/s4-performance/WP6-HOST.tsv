@@ -1,0 +1,47 @@
+NAUX-S4-CONTROLLED-HOST-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-measurement-boundary	bda4409f32e1afe162b68401529d127cf4a77077df000826823d2660ee4ade26
+meta	parent-role-admission	702ba39892da6817ce5ed6d0c23c4a454b4adeb7e5053cf8d10b1cc21cba1fc0
+meta	protocol-status	controlled-host-protocol-admitted
+meta	host-status	runtime-attestation-required
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	target	x86_64-unknown-linux-gnu
+meta	attestation	canonical-stdout-only
+meta	fingerprint	sha256-canonical-host-facts
+meta	clock-policy	capability-inspection-only-no-sample
+requirement	01	platform	exact	linux-x86_64
+requirement	02	source-state	exact	clean-detached-or-branch-head
+requirement	03	commit	exact	caller-supplied-lower-hex40
+requirement	04	affinity	exact	single-online-logical-cpu
+requirement	05	governor	exact	selected-cpu-performance
+requirement	06	turbo	exact	disabled-by-supported-kernel-control
+requirement	07	clock	exact	monotonic-clock-gettime-capability
+requirement	08	identity	exact	stable-cpu-kernel-host-fingerprint
+fact	01	kernel-system
+fact	02	kernel-release
+fact	03	machine
+fact	04	cpu-vendor
+fact	05	cpu-family
+fact	06	cpu-model
+fact	07	cpu-stepping
+fact	08	microcode
+fact	09	logical-cpu
+fact	10	affinity-mask
+fact	11	governor
+fact	12	turbo-control
+fact	13	turbo-value
+fact	14	monotonic-implementation
+fact	15	git-commit
+refusal	01	unsupported-platform
+refusal	02	dirty-or-unborn-repository
+refusal	03	commit-mismatch
+refusal	04	multi-cpu-or-offline-affinity
+refusal	05	missing-or-nonperformance-governor
+refusal	06	missing-or-enabled-turbo-control
+refusal	07	nonmonotonic-or-unavailable-clock
+refusal	08	missing-cpu-fingerprint-fact
+closure	01	naux-residual-unavailable	wp5f-local-role-authority
+blocker	01	controlled-host-attestation-unavailable
+blocker	02	measurement-runner-unavailable
+seal	0a243e91062061450d88085f0089b93660834b14359ad1b01d7f575d336f995e

@@ -1,0 +1,20 @@
+NAUX-S4-RESIDUAL-PROCESS-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP5E
+meta	authority-id	s4-residual-process-v1
+meta	status	fresh-process-checksum-work-parity-admitted
+meta	claim-status	untimed-parity-only
+meta	timing-status	forbidden
+meta	kernel-count	4
+meta	file-count	8
+component	residual-process-contract	distribution/s4-performance/WP5E-PROCESS.tsv	213eb3f1c9c596141ca6d6793368e85e901d308e2c57d93f0917ce766e63c8e8
+parent	residual-elf64-authority	distribution/s4-performance/WP5D-AUTHORITY.tsv	eba915d65c448d0251c4b253c911d61e2f06b8d4bcc4cf3e57a7eea78bd87fb4
+file	100644	2302	1319d8feb1d1ed2894a79efc9a9e423f2b144b0db50edbd65bcc9844e58d3f68	.github/workflows/s4-residual-process.yml
+file	100644	981	87db03f34b331e36a4cfb6b38ac6a59d80e68b26e90cb6da0240de5c131505d3	distribution/s4-performance/WP5E-NONCLAIMS.md
+file	100644	2871	61eef4a6c204baab740a21c2c963d65c2de697b5e323dfae8c332664b851f0d2	distribution/s4-performance/WP5E-README.md
+file	100644	2179	9be272f74eeed13c9602298173fb39d1c4ba1534745e909061cea761ac3daf67	distribution/s4-performance/WP5E-PROCESS.tsv
+file	100644	8856	1a895149a9d0395cc63299e99599965075728df17216a05ee6865cfc819075f7	naux-lang/examples/naux_s4_residual_process.rs
+file	100644	22299	170a707cd015fe1d7d24e53ee0f2aadbfe3b958e20c67fbc438de5bc060d1797	naux-lang/examples/support/s4_residual_process_elf.rs
+file	100644	32892	fe2fc45a3afd7e60603cafec56e4f33d70c0c21f5387102c9850c849266d23ea	scripts/s4_residual_process.py
+file	100644	10986	46bc69006a5c445072a41504df1484317aa79c81e6c7684348967a02abb6a11f	scripts/tests/test_s4_residual_process.py
+seal	098a7cb2216359c03ab1e58d3a41f6c904d411ccafa1c10b0a88885fc3dfc53f

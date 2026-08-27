@@ -1,0 +1,33 @@
+name: S4 C timing carriers
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-c-timing-carriers.yml"
+      - "benchmarks/s4/c/**"
+      - "distribution/s4-performance/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-c-timing-carriers.yml"
+      - "benchmarks/s4/c/**"
+      - "distribution/s4-performance/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+
+permissions:
+  contents: read
+
+jobs:
+  static-and-compile-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static authority replay
+        run: python3 scripts/s4_c_timing_carriers.py
+      - name: Non-executing compiler audit
+        run: python3 scripts/s4_c_timing_carriers.py --cc cc
+      - name: Focused tests
+        run: python3 -m unittest scripts.tests.test_s4_c_timing_carriers

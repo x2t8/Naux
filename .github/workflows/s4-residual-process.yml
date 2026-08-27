@@ -1,0 +1,61 @@
+name: S4 residual fresh-process parity
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-residual-process.yml"
+      - "benchmarks/s4/**"
+      - "distribution/s4-performance/WP5*.tsv"
+      - "distribution/s4-performance/WP5E-*.md"
+      - "naux-lang/examples/naux_s4_residual_process.rs"
+      - "naux-lang/examples/support/s4_residual_process_elf.rs"
+      - "naux-lang/examples/support/s4_residual_x64_elf.rs"
+      - "naux-lang/examples/support/s4_residual_machine_ir.rs"
+      - "naux-lang/examples/support/s4_whole_program_residual.rs"
+      - "scripts/s4_residual_process.py"
+      - "scripts/s4_residual_elf64.py"
+      - "scripts/s4_residual_machine_ir.py"
+      - "scripts/tests/test_s4_residual_process.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-residual-process.yml"
+      - "benchmarks/s4/**"
+      - "distribution/s4-performance/WP5*.tsv"
+      - "distribution/s4-performance/WP5E-*.md"
+      - "naux-lang/examples/naux_s4_residual_process.rs"
+      - "naux-lang/examples/support/s4_residual_process_elf.rs"
+      - "naux-lang/examples/support/s4_residual_x64_elf.rs"
+      - "naux-lang/examples/support/s4_residual_machine_ir.rs"
+      - "naux-lang/examples/support/s4_whole_program_residual.rs"
+      - "scripts/s4_residual_process.py"
+      - "scripts/s4_residual_elf64.py"
+      - "scripts/s4_residual_machine_ir.py"
+      - "scripts/tests/test_s4_residual_process.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-process-parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Test generic target and process boundary
+        run: cargo test --locked -p naux --example naux_s4_residual_process
+
+      - name: Build reviewed process emitter
+        run: cargo build --locked -p naux --example naux_s4_residual_process
+
+      - name: Replay static authority and two fresh-process passes
+        env:
+          NAUX_S4_RESIDUAL_PROCESS_BINARY: target/debug/examples/naux_s4_residual_process
+        run: |
+          python3 -m unittest scripts/tests/test_s4_residual_process.py
+          python3 scripts/s4_residual_process.py \
+            --binary target/debug/examples/naux_s4_residual_process

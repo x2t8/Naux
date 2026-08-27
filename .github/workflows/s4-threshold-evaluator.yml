@@ -1,0 +1,29 @@
+name: S4 threshold evaluator authority
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-threshold-evaluator.yml"
+      - "distribution/s4-performance/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-threshold-evaluator.yml"
+      - "distribution/s4-performance/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+
+permissions:
+  contents: read
+
+jobs:
+  static-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static threshold authority
+        run: python3 scripts/s4_threshold_evaluator.py
+      - name: Focused synthetic replay tests
+        run: python3 -m unittest scripts.tests.test_s4_threshold_evaluator_static scripts.tests.test_s4_threshold_evaluator_replay

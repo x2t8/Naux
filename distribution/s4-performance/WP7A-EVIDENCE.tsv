@@ -1,0 +1,55 @@
+NAUX-S4-MEASUREMENT-EVIDENCE-LAW	1
+meta	policy-version	1.0.0
+meta	parent-measurement-boundary	bda4409f32e1afe162b68401529d127cf4a77077df000826823d2660ee4ade26
+meta	parent-residual-role	702ba39892da6817ce5ed6d0c23c4a454b4adeb7e5053cf8d10b1cc21cba1fc0
+meta	parent-host-protocol	9cc57ce48ec67d92724b417d43d9556e0e8446e5dfe2770b3d68ffd5dfe49b59
+meta	law-status	evidence-law-admitted
+meta	carrier-status	required-not-admitted
+meta	host-attestation-status	required-not-retained
+meta	runner-status	required-not-admitted
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	clock-source	clock-monotonic-raw
+meta	runtime-region	allocation-initialization-kernel-checksum-validation-teardown
+meta	clock-placement	inside-role-before-allocation-after-teardown
+meta	minimum-warmup-ns	100000000
+meta	measured-samples	30
+meta	sample-policy	ordered-complete-no-drop-no-retry
+meta	statistics	median-rational-p95-nearest-rank-cv-square-rational
+meta	maximum-cv-percent	5
+role	01	naux-residual	native-clean
+role	02	c-generic	reference-clean
+role	03	c-specialized	reference-clean
+kernel	01	sum-dense	6710476800
+kernel	02	branch-mix	-69189632
+kernel	03	dot-product	73294064435200
+kernel	04	list-update	6730547200
+field	01	role-binary	sha256
+field	02	role-toolchain	sha256
+field	03	compile-ns	separate-positive
+field	04	specialize-ns	separate-naux-positive-c-zero
+field	05	startup-ns	separate-positive
+field	06	peak-rss-bytes	separate-positive
+field	07	code-size-bytes	separate-positive
+field	08	warmup-ns	per-role-kernel-minimum
+field	09	runtime-ns	per-ordered-sample-positive
+field	10	checksum	per-warmup-and-sample-exact
+field	11	path-status	per-warmup-and-sample-exact
+field	12	median	canonical-reduced-rational
+field	13	p95	nearest-rank-integer
+field	14	cv-square	canonical-reduced-rational
+gate	01	parent-authorities	required	exact-wp4-wp5f-wp6
+gate	02	instrumentation-authority	required	inside-role-equal-runtime-boundary
+gate	03	host-attestation	required	retained-exact-controlled-host
+gate	04	runner-authority	required	exact-evidence-acquisition
+gate	05	role-identity	required	exact-binary-and-toolchain-hashes
+gate	06	semantic-parity	required	every-warmup-and-sample
+gate	07	raw-completeness	required	three-roles-four-kernels-thirty-samples
+gate	08	cost-separation	required	compile-specialize-startup-runtime-memory-code-size
+gate	09	arithmetic-replay	required	exact-median-p95-cv-square
+gate	10	variance	required	cv-not-greater-than-five-percent
+blocker	01	instrumented-carriers-unavailable
+blocker	02	retained-controlled-host-attestation-unavailable
+blocker	03	measurement-runner-unavailable
+blocker	04	raw-measurement-evidence-unavailable
+seal	8020ff2f2eb89d059299abc12d4231631266f75228a3846d1ec949c336caf231

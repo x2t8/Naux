@@ -1,0 +1,20 @@
+NAUX-S4-MEASUREMENT-EVIDENCE-LAW-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP7A
+meta	authority-id	s4-measurement-evidence-law-v1
+meta	law-status	evidence-law-admitted
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	file-count	7
+component	evidence-law	distribution/s4-performance/WP7A-EVIDENCE.tsv	8020ff2f2eb89d059299abc12d4231631266f75228a3846d1ec949c336caf231
+parent	measurement-boundary-authority	distribution/s4-performance/WP4-AUTHORITY.tsv	bda4409f32e1afe162b68401529d127cf4a77077df000826823d2660ee4ade26
+parent	residual-role-authority	distribution/s4-performance/WP5F-AUTHORITY.tsv	702ba39892da6817ce5ed6d0c23c4a454b4adeb7e5053cf8d10b1cc21cba1fc0
+parent	controlled-host-protocol-authority	distribution/s4-performance/WP6-AUTHORITY.tsv	9cc57ce48ec67d92724b417d43d9556e0e8446e5dfe2770b3d68ffd5dfe49b59
+file	100644	965	d907716c4a445100412e40957602755e88a787dfdcef2b0760bc04a3fb41b34d	.github/workflows/s4-measurement-evidence.yml	evidence-law
+file	100644	2711	b3455b8c5c87acb5a2d31add45471819070881553d2cbdcc29e8b77a30dc07cb	distribution/s4-performance/WP7A-EVIDENCE.tsv	evidence-law
+file	100644	793	ceea4bfe18ff58249c8d06ff45f95cf4116ef7464e33356c9d9420ecbf137b3e	distribution/s4-performance/WP7A-NONCLAIMS.md	evidence-law
+file	100644	968	35e7471301a394d2530141003307ee4594dc41ef258718b737fbbbf1cf039636	distribution/s4-performance/WP7A-README.md	evidence-law
+file	100644	23034	b9052c3401b0be867dcae1b8cb345debd8498497f99593ab625c8e84117f60c2	scripts/s4_measurement_evidence.py	evidence-law
+file	100644	6005	55365819bdb9d51ef89b3de57f24e5d8714260552f03536880dc0adaa2741ce2	scripts/tests/test_s4_measurement_evidence_replay.py	evidence-law
+file	100644	3682	718f7e97e1491319674f66b3b93c12a7a774103320c4dfccf976d1e52138ec5e	scripts/tests/test_s4_measurement_evidence_static.py	evidence-law
+seal	a3a838a64dcffcca4cc4586eba304737ab66a56e11ff2c4616196f4f22de1e67

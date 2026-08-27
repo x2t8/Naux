@@ -1,0 +1,47 @@
+NAUX-S4-MEASUREMENT-RUNNER-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-host-protocol	9cc57ce48ec67d92724b417d43d9556e0e8446e5dfe2770b3d68ffd5dfe49b59
+meta	parent-evidence-law	a3a838a64dcffcca4cc4586eba304737ab66a56e11ff2c4616196f4f22de1e67
+meta	parent-naux-carrier	61e42d60f76b5bbb322c870a53beb2b357ab0f22b660b971baa0f0ed3f0cf337
+meta	parent-c-carrier	aaad18dcaf4a23408e11e7df301c66db1d5184d21c8418998043b579e21f936b
+meta	runner-status	measurement-runner-structurally-admitted
+meta	acquisition-status	retained-eligible-host-required
+meta	claim-status	not-admitted
+meta	default-mode	static-no-host-no-clock-no-execution
+meta	acquire-mode	explicit-only
+meta	host-policy	retained-report-plus-exact-live-reattestation
+meta	build-policy	fixed-argv-no-shell
+meta	artifact-policy	twelve-exact-role-kernel-artifacts
+meta	binary-identity	sha256-ordered-kernel-hash-aggregate
+meta	toolchain-identity	sha256-executable-and-version-aggregate
+meta	warmup-policy	retain-every-invocation-until-cumulative-100000000ns
+meta	sample-policy	role-major-kernel-major-exact30-no-drop-no-retry
+meta	startup-policy	nearest-rank-p50-positive-parent-envelope-minus-runtime
+meta	rss-policy	maximum-wait4-child-rss-bytes
+meta	code-size-policy	sum-four-role-artifact-bytes
+meta	failure-policy	atomic-bundle-or-no-bundle
+meta	result-protocol	fixed-le56-v1
+meta	target	x86_64-unknown-linux-gnu
+role	01	naux-residual	1	native-clean
+role	02	c-generic	2	reference-clean
+role	03	c-specialized	3	reference-clean
+kernel	01	sum-dense	6710476800
+kernel	02	branch-mix	-69189632
+kernel	03	dot-product	73294064435200
+kernel	04	list-update	6730547200
+gate	01	static-isolation	required	no-host-no-clock-no-build-no-execution
+gate	02	retained-attestation	required	exact-eligible-wp6-report
+gate	03	live-reattestation	required	exact-facts-fingerprint-commit
+gate	04	checkout	required	clean-exact-attested-commit
+gate	05	toolchains	required	resolved-regular-exact-hashes
+gate	06	artifacts	required	exact-build-and-aggregate-identity
+gate	07	warmup	required	all-invocations-retained-cumulative-minimum
+gate	08	samples	required	exact360-no-retry
+gate	09	parity	required	every-record-exact
+gate	10	cost-separation	required	compile-specialize-startup-rss-code-size
+gate	11	independent-replay	required	wp7a-before-publish
+gate	12	atomic-publication	required	complete-bundle-only
+closure	01	measurement-runner-unavailable	closed	wp7c-structural-runner
+blocker	01	retained-controlled-host-attestation-unavailable
+blocker	02	raw-measurement-evidence-unavailable
+seal	cc837b40b2055632501c4de1a540824738818e9e7d8ca8ae87e6a3e95c7cb730

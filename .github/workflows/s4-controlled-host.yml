@@ -1,0 +1,36 @@
+name: S4 controlled host protocol
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-controlled-host.yml"
+      - "distribution/s4-performance/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-controlled-host.yml"
+      - "distribution/s4-performance/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+
+permissions:
+  contents: read
+
+jobs:
+  static-host-protocol:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate the clock-free controlled-host protocol
+        run: python3 scripts/s4_controlled_host.py
+      - name: Exercise observation mode without admitting hosted CI
+        run: |
+          python3 scripts/s4_controlled_host.py \
+            --observe --expected-commit "$(git rev-parse HEAD)"
+      - name: Run focused host-protocol mutation tests
+        run: |
+          python3 -m unittest discover \
+            -s scripts/tests \
+            -p 'test_s4_controlled_host*.py'

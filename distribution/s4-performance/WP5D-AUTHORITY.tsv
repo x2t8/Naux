@@ -1,0 +1,21 @@
+NAUX-S4-RESIDUAL-ELF64-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP5D
+meta	authority-id	s4-residual-elf64-v1
+meta	status	x86-64-elf64-structurally-admitted
+meta	execution-status	forbidden
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	kernel-count	4
+meta	file-count	8
+component	residual-elf64-contract	distribution/s4-performance/WP5D-ELF64.tsv	4219b6842f92d659daa4ed5bc144ae312710010d7f763b0e27bfd4ba3957518c
+parent	residual-machine-ir-authority	distribution/s4-performance/WP5C-AUTHORITY.tsv	bcb4aab033397092049e9fcaf32aba9e615d3029789dafdc2dfb32ea3324860f
+file	100644	1361	36e84c889e98cc1e7674e775f22bcd6628501d62753070da63dddf23b14e1e0a	.github/workflows/s4-residual-elf64.yml
+file	100644	1001	565c1246b4d17fc54691d1a3eaac0cb85c9420b885ca8e6df7708769fe40891d	distribution/s4-performance/WP5D-NONCLAIMS.md
+file	100644	1309	41ff5d6ecc41ecd4876c4b423292b4e58fb56f7d45a1a8cb7700587cb2165a33	distribution/s4-performance/WP5D-README.md
+file	100644	2271	089c95c3e0474011009538c40de3b27011c0e36e0a4f97afeaa5aa4997434cf0	distribution/s4-performance/WP5D-ELF64.tsv
+file	100644	11930	96f9721eb7638c14b43c355c0cce70b514037c5ac6cc023d955ac33ddbcc0769	naux-lang/examples/naux_s4_residual_elf64.rs
+file	100644	58891	1424d65d5c108095b9179b1af7280c688d64dfd5006d1249c7ef6286e5a36a0f	naux-lang/examples/support/s4_residual_x64_elf.rs
+file	100644	32312	267e0cd1c4b67e9fc2bcde863f15dc6264d4edd23f122ac5232289b3537f7050	scripts/s4_residual_elf64.py
+file	100644	8987	7f90617c9aec714655a054c7875e4c16678e5e95a3e3582b17fcb466b56b72b1	scripts/tests/test_s4_residual_elf64.py
+seal	eba915d65c448d0251c4b253c911d61e2f06b8d4bcc4cf3e57a7eea78bd87fb4

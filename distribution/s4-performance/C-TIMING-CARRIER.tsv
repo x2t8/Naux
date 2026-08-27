@@ -1,0 +1,29 @@
+NAUX-S4-C-TIMING-CARRIER-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-baseline-authority	0361c1e0d90bc3ba8d9a1e0bead7466bd71be3e3a723d605606730144ae7db6a
+meta	sibling-naux-carrier-authority	61e42d60f76b5bbb322c870a53beb2b357ab0f22b660b971baa0f0ed3f0cf337
+meta	parent-evidence-law-authority	a3a838a64dcffcca4cc4586eba304737ab66a56e11ff2c4616196f4f22de1e67
+meta	status	c-timing-carriers-structurally-admitted
+meta	execution-status	forbidden
+meta	claim-status	not-admitted
+meta	clock-source	clock-monotonic-raw-direct-syscall
+meta	clock-reads	2
+meta	clock-placement	before-allocation-after-checksum-validation-and-teardown
+meta	derivation	exact-mechanical-wp2-source-wrapper
+meta	result-protocol	fixed-le56-v1
+meta	target	x86_64-unknown-linux-gnu
+meta	language	c17
+meta	kernel-count	4
+meta	role-count	2
+role	01	c-generic	runtime-n-and-reps	2
+role	02	c-specialized	static-n-and-reps	3
+kernel	01	sum-dense	6710476800	benchmarks/s4/c/sum_dense.c	e86ca5f94eaecfe1d3af03260141639b81291198eed97afe804a4991b5204de6	benchmarks/s4/c/timing/sum_dense.c	81e540fed2f01c5771c1561e0ee9a6a9c586db6658d902ff8ebbf3c8bf26da87
+kernel	02	branch-mix	-69189632	benchmarks/s4/c/branch_mix.c	bb2e483e5f6348a42e58071550fa3b7bbfcf63df4602f879596f42a0ae716e3f	benchmarks/s4/c/timing/branch_mix.c	8582db44bb1b399932c440479a329dd10c6b0c4105c5960f4a6a315ced708eb7
+kernel	03	dot-product	73294064435200	benchmarks/s4/c/dot_product.c	94b43148194dfca1a0c9ad571402d338a745cbc57d7e083fd6b4f63a82f52a4d	benchmarks/s4/c/timing/dot_product.c	aa2bc9e37cd594c7d436537b5e1a9c6e451ff343fefc50b117477dada12e8305
+kernel	04	list-update	6730547200	benchmarks/s4/c/list_update.c	0b9bb17070f3a6528d8aa26b4d7b86f446d858e8aa6ed1ac9d8c64ad3fd41eb4	benchmarks/s4/c/timing/list_update.c	cd138512c39f75935290ab9f5c1ea9fddf47481a4369545068647e11e55cf20c
+closure	01	c-generic-in-role-timing-carrier-unavailable	closed	wp7b-c-exact-source-derivation
+closure	02	c-specialized-in-role-timing-carrier-unavailable	closed	wp7b-c-exact-source-derivation
+blocker	01	retained-controlled-host-attestation-unavailable
+blocker	02	measurement-runner-unavailable
+blocker	03	raw-measurement-evidence-unavailable
+seal	0dcfcebd62268fb12056dfb08dcbc7a58bd5dd0955a2b29e7fcb745645a00ddf

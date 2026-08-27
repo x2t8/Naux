@@ -1,0 +1,48 @@
+name: S4 residual role admission
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-residual-role-admission.yml"
+      - "distribution/s4-performance/**"
+      - "naux-lang/examples/naux_s4_residual_process.rs"
+      - "naux-lang/examples/support/s4_residual_process_elf.rs"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-residual-role-admission.yml"
+      - "distribution/s4-performance/**"
+      - "naux-lang/examples/naux_s4_residual_process.rs"
+      - "naux-lang/examples/support/s4_residual_process_elf.rs"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+
+permissions:
+  contents: read
+
+jobs:
+  untimed-role-admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.85.0
+      - name: Build and test the reviewed process emitter
+        run: |
+          cargo test --locked -p naux --example naux_s4_residual_process
+          cargo build --locked -p naux --example naux_s4_residual_process
+      - name: Validate static composition and two fresh-process passes
+        run: |
+          python3 scripts/s4_residual_role_admission.py
+          python3 scripts/s4_residual_role_admission.py \
+            --binary target/debug/examples/naux_s4_residual_process
+      - name: Run focused role-admission mutation tests
+        env:
+          NAUX_S4_RESIDUAL_PROCESS_BINARY: target/debug/examples/naux_s4_residual_process
+        run: |
+          python3 -m unittest discover \
+            -s scripts/tests \
+            -p 'test_s4_residual_role_admission*.py'

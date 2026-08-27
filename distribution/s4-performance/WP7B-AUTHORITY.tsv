@@ -1,0 +1,21 @@
+NAUX-S4-RESIDUAL-TIMING-CARRIER-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP7B
+meta	authority-id	s4-naux-residual-timing-carrier-v1
+meta	status	naux-timing-carrier-structurally-admitted
+meta	execution-status	forbidden
+meta	claim-status	not-admitted
+meta	file-count	8
+component	timing-carrier	distribution/s4-performance/WP7B-CARRIER.tsv	3264aab6c5457e8611ddfc7874b8274a01e3f4b4107b086b5c82c6683c507d30
+parent	process-authority	distribution/s4-performance/WP5E-AUTHORITY.tsv	098a7cb2216359c03ab1e58d3a41f6c904d411ccafa1c10b0a88885fc3dfc53f
+parent	role-authority	distribution/s4-performance/WP5F-AUTHORITY.tsv	702ba39892da6817ce5ed6d0c23c4a454b4adeb7e5053cf8d10b1cc21cba1fc0
+parent	evidence-law-authority	distribution/s4-performance/WP7A-AUTHORITY.tsv	a3a838a64dcffcca4cc4586eba304737ab66a56e11ff2c4616196f4f22de1e67
+file	100644	1768	43d4b313605d75fcebbe0a472e783e39a93a3691050c00eef485a023e7ec4e68	.github/workflows/s4-residual-timing.yml	timing-carrier
+file	100644	2320	4e85e1a610c2d8d733ba7682f55e04766dc9254b917efb3d2d75874744c3d1da	distribution/s4-performance/WP7B-CARRIER.tsv	timing-carrier
+file	100644	868	ab6ef354bec148fcad22f8f11c0879a61b9616c33f3645c6456ecc8f1dd3bde8	distribution/s4-performance/WP7B-NONCLAIMS.md	timing-carrier
+file	100644	927	0c167ea31d288c35a0d7f58e3cc106550be3fb1126a715c8ec235bfd8ca83b9e	distribution/s4-performance/WP7B-README.md	timing-carrier
+file	100644	7988	950c5487104397423e4c5ac2b07283c2469cf8eee7c52e9e51f8eb48242941f3	naux-lang/examples/naux_s4_residual_timing.rs	timing-carrier
+file	100644	17418	dc311d569b79f1b771b133064d53c761bc05f881d1cfad8221169da71970f612	naux-lang/examples/support/s4_residual_timing_elf.rs	timing-carrier
+file	100644	30283	15983af186b950f0c7b8193dae50704197ce5eb159fd509476e497f762c3ef7a	scripts/s4_residual_timing.py	timing-carrier
+file	100644	7721	b9537db018eecf39a7fd546aa7fd31d9cd4cd219b5457f1d11898178927e3733	scripts/tests/test_s4_residual_timing.py	timing-carrier
+seal	61e42d60f76b5bbb322c870a53beb2b357ab0f22b660b971baa0f0ed3f0cf337

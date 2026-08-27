@@ -1,0 +1,33 @@
+NAUX-S4-THRESHOLD-EVALUATOR-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-benchmark-authority	b23533c4e96ec9e3b66482e96b79fdeb5985c823ce012d827e69eb1c14a4b659
+meta	parent-evidence-law	a3a838a64dcffcca4cc4586eba304737ab66a56e11ff2c4616196f4f22de1e67
+meta	parent-runner-authority	65039af5fe9fb8f301a2615485320d9373a31e4d207e042baf9a3f136f6474ef
+meta	status	threshold-evaluator-structurally-admitted
+meta	input	exact-wp7c-bundle-v1
+meta	clock-policy	forbidden
+meta	execution-policy	forbidden
+meta	claim-status	not-admitted
+meta	variance-policy	all-twelve-statistics-pass
+meta	arithmetic	exact-integer-rational-cross-products
+meta	residual-max-specialized-ratio	11/10
+meta	residual-min-generic-speedup	5/4
+meta	intersection-policy	same-kernel-must-pass-both-thresholds
+meta	result	threshold-candidate-only
+meta	target	x86_64-unknown-linux-gnu
+gate	01	bundle-root	required	exact-wp7c-manifest-and-inventory
+gate	02	host-attestation	required	exact-eligible-retained-report
+gate	03	evidence-replay	required	exact-wp7a-candidate
+gate	04	session-replay	required	exact-warmup-and-360-sample-correspondence
+gate	05	artifact-identity	required	exact-twelve-binaries-and-three-role-aggregates
+gate	06	toolchain-identity	required	exact-four-readable-receipts-and-role-aggregates
+gate	07	variance	required	all-twelve-cv-gates-pass
+gate	08	competitiveness	required	naux-over-specialized-not-greater-than-11-over-10
+gate	09	differentiation	required	generic-over-naux-not-less-than-5-over-4
+gate	10	intersection	required	at-least-one-same-kernel-passes-both
+gate	11	claim-boundary	required	candidate-never-self-admits-claim
+closure	01	threshold-evaluator-unavailable	closed	wp7d-exact-replay
+blocker	01	eligible-controlled-bundle-unavailable
+blocker	02	tracked-public-protocol-acceptance-unavailable
+blocker	03	performance-claim-authority-unavailable
+seal	97928587117cb085cc99bde7e38994ed3aef17d36a3a70ab9565450b19b8cb92

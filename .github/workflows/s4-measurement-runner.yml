@@ -1,0 +1,31 @@
+name: S4 measurement runner authority
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-measurement-runner.yml"
+      - "distribution/s4-performance/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+      - "docs/adr/adr-0095-s4-controlled-acquisition-runner.md"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-measurement-runner.yml"
+      - "distribution/s4-performance/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+      - "docs/adr/adr-0095-s4-controlled-acquisition-runner.md"
+
+permissions:
+  contents: read
+
+jobs:
+  static-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static runner authority
+        run: python3 scripts/s4_measurement_runner.py
+      - name: Focused synthetic tests
+        run: python3 -m unittest scripts.tests.test_s4_measurement_runner_static scripts.tests.test_s4_measurement_runner_replay

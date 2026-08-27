@@ -1,0 +1,47 @@
+name: S4 residual timing carrier
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-residual-timing.yml"
+      - "distribution/s4-performance/WP5E-*"
+      - "distribution/s4-performance/WP7A-*"
+      - "distribution/s4-performance/WP7B-*"
+      - "naux-lang/examples/naux_s4_residual_timing.rs"
+      - "naux-lang/examples/support/s4_residual_timing_elf.rs"
+      - "scripts/s4_residual_timing.py"
+      - "scripts/tests/test_s4_residual_timing.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-residual-timing.yml"
+      - "distribution/s4-performance/WP5E-*"
+      - "distribution/s4-performance/WP7A-*"
+      - "distribution/s4-performance/WP7B-*"
+      - "naux-lang/examples/naux_s4_residual_timing.rs"
+      - "naux-lang/examples/support/s4_residual_timing_elf.rs"
+      - "scripts/s4_residual_timing.py"
+      - "scripts/tests/test_s4_residual_timing.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  structural-carrier-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Test non-executing carrier construction
+        run: cargo test --locked -p naux --example naux_s4_residual_timing
+      - name: Build reviewed carrier emitter
+        run: cargo build --locked -p naux --example naux_s4_residual_timing
+      - name: Independently replay bytes without executing generated images
+        env:
+          NAUX_S4_RESIDUAL_TIMING_BINARY: target/debug/examples/naux_s4_residual_timing
+        run: |
+          python3 -m unittest scripts/tests/test_s4_residual_timing.py
+          python3 scripts/s4_residual_timing.py \
+            --binary target/debug/examples/naux_s4_residual_timing
