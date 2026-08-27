@@ -1,11 +1,11 @@
 NAUX-S4-CLAIM-ADMISSION-CONTRACT	1
 meta	policy-version	1.0.0
 meta	parent-benchmark-authority	b23533c4e96ec9e3b66482e96b79fdeb5985c823ce012d827e69eb1c14a4b659
-meta	parent-residual-role-authority	702ba39892da6817ce5ed6d0c23c4a454b4adeb7e5053cf8d10b1cc21cba1fc0
-meta	parent-host-protocol-authority	9cc57ce48ec67d92724b417d43d9556e0e8446e5dfe2770b3d68ffd5dfe49b59
-meta	parent-evidence-law-authority	a3a838a64dcffcca4cc4586eba304737ab66a56e11ff2c4616196f4f22de1e67
-meta	parent-runner-authority	65039af5fe9fb8f301a2615485320d9373a31e4d207e042baf9a3f136f6474ef
-meta	parent-threshold-authority	e23bb392575aa4d7ea950d93b98d962ae50dae3ffa7a9040cb5027997d0e0660
+meta	parent-residual-role-authority	1d85ad923f5db2eb520cee9d3582bbc97f63b711c67d5d4b44d5859fb0fa92bd
+meta	parent-host-protocol-authority	3062a5197fa1fcbe50f60b624b75b2be37c55a0c1193d1eeeffc03e7f03caaf0
+meta	parent-evidence-law-authority	7e10bc03b30b532f05e67c6f6d3ce80d7430125bcae7b9e3824c86cfc233f0bc
+meta	parent-runner-authority	6c2fb288d7a0012eacc5e6aff4ad49aaff5e218367dd95776c0a470ec95ece7b
+meta	parent-threshold-authority	43a80fe569a3defb5428b232a6b4b8d83a2a221a2558a5642e213b8d44a559f5
 meta	protocol-status	claim-protocol-structurally-admitted
 meta	admission-status	blocked
 meta	default-mode	static-no-host-no-network-no-clock-no-execution
@@ -29,4 +29,4 @@ blocker	01	tracked-public-protocol-acceptance-unavailable
 blocker	02	eligible-controlled-bundle-unavailable
 blocker	03	exact-public-claim-request-unavailable
 blocker	04	distinct-release-approval-unavailable
-seal	5fc3a2e1de06bb1fa5d45fba83f8e9703c544ee4aa2f86da0520365a57e3054d
+seal	b416feb3facae3137bffa28ddfac2c1e89909fda115c0623becb45197a96794b

@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.85.0
+          toolchain: 1.96.0
       - name: Build and test the reviewed process emitter
         run: |
           cargo test --locked -p naux --example naux_s4_residual_process

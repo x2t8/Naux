@@ -1,8 +1,8 @@
 NAUX-S4-RESIDUAL-TIMING-CARRIER-CONTRACT	1
 meta	policy-version	1.0.0
 meta	parent-process-authority	098a7cb2216359c03ab1e58d3a41f6c904d411ccafa1c10b0a88885fc3dfc53f
-meta	parent-role-authority	702ba39892da6817ce5ed6d0c23c4a454b4adeb7e5053cf8d10b1cc21cba1fc0
-meta	parent-evidence-law-authority	a3a838a64dcffcca4cc4586eba304737ab66a56e11ff2c4616196f4f22de1e67
+meta	parent-role-authority	1d85ad923f5db2eb520cee9d3582bbc97f63b711c67d5d4b44d5859fb0fa92bd
+meta	parent-evidence-law-authority	7e10bc03b30b532f05e67c6f6d3ce80d7430125bcae7b9e3824c86cfc233f0bc
 meta	status	naux-timing-carrier-structurally-admitted
 meta	execution-status	forbidden
 meta	claim-status	not-admitted
@@ -27,4 +27,4 @@ blocker	02	c-specialized-in-role-timing-carrier-unavailable
 blocker	03	retained-controlled-host-attestation-unavailable
 blocker	04	measurement-runner-unavailable
 blocker	05	raw-measurement-evidence-unavailable
-seal	3264aab6c5457e8611ddfc7874b8274a01e3f4b4107b086b5c82c6683c507d30
+seal	6cb3084f30090aa1984bc8d0e811cb7c07d3b74a59b7bd75b21ae3f9cd5724a9

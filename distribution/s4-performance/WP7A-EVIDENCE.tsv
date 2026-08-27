@@ -1,8 +1,8 @@
 NAUX-S4-MEASUREMENT-EVIDENCE-LAW	1
 meta	policy-version	1.0.0
 meta	parent-measurement-boundary	bda4409f32e1afe162b68401529d127cf4a77077df000826823d2660ee4ade26
-meta	parent-residual-role	702ba39892da6817ce5ed6d0c23c4a454b4adeb7e5053cf8d10b1cc21cba1fc0
-meta	parent-host-protocol	9cc57ce48ec67d92724b417d43d9556e0e8446e5dfe2770b3d68ffd5dfe49b59
+meta	parent-residual-role	1d85ad923f5db2eb520cee9d3582bbc97f63b711c67d5d4b44d5859fb0fa92bd
+meta	parent-host-protocol	3062a5197fa1fcbe50f60b624b75b2be37c55a0c1193d1eeeffc03e7f03caaf0
 meta	law-status	evidence-law-admitted
 meta	carrier-status	required-not-admitted
 meta	host-attestation-status	required-not-retained
@@ -52,4 +52,4 @@ blocker	01	instrumented-carriers-unavailable
 blocker	02	retained-controlled-host-attestation-unavailable
 blocker	03	measurement-runner-unavailable
 blocker	04	raw-measurement-evidence-unavailable
-seal	8020ff2f2eb89d059299abc12d4231631266f75228a3846d1ec949c336caf231
+seal	f064135a25638c4c8d94c5e973805220763ed075497388c3b7310f4ae60acb60
