@@ -36,6 +36,7 @@ const SYS_CLOCK_GETTIME: u32 = 228;
 const SYS_EXIT: u32 = 60;
 const FAILURE_EXIT_CODE: u32 = 71;
 const NANOSECONDS_PER_SECOND: u32 = 1_000_000_000;
+const RESULT_OWNER: u64 = 1;
 
 pub const RESULT_MAGIC: [u8; 8] = *b"NAUX7B01";
 pub const RESULT_BYTES: u32 = 56;
@@ -59,6 +60,8 @@ pub struct TimingElf64Facts {
     pub target_bytes: u64,
     pub result_bytes: u64,
     pub clock_reads: u32,
+    pub owner_zero_checks: u32,
+    pub result_owner: u64,
     pub load_flags: u32,
     pub stack_flags: u32,
 }
@@ -161,6 +164,8 @@ pub fn verify_timing_elf64(
         target_bytes: process.bytes.len() as u64,
         result_bytes: RESULT_BYTES as u64,
         clock_reads: 2,
+        owner_zero_checks: 1,
+        result_owner: RESULT_OWNER,
         load_flags: 5,
         stack_flags: 6,
     })
@@ -227,6 +232,8 @@ fn timing_startup(
     store_rcx_rsp(&mut bytes, OUTER_OFFSET);
     store_rdx_rsp(&mut bytes, INNER_OFFSET);
     store_rsi_rsp(&mut bytes, OWNER_OFFSET);
+    bytes.extend_from_slice(&[0x48, 0x85, 0xf6]);
+    failure_fixups.push(emit_jcc(&mut bytes, &[0x0f, 0x85]));
     mov_r8_imm64(&mut bytes, oracle as u64);
     bytes.extend_from_slice(&[0x4c, 0x39, 0xc0]);
     failure_fixups.push(emit_jcc(&mut bytes, &[0x0f, 0x85]));
@@ -255,6 +262,8 @@ fn timing_startup(
     store_r8_rsp(&mut bytes, RESULT_OFFSET);
     mov_r8_imm64(&mut bytes, ordinal);
     store_r8_rsp(&mut bytes, RESULT_OFFSET + 8);
+    mov_r8_imm64(&mut bytes, RESULT_OWNER);
+    store_r8_rsp(&mut bytes, OWNER_OFFSET);
 
     bytes.push(0xb8);
     bytes.extend_from_slice(&SYS_WRITE.to_le_bytes());

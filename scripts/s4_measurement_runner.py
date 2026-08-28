@@ -45,8 +45,8 @@ TOOLCHAIN_RECEIPT_DOMAIN = b"NAUX:s4-measurement-runner:toolchain-receipt:v1\0"
 WP6_AUTHORITY_SEAL = "3062a5197fa1fcbe50f60b624b75b2be37c55a0c1193d1eeeffc03e7f03caaf0"
 WP6_CONTRACT_SEAL = "64f3ee8279085c35857845ee7c4a4c6d2660695e3c74f43695126c7e5329e123"
 WP7A_AUTHORITY_SEAL = "7e10bc03b30b532f05e67c6f6d3ce80d7430125bcae7b9e3824c86cfc233f0bc"
-WP7B_NAUX_AUTHORITY_SEAL = "7b9ab600dbb1acc87ff7a4084dc0355b85a69c7cdf967ee072d0f668eb3c0c63"
-WP7B_C_AUTHORITY_SEAL = "240bceed62f9ab98b792f2308800df778ce5c35596139349d2a8c03827d63588"
+WP7B_NAUX_AUTHORITY_SEAL = "dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed"
+WP7B_C_AUTHORITY_SEAL = "8709d9737360a4334313f8886bc1fb1b1b42f48014f7b1e0e567088c29d238c4"
 HASH_RE = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}\Z")
 PATH_RE = re.compile(r"[A-Za-z0-9.][A-Za-z0-9._/-]*\Z")
@@ -522,19 +522,23 @@ def decode_carrier_record(raw: bytes, role: str, kernel: str) -> CarrierResult:
         raise RunnerError("unknown carrier role or kernel ordinal")
     values = struct.unpack("<QqQQQQ", raw[8:])
     result = CarrierResult(*values)
-    expected_name, oracle = kernel_map[kernel]
-    role_name, owner, _status = role_map[role]
-    if (
-        result.kernel_ordinal != int(kernel)
-        or expected_name not in {name for _ordinal, name, _oracle in wp7a.KERNELS}
-        or role_name not in {name for _ordinal, name, _owner, _status in CONTRACT_ROLES}
-        or result.checksum != oracle
-        or result.outer != REPS
-        or result.inner != N
-        or result.owner != owner
-        or result.duration_ns <= 0
-    ):
-        raise RunnerError("carrier result identity, parity, work, owner, or duration drifted")
+    _expected_name, oracle = kernel_map[kernel]
+    _role_name, owner, _status = role_map[role]
+    expected = (
+        ("kernel", result.kernel_ordinal, int(kernel)),
+        ("checksum", result.checksum, oracle),
+        ("outer", result.outer, REPS),
+        ("inner", result.inner, N),
+        ("owner", result.owner, owner),
+    )
+    for label, observed, required in expected:
+        if observed != required:
+            raise RunnerError(
+                f"carrier {role}/{kernel} {label} drifted: "
+                f"expected {required}, observed {observed}"
+            )
+    if result.duration_ns <= 0:
+        raise RunnerError(f"carrier {role}/{kernel} duration is non-positive")
     return result
 
 

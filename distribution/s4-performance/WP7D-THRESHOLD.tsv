@@ -2,7 +2,7 @@ NAUX-S4-THRESHOLD-EVALUATOR-CONTRACT	1
 meta	policy-version	1.0.0
 meta	parent-benchmark-authority	b23533c4e96ec9e3b66482e96b79fdeb5985c823ce012d827e69eb1c14a4b659
 meta	parent-evidence-law	7e10bc03b30b532f05e67c6f6d3ce80d7430125bcae7b9e3824c86cfc233f0bc
-meta	parent-runner-authority	6a864bb1435309e3dfa95c3bb3f9674eb0f10823a3def552e15cd7b766253af9
+meta	parent-runner-authority	7eb774dd2047d249a87806ae8ca1daaef11698fbab3975ac29f458a7b0766571
 meta	status	threshold-evaluator-structurally-admitted
 meta	input	exact-wp7c-bundle-v1
 meta	clock-policy	forbidden
@@ -30,4 +30,4 @@ closure	01	threshold-evaluator-unavailable	closed	wp7d-exact-replay
 blocker	01	eligible-controlled-bundle-unavailable
 blocker	02	tracked-public-protocol-acceptance-unavailable
 blocker	03	performance-claim-authority-unavailable
-seal	6a9b6b25741f680090749700ddc58f7f8c3a4d9ffe5a9ec3f98f8d12b9cecefa
+seal	f2c34a3af3f95c2497b2f2aeef6a2949215c942c528ae49b30ba59adb5afd0c7

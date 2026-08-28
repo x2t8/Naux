@@ -58,6 +58,7 @@ fn main() {
     println!("meta\tclock-source\tclock-monotonic-raw");
     println!("meta\tclock-placement\tbefore-target-after-checksum-validation");
     println!("meta\tresult-protocol\tfixed-le56-v1");
+    println!("meta\tresult-owner-policy\ttarget-rsi-zero-before-stop-record-role-one-after-stop");
     println!("meta\tallowed-syscalls\tmmap-munmap-clock-gettime-write-exit");
     println!("meta\ttarget\tx86_64-unknown-linux-gnu");
     println!(
@@ -151,6 +152,8 @@ mod tests {
             assert_eq!(first, second, "{name} timing carrier drifted");
             let facts = verify_timing_elf64(&first.1, &first.0).expect("image verifies");
             assert_eq!(facts.clock_reads, 2);
+            assert_eq!(facts.owner_zero_checks, 1);
+            assert_eq!(facts.result_owner, 1);
             assert_eq!(facts.result_bytes, u64::from(RESULT_BYTES));
             assert_eq!(first.1.bytes.get(..4), Some(b"\x7fELF".as_slice()));
         }

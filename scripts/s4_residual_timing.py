@@ -58,6 +58,7 @@ SYS_CLOCK_GETTIME = 228
 SYS_EXIT = 60
 FAILURE_EXIT_CODE = 71
 NANOSECONDS_PER_SECOND = 1_000_000_000
+RESULT_OWNER = 1
 RESULT_MAGIC = b"NAUX7B01"
 RESULT_BYTES = 56
 MAX_TARGET_BYTES = 1_048_576
@@ -77,6 +78,7 @@ CONTRACT_METADATA = (
     ("target-preservation", "byte-exact-wp5e-process-target"),
     ("oracle-policy", "startup-validation-only-never-target-output-substitution"),
     ("result-protocol", "fixed-le56-v1"),
+    ("result-owner-policy", "target-rsi-zero-before-stop-record-role-one-after-stop"),
     ("allowed-syscalls", "mmap-munmap-clock-gettime-write-exit"),
     ("linker", "none"),
     ("libc", "none"),
@@ -118,6 +120,7 @@ CANDIDATE_METADATA = (
     ("clock-source", "clock-monotonic-raw"),
     ("clock-placement", "before-target-after-checksum-validation"),
     ("result-protocol", "fixed-le56-v1"),
+    ("result-owner-policy", "target-rsi-zero-before-stop-record-role-one-after-stop"),
     ("allowed-syscalls", "mmap-munmap-clock-gettime-write-exit"),
     ("target", "x86_64-unknown-linux-gnu"),
 )
@@ -506,6 +509,8 @@ def _startup(ordinal: int, oracle: int, target_offset: int) -> bytes:
     _store(result, b"\x48\x89\x4c\x24", OUTER_OFFSET)
     _store(result, b"\x48\x89\x54\x24", INNER_OFFSET)
     _store(result, b"\x48\x89\x74\x24", OWNER_OFFSET)
+    result.extend(b"\x48\x85\xf6")
+    failures.append(_emit_jcc(result, b"\x0f\x85"))
     _mov_r8(result, oracle)
     result.extend(b"\x4c\x39\xc0")
     failures.append(_emit_jcc(result, b"\x0f\x85"))
@@ -530,6 +535,8 @@ def _startup(ordinal: int, oracle: int, target_offset: int) -> bytes:
     _store(result, b"\x4c\x89\x44\x24", RESULT_OFFSET)
     _mov_r8(result, ordinal)
     _store(result, b"\x4c\x89\x44\x24", RESULT_OFFSET + 8)
+    _mov_r8(result, RESULT_OWNER)
+    _store(result, b"\x4c\x89\x44\x24", OWNER_OFFSET)
     result.extend(b"\xb8" + struct.pack("<I", SYS_WRITE))
     result.extend(b"\xbf" + struct.pack("<I", 1))
     _lea_rsi_rsp(result, RESULT_OFFSET)

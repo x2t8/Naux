@@ -89,15 +89,40 @@ class S4ResidualTimingTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertIn(b"mode\tindependent-byte-replay-no-execution\n", first_report)
 
+    def test_owner_cleanup_precedes_serialized_naux_role_identity(self) -> None:
+        raw = self._stdout()
+        contract = timing.parse_contract(
+            ROOT / "distribution/s4-performance/WP7B-CARRIER.tsv"
+        )
+        candidate = timing.parse_candidate(raw, contract)
+        cleanup_check = b"\x48\x85\xf6\x0f\x85"
+        role_identity = (
+            b"\x49\xb8"
+            + timing.RESULT_OWNER.to_bytes(8, "little")
+            + b"\x4c\x89\x44\x24"
+            + bytes((timing.OWNER_OFFSET,))
+        )
+        for kernel in candidate.kernels:
+            startup = kernel.elf[timing.ELF_ENTRY_OFFSET : kernel.record.target_offset]
+            self.assertIn(cleanup_check, startup)
+            self.assertIn(role_identity, startup)
+            self.assertLess(startup.index(cleanup_check), startup.index(role_identity))
+
     def test_target_elf_and_receipt_mutations_fail_closed(self) -> None:
         raw = self._stdout()
         contract = timing.parse_contract(
             ROOT / "distribution/s4-performance/WP7B-CARRIER.tsv"
         )
+        receipt = next(
+            line for line in raw.splitlines() if line.startswith(b"kernel\t01\t")
+        )
+        receipt_fields = receipt.split(b"\t")
+        receipt_fields[7] = str(int(receipt_fields[7]) + 1).encode("ascii")
+        drifted_receipt = b"\t".join(receipt_fields)
         mutations = (
             raw.replace(b"target-hex\t01\t55", b"target-hex\t01\t54", 1),
             raw.replace(b"elf-hex\t02\t7f", b"elf-hex\t02\t7e", 1),
-            raw.replace(b"\t321\t592\n", b"\t322\t592\n", 1),
+            raw.replace(receipt, drifted_receipt, 1),
             raw.replace(
                 b"verification\tregenerated-no-execution",
                 b"runtime-ns\t1",

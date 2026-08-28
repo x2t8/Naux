@@ -5,6 +5,9 @@ target. The target bytes remain unchanged. A generic startup reads
 `CLOCK_MONOTONIC_RAW`, calls the target, saves its returned checksum and work
 facts, validates the checksum, reads the clock again, computes a checked
 positive nanosecond delta, and only then serializes a fixed 56-byte record.
+The startup also requires the returned owner register to be zero before the
+stop clock, proving target teardown, then writes the NAUX role identity `1`
+into the result record after the stop clock.
 
 Static authority validation:
 

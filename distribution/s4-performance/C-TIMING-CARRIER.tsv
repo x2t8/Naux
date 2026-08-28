@@ -1,7 +1,7 @@
 NAUX-S4-C-TIMING-CARRIER-CONTRACT	1
 meta	policy-version	1.0.0
 meta	parent-baseline-authority	0361c1e0d90bc3ba8d9a1e0bead7466bd71be3e3a723d605606730144ae7db6a
-meta	sibling-naux-carrier-authority	7b9ab600dbb1acc87ff7a4084dc0355b85a69c7cdf967ee072d0f668eb3c0c63
+meta	sibling-naux-carrier-authority	dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed
 meta	parent-evidence-law-authority	7e10bc03b30b532f05e67c6f6d3ce80d7430125bcae7b9e3824c86cfc233f0bc
 meta	status	c-timing-carriers-structurally-admitted
 meta	execution-status	forbidden
@@ -26,4 +26,4 @@ closure	02	c-specialized-in-role-timing-carrier-unavailable	closed	wp7b-c-exact-
 blocker	01	retained-controlled-host-attestation-unavailable
 blocker	02	measurement-runner-unavailable
 blocker	03	raw-measurement-evidence-unavailable
-seal	d5228ed6a89aa501aedb26c4849d4a46db54bbfe17b48be4f1e7a8c77913bb1c
+seal	4b2f6bf469aeac00679bfbc754406d7203c1ec0ab5495c5da3cf4332c92c3b5e
