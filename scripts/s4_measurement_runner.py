@@ -508,9 +508,18 @@ def parse_retained_host(path: Path, admission: Admission) -> RetainedHost:
 def verify_live_host(root: Path, retained: RetainedHost) -> None:
     observation = wp7a.wp6.observe(root.resolve(), retained.commit)
     if not observation.eligible:
-        raise RunnerError("live host is not eligible under WP6")
+        refusals = ",".join(observation.refusals)
+        raise RunnerError(f"live host is not eligible under WP6: {refusals}")
     if observation.fingerprint != retained.fingerprint or observation.facts != retained.facts:
-        raise RunnerError("live host differs from retained attestation")
+        retained_facts = dict(retained.facts)
+        observed_facts = dict(observation.facts)
+        changed = tuple(
+            key
+            for _ordinal, key in wp7a.wp6.CONTRACT_FACTS
+            if retained_facts.get(key) != observed_facts.get(key)
+        )
+        detail = ",".join(changed) if changed else "fingerprint"
+        raise RunnerError(f"live host differs from retained attestation: {detail}")
 
 
 def decode_carrier_record(raw: bytes, role: str, kernel: str) -> CarrierResult:

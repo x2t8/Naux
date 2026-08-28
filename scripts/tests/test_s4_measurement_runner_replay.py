@@ -122,7 +122,42 @@ class S4MeasurementRunnerReplayTests(unittest.TestCase):
             changed = runner.wp7a.wp6.HostObservation(retained.facts, (), "9" * 64)
             with (
                 mock.patch.object(runner.wp7a.wp6, "observe", return_value=changed),
-                self.assertRaises(runner.RunnerError),
+                self.assertRaisesRegex(
+                    runner.RunnerError,
+                    "live host differs from retained attestation: fingerprint",
+                ),
+            ):
+                runner.verify_live_host(ROOT, retained)
+
+    def test_live_host_failure_names_refusals_and_changed_facts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="naux-wp7c-host-diagnostic-") as directory_name:
+            retained = self.retained(Path(directory_name))
+            refused = runner.wp7a.wp6.HostObservation(
+                retained.facts,
+                ("missing-or-nonperformance-governor", "dirty-or-unborn-repository"),
+                retained.fingerprint,
+            )
+            with (
+                mock.patch.object(runner.wp7a.wp6, "observe", return_value=refused),
+                self.assertRaisesRegex(
+                    runner.RunnerError,
+                    "live host is not eligible under WP6: "
+                    "missing-or-nonperformance-governor,dirty-or-unborn-repository",
+                ),
+            ):
+                runner.verify_live_host(ROOT, retained)
+
+            facts = tuple(
+                (key, "powersave" if key == "governor" else value)
+                for key, value in retained.facts
+            )
+            changed = runner.wp7a.wp6.HostObservation(facts, (), "9" * 64)
+            with (
+                mock.patch.object(runner.wp7a.wp6, "observe", return_value=changed),
+                self.assertRaisesRegex(
+                    runner.RunnerError,
+                    "live host differs from retained attestation: governor",
+                ),
             ):
                 runner.verify_live_host(ROOT, retained)
 

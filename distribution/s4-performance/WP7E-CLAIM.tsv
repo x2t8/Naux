@@ -4,8 +4,8 @@ meta	parent-benchmark-authority	b23533c4e96ec9e3b66482e96b79fdeb5985c823ce012d82
 meta	parent-residual-role-authority	1d85ad923f5db2eb520cee9d3582bbc97f63b711c67d5d4b44d5859fb0fa92bd
 meta	parent-host-protocol-authority	3062a5197fa1fcbe50f60b624b75b2be37c55a0c1193d1eeeffc03e7f03caaf0
 meta	parent-evidence-law-authority	7e10bc03b30b532f05e67c6f6d3ce80d7430125bcae7b9e3824c86cfc233f0bc
-meta	parent-runner-authority	7eb774dd2047d249a87806ae8ca1daaef11698fbab3975ac29f458a7b0766571
-meta	parent-threshold-authority	bbf5d09e9f25a8995898d54deaf6ff059579e0d227680c4af9481d1a0c3f7615
+meta	parent-runner-authority	b9dbfa5708eceac818f3b33904551ee7a86bc47f687b5d268e7470efc8d7a130
+meta	parent-threshold-authority	be68151c8af3a32ddd09e1390b354c8dfa8679476af7143e937252b07b148179
 meta	protocol-status	claim-protocol-structurally-admitted
 meta	admission-status	blocked
 meta	default-mode	static-no-host-no-network-no-clock-no-execution
@@ -29,4 +29,4 @@ blocker	01	tracked-public-protocol-acceptance-unavailable
 blocker	02	eligible-controlled-bundle-unavailable
 blocker	03	exact-public-claim-request-unavailable
 blocker	04	distinct-release-approval-unavailable
-seal	78f5d34388813353ac5bffd13fe0bb17f85d7c32254064b2870c5af4f879e020
+seal	93cb136ccbaa16f0a3843d1c9a8a7e8f70ffc698cadab8e2c3bc1225af0a67e8
