@@ -77,7 +77,7 @@ CONTRACT_METADATA = (
     ("build-policy", "fixed-argv-no-shell"),
     ("artifact-policy", "twelve-exact-role-kernel-artifacts"),
     ("binary-identity", "sha256-ordered-kernel-hash-aggregate"),
-    ("toolchain-identity", "sha256-executable-and-version-aggregate"),
+    ("toolchain-identity", "sha256-resolved-executable-and-version-aggregate"),
     ("warmup-policy", "retain-every-invocation-until-cumulative-100000000ns"),
     ("sample-policy", "role-major-kernel-major-exact30-no-drop-no-retry"),
     ("startup-policy", "nearest-rank-p50-positive-parent-envelope-minus-runtime"),
@@ -100,7 +100,7 @@ CONTRACT_GATES = (
     ("02", "retained-attestation", "required", "exact-eligible-wp6-report"),
     ("03", "live-reattestation", "required", "exact-facts-fingerprint-commit"),
     ("04", "checkout", "required", "clean-exact-attested-commit"),
-    ("05", "toolchains", "required", "resolved-regular-exact-hashes"),
+    ("05", "toolchains", "required", "stable-invocation-resolved-regular-exact-hashes"),
     ("06", "artifacts", "required", "exact-build-and-aggregate-identity"),
     ("07", "warmup", "required", "all-invocations-retained-cumulative-minimum"),
     ("08", "samples", "required", "exact360-no-retry"),
@@ -604,10 +604,21 @@ def _resolve_tool(command: str, label: str) -> Path:
     located = shutil.which(command)
     if located is None:
         raise RunnerError(f"{label} was not found")
-    path = Path(located).resolve(strict=True)
-    metadata = path.stat()
-    if not stat.S_ISREG(metadata.st_mode) or not os.access(path, os.X_OK):
+    path = Path(os.path.abspath(located))
+    try:
+        resolved = path.resolve(strict=True)
+        metadata = resolved.stat()
+    except OSError as error:
+        raise RunnerError(f"{label} cannot be resolved") from error
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or not os.access(path, os.X_OK)
+        or not os.access(resolved, os.X_OK)
+    ):
         raise RunnerError(f"{label} is not a regular executable")
+    # Preserve the located invocation path. Dispatchers such as rustup select
+    # their cargo/rustc personality from argv[0], so replacing this path with
+    # its canonical target changes the command's semantics.
     return path
 
 
@@ -622,6 +633,19 @@ def _fixed_environment() -> dict[str, str]:
 
 
 def _tool_identity(name: str, path: Path) -> ToolIdentity:
+    try:
+        resolved_before = path.resolve(strict=True)
+        metadata = resolved_before.stat()
+        executable = resolved_before.read_bytes()
+    except OSError as error:
+        raise RunnerError(f"cannot inspect {name}") from error
+    if (
+        not stat.S_ISREG(metadata.st_mode)
+        or not os.access(path, os.X_OK)
+        or not os.access(resolved_before, os.X_OK)
+        or not executable
+    ):
+        raise RunnerError(f"{name} is not a regular executable")
     try:
         completed = subprocess.run(
             [os.fspath(path), "--version"],
@@ -644,10 +668,17 @@ def _tool_identity(name: str, path: Path) -> ToolIdentity:
         or b"\r" in version
     ):
         raise RunnerError(f"{name} version output is not canonical")
+    try:
+        resolved_after = path.resolve(strict=True)
+        executable_after = resolved_after.read_bytes()
+    except OSError as error:
+        raise RunnerError(f"cannot re-inspect {name}") from error
+    if resolved_after != resolved_before or executable_after != executable:
+        raise RunnerError(f"{name} identity drifted during inspection")
     return ToolIdentity(
         name,
         os.fspath(path),
-        _sha256(path.read_bytes()),
+        _sha256(executable),
         _sha256(version),
         version.hex(),
     )
@@ -709,6 +740,7 @@ def _build_naux_role(
     cargo: Path,
     rustc: Path,
 ) -> RoleBuild:
+    toolchains = (_tool_identity("cargo", cargo), _tool_identity("rustc", rustc))
     target = directory / "cargo-target"
     environment = _fixed_environment()
     environment.update({"CARGO_TARGET_DIR": os.fspath(target), "RUSTC": os.fspath(rustc)})
@@ -738,7 +770,8 @@ def _build_naux_role(
         _write_executable(path, kernel.elf)
         artifacts.append(_artifact("01", ordinal, path))
     artifact_tuple = tuple(artifacts)
-    toolchains = (_tool_identity("cargo", cargo), _tool_identity("rustc", rustc))
+    if toolchains != (_tool_identity("cargo", cargo), _tool_identity("rustc", rustc)):
+        raise RunnerError("NAUX toolchain identity drifted during build")
     return RoleBuild(
         "01",
         "naux-residual",
@@ -763,6 +796,7 @@ def _build_c_role(
     path_status: str,
     role_flags: tuple[str, ...],
 ) -> RoleBuild:
+    toolchains = (_tool_identity("cc", compiler),)
     output = directory / name
     output.mkdir()
     environment = _fixed_environment()
@@ -788,7 +822,8 @@ def _build_c_role(
             raise RunnerError("C carrier is not an x86-64 ELF")
         artifacts.append(_artifact(ordinal, f"{record.ordinal:02}", binary))
     artifact_tuple = tuple(artifacts)
-    toolchains = (_tool_identity("cc", compiler),)
+    if toolchains != (_tool_identity("cc", compiler),):
+        raise RunnerError(f"{name} toolchain identity drifted during build")
     return RoleBuild(
         ordinal,
         name,

@@ -10,7 +10,11 @@ python3 scripts/s4_measurement_runner.py
 
 Acquisition is available only through an explicit command with an exact
 eligible retained WP6 report, a matching live re-attestation, a clean attested
-commit, resolved toolchains, and a new output path outside the checkout:
+commit, resolved toolchains, and a new output path outside the checkout. The
+runner preserves each located invocation name (including `rustup`-managed
+`cargo` and `rustc` proxies), hashes the regular executable behind it, and
+requires the same invocation/target/version identity before and after each
+role build:
 
 ```bash
 python3 scripts/s4_measurement_runner.py \

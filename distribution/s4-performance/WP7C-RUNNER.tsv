@@ -13,7 +13,7 @@ meta	host-policy	retained-report-plus-exact-live-reattestation
 meta	build-policy	fixed-argv-no-shell
 meta	artifact-policy	twelve-exact-role-kernel-artifacts
 meta	binary-identity	sha256-ordered-kernel-hash-aggregate
-meta	toolchain-identity	sha256-executable-and-version-aggregate
+meta	toolchain-identity	sha256-resolved-executable-and-version-aggregate
 meta	warmup-policy	retain-every-invocation-until-cumulative-100000000ns
 meta	sample-policy	role-major-kernel-major-exact30-no-drop-no-retry
 meta	startup-policy	nearest-rank-p50-positive-parent-envelope-minus-runtime
@@ -33,7 +33,7 @@ gate	01	static-isolation	required	no-host-no-clock-no-build-no-execution
 gate	02	retained-attestation	required	exact-eligible-wp6-report
 gate	03	live-reattestation	required	exact-facts-fingerprint-commit
 gate	04	checkout	required	clean-exact-attested-commit
-gate	05	toolchains	required	resolved-regular-exact-hashes
+gate	05	toolchains	required	stable-invocation-resolved-regular-exact-hashes
 gate	06	artifacts	required	exact-build-and-aggregate-identity
 gate	07	warmup	required	all-invocations-retained-cumulative-minimum
 gate	08	samples	required	exact360-no-retry
@@ -44,4 +44,4 @@ gate	12	atomic-publication	required	complete-bundle-only
 closure	01	measurement-runner-unavailable	closed	wp7c-structural-runner
 blocker	01	retained-controlled-host-attestation-unavailable
 blocker	02	raw-measurement-evidence-unavailable
-seal	c25cf5545691fa89f942a2319c24f4ac528083aa0b5a6e75a040be66c0e90b6f
+seal	7c53d79da49e47579c740b0386affa386b26a3c888d10e86f61f9df8b8ae464f

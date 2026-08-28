@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import io
+import os
 import shutil
 import sys
 import tempfile
@@ -99,6 +100,32 @@ class S4MeasurementRunnerStaticTests(unittest.TestCase):
         self.assertNotIn("--acquire", workflow)
         self.assertIn("test_s4_measurement_runner_static", workflow)
         self.assertIn("test_s4_measurement_runner_replay", workflow)
+
+    def test_symlink_dispatcher_keeps_invocation_name_and_hashes_target(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="naux-wp7c-tool-proxy-") as directory_name:
+            directory = Path(directory_name)
+            dispatcher = directory / "dispatcher"
+            dispatcher.write_text(
+                "#!/bin/sh\n"
+                "case \"${0##*/}\" in\n"
+                "  cargo) printf 'cargo proxy 1.0\\n' ;;\n"
+                "  *) exit 42 ;;\n"
+                "esac\n"
+            )
+            dispatcher.chmod(0o700)
+            cargo = directory / "cargo"
+            cargo.symlink_to(dispatcher.name)
+
+            invocation = runner._resolve_tool(os.fspath(cargo), "Cargo")
+            self.assertEqual(invocation, cargo)
+            self.assertNotEqual(invocation, dispatcher)
+            identity = runner._tool_identity("cargo", invocation)
+            self.assertEqual(identity.executable_path, os.fspath(cargo))
+            self.assertEqual(
+                identity.executable_hash,
+                hashlib.sha256(dispatcher.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(bytes.fromhex(identity.version_hex), b"cargo proxy 1.0\n")
 
 
 if __name__ == "__main__":
