@@ -1,0 +1,22 @@
+NAUX-S4-PERFORMANCE-GAP-FORENSICS-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8A
+meta	authority-id	s4-performance-gap-forensics-v1
+meta	status	forensics-protocol-admitted
+meta	claim-status	not-admitted
+meta	clock-policy	forbidden
+meta	native-execution-policy	forbidden
+meta	file-count	7
+component	forensics-contract	distribution/s4-performance/WP8A-FORENSICS.tsv	eb0c7a1fa087b942e102906514674c8d74e41137749da31e55be3b2aee6cb8c6
+parent	wp5d-authority	distribution/s4-performance/WP5D-AUTHORITY.tsv	eba915d65c448d0251c4b253c911d61e2f06b8d4bcc4cf3e57a7eea78bd87fb4
+parent	wp5e-authority	distribution/s4-performance/WP5E-AUTHORITY.tsv	098a7cb2216359c03ab1e58d3a41f6c904d411ccafa1c10b0a88885fc3dfc53f
+parent	wp7b-authority	distribution/s4-performance/WP7B-AUTHORITY.tsv	dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed
+parent	wp7d-authority	distribution/s4-performance/WP7D-AUTHORITY.tsv	be68151c8af3a32ddd09e1390b354c8dfa8679476af7143e937252b07b148179
+file	100644	1346	132f6d6529f67cc8f0512e651791c47cb712fddab4b64b10c9d2edd90e23fa09	.github/workflows/s4-performance-gap-forensics.yml	performance-gap-forensics
+file	100644	1769	f78424c6ebfd908b85c2ffb7ca0224e7b60d6e069bf892259aa76b7d490d0769	distribution/s4-performance/WP8A-FORENSICS.tsv	performance-gap-forensics
+file	100644	670	12cd2613d0dbaa914a61caa7e3372784fae34c01908be99ffa06b6deef20887e	distribution/s4-performance/WP8A-NONCLAIMS.md	performance-gap-forensics
+file	100644	2648	b0cfa50d3fda452b1489ee42ba71fd6f20165f1009f9ef656332bed514563d1e	distribution/s4-performance/WP8A-README.md	performance-gap-forensics
+file	100644	32519	52ed0abb091c4dad48e6db0015b4fa91f5a5dd333a7f485a30a98d0db285dc55	scripts/s4_performance_gap_forensics.py	performance-gap-forensics
+file	100644	6055	c2f3063268a24cee7c03f6fc75eda1d168f07fc7b23089e929c05814ce787c3f	scripts/tests/test_s4_performance_gap_forensics_replay.py	performance-gap-forensics
+file	100644	3775	5fd82f8a433b3643ff75330cdec250908ecfd79c474acbde4dee143f9d6c35d5	scripts/tests/test_s4_performance_gap_forensics_static.py	performance-gap-forensics
+seal	6ba069fa75e8dfc49e60794c76097434868013fe38afc1c3c937fe7f818dae16

@@ -1,6 +1,6 @@
 # NAUX language support
 
-This is the self-contained, MIT-licensed language-support package for NAUX
+This is the self-contained, Apache-2.0-licensed language-support package for NAUX
 source files. Its canonical public home is
 [`x2t8/naux-grammar`](https://github.com/x2t8/naux-grammar); the NAUX compiler
 monorepo retains the synchronized source under `vscode/naux-lang` so grammar
@@ -17,7 +17,7 @@ drift can be checked against the executable language surface.
 | TextMate scope | `source.naux` |
 | Interpreter | `naux` |
 | Linguist color | `#FF304D` |
-| Grammar license | MIT |
+| Grammar license | Apache-2.0 |
 
 The machine-readable authority is
 [`linguist-language.json`](linguist-language.json). The status
@@ -33,7 +33,7 @@ usage threshold or GitHub acceptance.
 - `icons/nauxlang.png`: the global NAUX project mark used by registries;
 - `scripts/validate.mjs`: dependency-free identity and compiler-drift checks;
 - `test/fixtures/`: grammar fixtures, never part of the NAUX runtime installer;
-- `LICENSE`: standalone MIT grant for the grammar package.
+- `LICENSE`: standalone Apache License 2.0 grant for the grammar package.
 
 The grammar covers the currently executable Surface syntax: ritual blocks,
 functions, actions, exact scalar annotations, Unicode variables, byte

@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 INLINE_LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 REFERENCE_LINK = re.compile(r"^\s*\[[^\]]+\]:\s*(\S+)", re.MULTILINE)
 FENCE = re.compile(r"^\s*(```|~~~)")
+SEALED_SNAPSHOT_PREFIXES = ("distribution/license-transition/pre-apache/",)
 
 
 def tracked_paths(repo_root: Path) -> tuple[str, ...]:
@@ -94,6 +95,12 @@ def resolve_target(source: str, destination: str) -> str | None:
     return PurePosixPath(*parts).as_posix()
 
 
+def is_audited_markdown_source(path: str) -> bool:
+    return path.lower().endswith(".md") and not path.startswith(
+        SEALED_SNAPSHOT_PREFIXES
+    )
+
+
 def audit(repo_root: Path) -> list[str]:
     tracked = tracked_paths(repo_root)
     tracked_set = set(tracked)
@@ -105,7 +112,7 @@ def audit(repo_root: Path) -> list[str]:
             parent = parent.parent
 
     failures: list[str] = []
-    markdown = sorted(path for path in tracked if path.lower().endswith(".md"))
+    markdown = sorted(path for path in tracked if is_audited_markdown_source(path))
     link_count = 0
     for source in markdown:
         text = (repo_root / source).read_text(encoding="utf-8")

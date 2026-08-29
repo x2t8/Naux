@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Materialize the sealed pre-Apache authority view
+        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Install pinned Rust toolchain
         run: |
           rustup toolchain install 1.96.0 --profile minimal
@@ -27,9 +29,9 @@ jobs:
       - name: NAUX grammar and Linguist identity
         run: node vscode/naux-lang/scripts/validate.mjs
       - name: Sealed S2 Linguist surface
-        run: python3 scripts/s2_linguist_surface.py
+        run: python3 /tmp/naux-pre-apache/scripts/s2_linguist_surface.py
       - name: Sealed S3 trusted-thesis audit inputs
-        run: python3 scripts/s3_thesis_audit.py --static-only
+        run: python3 /tmp/naux-pre-apache/scripts/s3_thesis_audit.py --static-only
       - name: Tracked Markdown link audit
         run: python3 scripts/check_markdown_links.py
       - name: fmt
@@ -57,12 +59,12 @@ jobs:
         run: bash scripts/test_s2_public_release.sh
       - name: Independent S3 fixed-argv replay
         run: >-
-          python3 scripts/s3_thesis_audit.py
-          --t1-binary target/debug/naux-surface-native-t1
-          --worker-binary target/debug/naux-surface-native-t1-worker
-          --process-binary target/debug/naux-surface-native-t1-process
+          python3 /tmp/naux-pre-apache/scripts/s3_thesis_audit.py
+          --t1-binary ${{ github.workspace }}/target/debug/naux-surface-native-t1
+          --worker-binary ${{ github.workspace }}/target/debug/naux-surface-native-t1-worker
+          --process-binary ${{ github.workspace }}/target/debug/naux-surface-native-t1-process
       - name: performance governance tests
-        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+        run: cd /tmp/naux-pre-apache && python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 
   compatibility-smoke:
     name: core compatibility (${{ matrix.os }})

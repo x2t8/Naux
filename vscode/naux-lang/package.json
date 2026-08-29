@@ -4,7 +4,7 @@
   "description": "Language support, TextMate grammar, and editor snippets for NAUX (.nx)",
   "version": "0.1.2",
   "publisher": "x2t8",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "preview": true,
   "repository": {
     "type": "git",

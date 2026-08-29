@@ -9,7 +9,7 @@
     <img alt="Rust 2021" src="https://img.shields.io/badge/Rust-2021-b7410e?logo=rust&logoColor=white" />
     <img alt="Status" src="https://img.shields.io/badge/status-experimental-orange" />
     <img alt="CLI" src="https://img.shields.io/badge/CLI-naux-1f6feb" />
-    <img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
+    <img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-green" />
   </p>
 
   <p>
@@ -289,7 +289,7 @@ cargo run -p naux -- dev disasm naux-lang/examples/bench_sum_dense.nx
 |-- scripts/            Benchmark, validation, and reporting tools
 |-- tools/perf-gates/   Rust performance-gate utilities
 |-- naux-meta-coq/      Separate formal-model workspace
-|-- vscode/naux-lang/   Mirror of the canonical MIT-licensed NAUX grammar
+|-- vscode/naux-lang/   Mirror of the canonical Apache-2.0 NAUX grammar
 |-- docs/               Active public language and benchmark documentation
 |-- tutorial/           Current learner-facing guides
 |-- assets/             Public project assets
@@ -343,4 +343,5 @@ of the public repository surface.
 
 ## License
 
-NAUX is licensed under the MIT License and provided without warranty.
+NAUX is licensed under the [Apache License 2.0](LICENSE) and provided without
+warranty.

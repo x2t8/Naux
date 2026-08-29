@@ -1,0 +1,30 @@
+NAUX-S4-PERFORMANCE-GAP-FORENSICS-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-wp5d-authority	eba915d65c448d0251c4b253c911d61e2f06b8d4bcc4cf3e57a7eea78bd87fb4
+meta	parent-wp5e-authority	098a7cb2216359c03ab1e58d3a41f6c904d411ccafa1c10b0a88885fc3dfc53f
+meta	parent-wp7b-authority	dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed
+meta	parent-wp7d-authority	be68151c8af3a32ddd09e1390b354c8dfa8679476af7143e937252b07b148179
+meta	source-commit	7d270a54c0af7530585fde7be4d9f3f67c15e142
+meta	host-report-root	d76ec487c0a9d9d3456f6af8bf1d5c7ec11d4e457e84e624a2ddaa7a054402d8
+meta	bundle-root	3b28e2d8c1c73af037c7455a5e81bf788d3301620c53979bb7f2d5c3d6e95e6b
+meta	evidence-root	0b645e70e9e84f1e28dc901cc704e49bd14e71ec9d2a61d6888e58120188edba
+meta	threshold-candidate-root	bd716964a55ba03127e1ef80e9cabfccaee68bf78af9ea72cd8f76eecbf361f2
+meta	threshold-candidate	fail
+meta	claim-status	not-admitted
+meta	clock-policy	forbidden
+meta	native-execution-policy	forbidden
+meta	artifact-chain	wp7b-timing-to-wp5e-process-to-wp5d-target
+meta	decoder	owned-wp5d-range-replay
+meta	profile	bounded-target-plan-interpretation
+meta	metric	structural-exposure-not-cycles
+meta	kernel-count	4
+gate	01	immutable-bundle	required	exact-first-wp7c-root
+gate	02	threshold-replay	required	exact-failed-wp7d-candidate
+gate	03	timing-artifact	required	exact-four-wp7b-images
+gate	04	process-target	required	exact-four-wp5e-reconstructions
+gate	05	target-decode	required	exact-wp5d-ranges-and-bytes
+gate	06	source-binding	required	exact-wp5c-correspondence
+gate	07	bounded-profile	required	oracle-and-owner-state
+gate	08	candidate-ranking	required	structural-facts-only
+gate	09	claim-boundary	required	not-admitted
+seal	eb0c7a1fa087b942e102906514674c8d74e41137749da31e55be3b2aee6cb8c6

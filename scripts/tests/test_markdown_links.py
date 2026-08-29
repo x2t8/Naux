@@ -38,6 +38,14 @@ class MarkdownLinkTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "escapes"):
             LINKS.resolve_target("README.md", "../outside.md")
 
+    def test_sealed_license_snapshots_are_not_link_sources(self) -> None:
+        self.assertFalse(
+            LINKS.is_audited_markdown_source(
+                "distribution/license-transition/pre-apache/README.md"
+            )
+        )
+        self.assertTrue(LINKS.is_audited_markdown_source("README.md"))
+
 
 if __name__ == "__main__":
     unittest.main()

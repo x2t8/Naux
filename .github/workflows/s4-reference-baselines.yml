@@ -14,11 +14,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Materialize the sealed pre-Apache authority view
+        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Validate sealed S4-WP1 parent and S4-WP2 authority
-        run: python3 scripts/s4_reference_baselines.py
+        run: python3 /tmp/naux-pre-apache/scripts/s4_reference_baselines.py --root /tmp/naux-pre-apache
       - name: Reject reference-baseline mutations
-        run: python3 -m unittest -v scripts.tests.test_s4_reference_baselines
+        run: cd /tmp/naux-pre-apache && python3 -m unittest -v scripts.tests.test_s4_reference_baselines
       - name: Replay exact untimed C generic and specialized parity
-        run: python3 scripts/s4_reference_baselines.py --cc cc
+        run: python3 /tmp/naux-pre-apache/scripts/s4_reference_baselines.py --root /tmp/naux-pre-apache --cc cc
       - name: Reject whitespace damage
         run: git diff --check

@@ -1,0 +1,67 @@
+{
+  "name": "naux-lang",
+  "displayName": "NAUX Language",
+  "description": "Language support, TextMate grammar, and editor snippets for NAUX (.nx)",
+  "version": "0.1.2",
+  "publisher": "x2t8",
+  "license": "MIT",
+  "preview": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/x2t8/naux-grammar.git"
+  },
+  "homepage": "https://github.com/x2t8/naux-grammar",
+  "bugs": {
+    "url": "https://github.com/x2t8/Naux/issues"
+  },
+  "icon": "icons/nauxlang.png",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "naux",
+    "nx",
+    "language",
+    "textmate",
+    "syntax-highlighting",
+    "compiler"
+  ],
+  "galleryBanner": {
+    "color": "#111318",
+    "theme": "dark"
+  },
+  "scripts": {
+    "test": "node scripts/validate.mjs"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "naux",
+        "aliases": [
+          "NAUX",
+          "naux"
+        ],
+        "extensions": [
+          ".nx"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "naux",
+        "scopeName": "source.naux",
+        "path": "./syntaxes/naux.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "naux",
+        "path": "./snippets/naux.json"
+      }
+    ]
+  }
+}

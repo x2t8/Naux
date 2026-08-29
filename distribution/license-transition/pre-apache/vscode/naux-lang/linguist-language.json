@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "language": "NAUX",
+  "type": "programming",
+  "aliases": [
+    "naux"
+  ],
+  "extensions": [
+    ".nx"
+  ],
+  "tmScope": "source.naux",
+  "aceMode": "text",
+  "color": "#FF304D",
+  "interpreters": [
+    "naux"
+  ],
+  "grammar": "syntaxes/naux.tmLanguage.json",
+  "license": "MIT",
+  "status": "candidate-not-submitted"
+}

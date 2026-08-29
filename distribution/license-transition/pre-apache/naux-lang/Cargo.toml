@@ -1,0 +1,62 @@
+[package]
+name = "naux"
+version = "0.1.4"
+edition = "2021"
+license = "MIT"
+default-run = "naux"
+build = "build.rs"
+
+[features]
+default = []
+experimental-regions = []
+
+[lib]
+name = "naux"
+path = "src/lib.rs"
+
+[[bin]]
+name = "naux"
+path = "src/main.rs"
+
+[[bin]]
+name = "naux-learn-setup"
+path = "src/bin/naux_learn_setup.rs"
+
+[[bin]]
+name = "nauxup"
+path = "src/bin/nauxup.rs"
+
+[[bin]]
+name = "naux-r1-s7b-worker"
+path = "src/bin/naux_r1_s7b_worker.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "naux-policy15-candidate-worker"
+path = "src/bin/naux_policy15_candidate_worker.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "naux-tail-enveloped-worker"
+path = "src/bin/naux_tail_enveloped_worker.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "naux-surface-native-t1"
+path = "src/bin/naux_surface_native_t1.rs"
+
+[[bin]]
+name = "naux-surface-native-t1-worker"
+path = "src/bin/naux_surface_native_t1_worker.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "naux-surface-native-t1-process"
+path = "src/bin/naux_surface_native_t1_process.rs"
+
+[dependencies]
+egg = "0.10"

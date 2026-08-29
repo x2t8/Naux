@@ -14,12 +14,14 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Materialize the sealed pre-Apache authority view
+        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Install pinned Rust toolchain
         run: |
           rustup toolchain install 1.96.0 --profile minimal
           rustup default 1.96.0
       - name: Validate parent authorities and WP5B contract
-        run: python3 scripts/s4_structural_residual.py
+        run: python3 /tmp/naux-pre-apache/scripts/s4_structural_residual.py --root /tmp/naux-pre-apache
       - name: Build reviewed residual emitter
         run: >-
           cargo build --release --locked -p naux
@@ -30,11 +32,12 @@ jobs:
           --example naux_s4_structural_residual
       - name: Replay residual instructions independently
         env:
-          NAUX_S4_STRUCTURAL_RESIDUAL_BINARY: target/release/examples/naux_s4_structural_residual
-        run: python3 -m unittest -v scripts.tests.test_s4_structural_residual
+          NAUX_S4_STRUCTURAL_RESIDUAL_BINARY: ${{ github.workspace }}/target/release/examples/naux_s4_structural_residual
+        run: cd /tmp/naux-pre-apache && python3 -m unittest -v scripts.tests.test_s4_structural_residual
       - name: Replay exact structural residual without timing
         run: >-
-          python3 scripts/s4_structural_residual.py
-          --binary target/release/examples/naux_s4_structural_residual
+          python3 /tmp/naux-pre-apache/scripts/s4_structural_residual.py
+          --root /tmp/naux-pre-apache
+          --binary ${{ github.workspace }}/target/release/examples/naux_s4_structural_residual
       - name: Reject whitespace damage
         run: git diff --check

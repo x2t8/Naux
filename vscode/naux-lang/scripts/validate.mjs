@@ -10,6 +10,7 @@ const identity = readJson(join(packageRoot, "linguist-language.json"));
 const grammar = readJson(join(packageRoot, identity.grammar));
 const languageConfiguration = readJson(join(packageRoot, "language-configuration.json"));
 const snippets = readJson(join(packageRoot, "snippets/naux.json"));
+const license = readFileSync(join(packageRoot, "LICENSE"), "utf8");
 
 const expectedIdentity = {
   language: "NAUX",
@@ -21,7 +22,7 @@ const expectedIdentity = {
   color: "#FF304D",
   interpreters: ["naux"],
   grammar: "syntaxes/naux.tmLanguage.json",
-  license: "MIT",
+  license: "Apache-2.0",
   status: "candidate-not-submitted"
 };
 
@@ -33,6 +34,12 @@ for (const [field, expected] of Object.entries(expectedIdentity)) {
 assert.equal(packageJson.displayName, "NAUX Language");
 assert.equal(packageJson.publisher, "x2t8");
 assert.equal(packageJson.license, identity.license);
+assert.ok(
+  license.includes("Apache License") &&
+    license.includes("Version 2.0, January 2004") &&
+    license.includes("END OF TERMS AND CONDITIONS"),
+  "LICENSE must contain the canonical Apache License 2.0 text"
+);
 assert.equal(packageJson.preview, true, "Marketplace package must remain experimental");
 assert.deepEqual(packageJson.galleryBanner, { color: "#111318", theme: "dark" });
 assert.equal(packageJson.repository.url, "https://github.com/x2t8/naux-grammar.git");

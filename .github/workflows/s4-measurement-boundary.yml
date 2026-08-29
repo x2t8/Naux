@@ -15,7 +15,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Materialize the sealed pre-Apache authority view
+        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Validate accepted parent authorities and WP4 boundary
-        run: python3 scripts/s4_measurement_boundary.py
+        run: python3 /tmp/naux-pre-apache/scripts/s4_measurement_boundary.py --root /tmp/naux-pre-apache
       - name: Run WP4 mutation tests
-        run: python3 -m unittest scripts.tests.test_s4_measurement_boundary
+        run: cd /tmp/naux-pre-apache && python3 -m unittest scripts.tests.test_s4_measurement_boundary

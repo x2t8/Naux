@@ -1,0 +1,54 @@
+name: License transition authority
+
+on:
+  push:
+    paths:
+      - "LICENSE"
+      - "README.md"
+      - "naux-lang/Cargo.toml"
+      - "naux-lang/LICENSE"
+      - "naux-lang/src/cli/new.rs"
+      - "vscode/naux-lang/**"
+      - "distribution/license-transition/**"
+      - "scripts/license_transition.py"
+      - "scripts/tests/test_license_transition_*.py"
+      - ".github/workflows/license-transition.yml"
+  pull_request:
+    paths:
+      - "LICENSE"
+      - "README.md"
+      - "naux-lang/Cargo.toml"
+      - "naux-lang/LICENSE"
+      - "naux-lang/src/cli/new.rs"
+      - "vscode/naux-lang/**"
+      - "distribution/license-transition/**"
+      - "scripts/license_transition.py"
+      - "scripts/tests/test_license_transition_*.py"
+      - ".github/workflows/license-transition.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  transition:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate exact transition bytes
+        run: python3 scripts/license_transition.py
+      - name: Run static and historical authority tests
+        run: python3 -m unittest -v scripts.tests.test_license_transition_static scripts.tests.test_license_transition_replay
+      - name: Build current reviewed emitter
+        run: cargo build --locked -p naux --example naux_s4_residual_elf64
+      - name: Materialize exact pre-Apache view
+        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
+      - name: Build historical reviewed emitter
+        env:
+          CARGO_TARGET_DIR: /tmp/naux-pre-apache-target
+        run: cargo build --locked --manifest-path /tmp/naux-pre-apache/Cargo.toml -p naux --example naux_s4_residual_elf64
+      - name: Replay old authorities and compare generated targets
+        env:
+          NAUX_LT1_HISTORICAL_ROOT: /tmp/naux-pre-apache
+          NAUX_LT1_CURRENT_EMITTER: ${{ github.workspace }}/target/debug/examples/naux_s4_residual_elf64
+          NAUX_LT1_HISTORICAL_EMITTER: /tmp/naux-pre-apache-target/debug/examples/naux_s4_residual_elf64
+        run: python3 -m unittest -v scripts.tests.test_license_transition_replay

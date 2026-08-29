@@ -15,7 +15,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Materialize the sealed pre-Apache authority view
+        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Validate accepted parent authorities and residual-role contract
-        run: python3 scripts/s4_residual_role.py
+        run: python3 /tmp/naux-pre-apache/scripts/s4_residual_role.py --root /tmp/naux-pre-apache
       - name: Run residual-role mutation tests
-        run: python3 -m unittest scripts.tests.test_s4_residual_role
+        run: cd /tmp/naux-pre-apache && python3 -m unittest scripts.tests.test_s4_residual_role

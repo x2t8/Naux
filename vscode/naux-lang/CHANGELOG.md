@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Re-license the current language-support package under Apache-2.0.
+
 ## 0.1.2 — 2026-08-17
 
 - Add source-validated snippets for ordinary NAUX blocks, input, output, and
@@ -20,5 +24,4 @@
 
 ## 0.1.0 — 2026-08-17
 
-- Publish the canonical MIT-licensed TextMate grammar and Linguist candidate
-  identity.
+- Publish the canonical TextMate grammar and Linguist candidate identity.
