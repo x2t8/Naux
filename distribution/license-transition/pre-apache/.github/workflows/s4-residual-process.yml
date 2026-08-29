@@ -46,20 +46,15 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Materialize the sealed pre-Apache authority view
-        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Test generic target and process boundary
-        working-directory: /tmp/naux-pre-apache
         run: cargo test --locked -p naux --example naux_s4_residual_process
 
       - name: Build reviewed process emitter
-        working-directory: /tmp/naux-pre-apache
         run: cargo build --locked -p naux --example naux_s4_residual_process
 
       - name: Replay static authority and two fresh-process passes
         env:
-          NAUX_S4_RESIDUAL_PROCESS_BINARY: /tmp/naux-pre-apache/target/debug/examples/naux_s4_residual_process
-        working-directory: /tmp/naux-pre-apache
+          NAUX_S4_RESIDUAL_PROCESS_BINARY: target/debug/examples/naux_s4_residual_process
         run: |
           python3 -m unittest scripts/tests/test_s4_residual_process.py
           python3 scripts/s4_residual_process.py \

@@ -23,9 +23,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Materialize the sealed pre-Apache authority view
-        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Static threshold authority
-        run: python3 /tmp/naux-pre-apache/scripts/s4_threshold_evaluator.py --root /tmp/naux-pre-apache
+        run: python3 scripts/s4_threshold_evaluator.py
       - name: Focused synthetic replay tests
-        run: cd /tmp/naux-pre-apache && python3 -m unittest scripts.tests.test_s4_threshold_evaluator_static scripts.tests.test_s4_threshold_evaluator_replay
+        run: python3 -m unittest scripts.tests.test_s4_threshold_evaluator_static scripts.tests.test_s4_threshold_evaluator_replay

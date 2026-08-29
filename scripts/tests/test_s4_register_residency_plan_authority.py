@@ -21,8 +21,17 @@ authority = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = authority
 SPEC.loader.exec_module(authority)
 
+APACHE_LICENSE_SHA256 = (
+    "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+)
+
 
 class S4RegisterResidencyPlanAuthorityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        if hashlib.sha256((ROOT / "LICENSE").read_bytes()).hexdigest() != APACHE_LICENSE_SHA256:
+            raise unittest.SkipTest("WP8C tests require the current Apache surface")
+
     @staticmethod
     def _reseal(path: Path, domain: bytes, label: str = "seal") -> None:
         lines = path.read_bytes().splitlines(keepends=True)

@@ -23,17 +23,14 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Materialize the sealed pre-Apache authority view
-        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Validate the clock-free controlled-host protocol
-        run: python3 /tmp/naux-pre-apache/scripts/s4_controlled_host.py --root /tmp/naux-pre-apache
+        run: python3 scripts/s4_controlled_host.py
       - name: Exercise observation mode without admitting hosted CI
         run: |
-          python3 /tmp/naux-pre-apache/scripts/s4_controlled_host.py \
-            --root /tmp/naux-pre-apache \
+          python3 scripts/s4_controlled_host.py \
             --observe --expected-commit "$(git rev-parse HEAD)"
       - name: Run focused host-protocol mutation tests
         run: |
-          cd /tmp/naux-pre-apache && python3 -m unittest discover \
+          python3 -m unittest discover \
             -s scripts/tests \
             -p 'test_s4_controlled_host*.py'

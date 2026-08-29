@@ -24,9 +24,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Materialize the sealed pre-Apache authority view
-        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Validate static WP7A authority
-        run: python3 /tmp/naux-pre-apache/scripts/s4_measurement_evidence.py --root /tmp/naux-pre-apache
+        run: python3 scripts/s4_measurement_evidence.py
       - name: Replay schema and exact arithmetic fixtures
-        run: cd /tmp/naux-pre-apache && python3 -m unittest scripts.tests.test_s4_measurement_evidence_static scripts.tests.test_s4_measurement_evidence_replay
+        run: python3 -m unittest scripts.tests.test_s4_measurement_evidence_static scripts.tests.test_s4_measurement_evidence_replay

@@ -25,9 +25,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Materialize the sealed pre-Apache authority view
-        run: python3 scripts/license_transition.py --materialize-historical /tmp/naux-pre-apache
       - name: Static runner authority
-        run: python3 /tmp/naux-pre-apache/scripts/s4_measurement_runner.py --root /tmp/naux-pre-apache
+        run: python3 scripts/s4_measurement_runner.py
       - name: Focused synthetic tests
-        run: cd /tmp/naux-pre-apache && python3 -m unittest scripts.tests.test_s4_measurement_runner_static scripts.tests.test_s4_measurement_runner_replay
+        run: python3 -m unittest scripts.tests.test_s4_measurement_runner_static scripts.tests.test_s4_measurement_runner_replay

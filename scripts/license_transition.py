@@ -44,7 +44,7 @@ METADATA = (
     ("previous-license", "MIT"),
     ("current-license", "Apache-2.0"),
     ("apache-license-sha256", APACHE_HASH),
-    ("transition-count", "21"),
+    ("transition-count", "30"),
     ("historical-s2-surface-seal", S2_SEAL),
     ("historical-s3-audit-seal", S3_SEAL),
     ("historical-s4-wp1-seal", WP1_SEAL),
@@ -80,6 +80,15 @@ TRANSITIONS = (
     ("19", "authority-routing", 535, "c5d467d8c1b415bc79dd5ecd28b4c241f7be7dfec9cba0318b870c9ed30a2080", 771, "4c2edfab4a915fdb9e9d1bdebf36e24a260561fde297b90f52bc48a46ad17ce5", ".github/workflows/s4-residual-role.yml"),
     ("20", "authority-routing", 1360, "0cfaf318168b6e96e138f3d77d2f5b01150e678f9d0ac777650b87228f9a0ca4", 1703, "90707fb82e3a9e7c9e2e8faafbe4bbd8cc333af735199e4246d695bdbec3fbe6", ".github/workflows/s4-specialization-request.yml"),
     ("21", "authority-routing", 1387, "e7a7ff61d50f29c32b02a3fb1a56606e024d699e9a3041dcd45516e536cffdee", 1730, "de9347cb53a80e59175b281b1e372dc08c41bef561cf7df459832dc2789f9544", ".github/workflows/s4-structural-residual.yml"),
+    ("22", "authority-routing", 907, "af5c702038a715c5d3a9fe70f60c93c086c2462e0aed64d0b54c3d279e5b6cd5", 1192, "d368d8c56233a96899adf319e3b07360e6e57bab80613476c7c21238249fd8de", ".github/workflows/s4-c-timing-carriers.yml"),
+    ("23", "authority-routing", 814, "c2519a9b56169a48989149254137dd28c04de11947e7a674cebedc989fba9a4b", 1050, "c74b1f2ec50a13186e4634bd03368622e6e4ae3bc693de27285562e6e9e3cb8a", ".github/workflows/s4-claim-admission.yml"),
+    ("24", "authority-routing", 1050, "7e9017d8abb66196f8a2ae1f176f2858a36a6443c4529a172c9183d55ee5aae0", 1349, "443bd2e93b6ee2866fe24a193d6524b27bd6667baaca53d598b5169e8bc536ac", ".github/workflows/s4-controlled-host.yml"),
+    ("25", "authority-routing", 965, "d907716c4a445100412e40957602755e88a787dfdcef2b0760bc04a3fb41b34d", 1201, "309950d5aaaf1ef5214c0ffe166a53738991e28d20ca21e022faed2236f9f165", ".github/workflows/s4-measurement-evidence.yml"),
+    ("26", "authority-routing", 940, "4d90571fce50ab0be626c046179d13981e8d8c631ff14eb05c6ca668df18b7b9", 1176, "3ae3c18b51cc9d5eddfd420cdf50d672d435b31f9c050a7bedda5385eae5492b", ".github/workflows/s4-measurement-runner.yml"),
+    ("27", "authority-routing", 2302, "1319d8feb1d1ed2894a79efc9a9e423f2b144b0db50edbd65bcc9844e58d3f68", 2627, "c1d11fd2f94d9e756009baa43c7e005a40ee781eef59acad595b23f2d7b3444c", ".github/workflows/s4-residual-process.yml"),
+    ("28", "authority-routing", 1684, "0b53dce03b2bffc35b89bd2fcbc5d670bb4672ada166f27e02329269b085cee5", 2009, "63adbffd5fa4b016dc32ae76fb24d551d08dd439aca5b8b9d27c00e881e5c9ef", ".github/workflows/s4-residual-role-admission.yml"),
+    ("29", "authority-routing", 1768, "43d4b313605d75fcebbe0a472e783e39a93a3691050c00eef485a023e7ec4e68", 2093, "0c12920afbd5d686a240bdbd29b61db82bba52db439c01eb301f409bb2a1f0ee", ".github/workflows/s4-residual-timing.yml"),
+    ("30", "authority-routing", 828, "8beace291c6f28ef2248c127900e4965affb80325f4e3012a78bbbd1ea97ce0b", 1064, "66278ab66986494967e411c1611892a3f9a301564cae09de483a2b12c4db4753", ".github/workflows/s4-threshold-evaluator.yml"),
 )
 
 AUTHORITY_METADATA = (
@@ -88,7 +97,7 @@ AUTHORITY_METADATA = (
     ("authority-id", "apache-2-transition-v1"),
     ("status", "transition-protocol-admitted"),
     ("claim-status", "not-admitted"),
-    ("file-count", "28"),
+    ("file-count", "37"),
 )
 EXPECTED_FILES = (
     ".github/workflows/license-transition.yml",
@@ -116,6 +125,15 @@ EXPECTED_FILES = (
     "distribution/license-transition/pre-apache/.github/workflows/s4-residual-role.yml",
     "distribution/license-transition/pre-apache/.github/workflows/s4-specialization-request.yml",
     "distribution/license-transition/pre-apache/.github/workflows/s4-structural-residual.yml",
+    "distribution/license-transition/pre-apache/.github/workflows/s4-c-timing-carriers.yml",
+    "distribution/license-transition/pre-apache/.github/workflows/s4-claim-admission.yml",
+    "distribution/license-transition/pre-apache/.github/workflows/s4-controlled-host.yml",
+    "distribution/license-transition/pre-apache/.github/workflows/s4-measurement-evidence.yml",
+    "distribution/license-transition/pre-apache/.github/workflows/s4-measurement-runner.yml",
+    "distribution/license-transition/pre-apache/.github/workflows/s4-residual-process.yml",
+    "distribution/license-transition/pre-apache/.github/workflows/s4-residual-role-admission.yml",
+    "distribution/license-transition/pre-apache/.github/workflows/s4-residual-timing.yml",
+    "distribution/license-transition/pre-apache/.github/workflows/s4-threshold-evaluator.yml",
     "scripts/license_transition.py",
     "scripts/tests/test_license_transition_replay.py",
     "scripts/tests/test_license_transition_static.py",
@@ -371,7 +389,7 @@ def _report(contract: Contract, authority: Authority, historical: bool, target_i
         REPORT_MAGIC,
         f"contract-seal\t{contract.seal}",
         f"authority-seal\t{authority.seal}",
-        "transition-count\t21",
+        "transition-count\t30",
         "current-license\tApache-2.0",
         "inventory-status\texact",
         "legal-delta-status\texact",
@@ -401,7 +419,7 @@ def materialize_historical(root: Path, destination: Path) -> Path:
         raise TransitionError("historical destination must be outside the repository")
     try:
         listed = subprocess.run(
-            ["git", "-C", os.fspath(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            ["git", "-C", os.fspath(root), "ls-files", "-z", "--cached"],
             check=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

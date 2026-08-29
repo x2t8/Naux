@@ -1,7 +1,7 @@
 NAUX-S4-REGISTER-RESIDENCY-PLAN-CONTRACT	1
 meta	policy-version	1.0.0
-meta	parent-wp8b-contract	a84f27fd54793cb8d09ebd56d0733544203b84a1de66e05f07ea31c02d64edab
-meta	parent-wp8b-authority	55bc1f788a1a4caad779049f9c0f0c6962c653b1a7091c821030b4ceac9c8733
+meta	parent-wp8b-contract	eeb1cdad654b13939e03f0cea30a2a640b7efde53915e5c29d015fc218d62d92
+meta	parent-wp8b-authority	facc136501aea8bed1baf5cffe162622f0742cf18dbaa9615d931bc3cc16790f
 meta	frozen-wp5d-source-sha256	1424d65d5c108095b9179b1af7280c688d64dfd5006d1249c7ef6286e5a36a0f
 meta	transform-id	one-hot-loop-index-r12-v1
 meta	target	x86_64-unknown-linux-gnu
@@ -15,8 +15,8 @@ meta	plan-identity	domain-separated-sha256-v1
 meta	replay-identity	domain-separated-sha256-v1
 meta	report-identity	domain-separated-sha256-v1
 meta	replay-step-limit	30000000
-meta	report-root	87e41ae9c0752ffe7738c8ea76e4df4d56751fc3a89f78cef8ece9e79083438e
-meta	report-sha256	42fcfa68e40631d0c4b578c67b87412bf6ae422ae751e7c5809e5f619d3b5174
+meta	report-root	8c6c21e538595f53fc4a5ca0478cf9619adead5d741c7fcf99ee413c7f67e6e2
+meta	report-sha256	191ec2b998451478e80d6b436e63fc5d030d89c2131dbb84c7c3f5cdd18cd550
 meta	report-bytes	12180
 meta	report-lines	276
 meta	kernel-count	4
@@ -43,4 +43,4 @@ verification	cfg-must-initialize-r12-before-every-read
 verification	erasure-reconstructs-source-machine-ir
 verification	independent-baseline-candidate-semantic-parity
 verification	oracle-overflow-owner-state-and-r12-restore
-seal	2669d74517889dc65ec25562e501d9ddb07da298966cc75644e8b20cd4bf0d47
+seal	99343d13e873f694fdc95bc01db9fbd6afd6685a647e40bd59b612e6d6cfca77
