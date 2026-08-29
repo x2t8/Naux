@@ -1,0 +1,25 @@
+name: S4 register-residency encoding contract
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  encoding-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate parent authorities
+        run: |
+          python3 scripts/license_transition.py
+          python3 scripts/s4_register_residency_contract.py
+      - name: Validate bounded encoding contract
+        run: python3 scripts/s4_register_residency_encoding_contract.py
+      - name: Run fail-closed encoding-contract tests
+        run: python3 -m unittest -v scripts.tests.test_s4_register_residency_encoding_contract
+      - name: Reject whitespace damage
+        run: git diff --check
