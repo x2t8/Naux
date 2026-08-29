@@ -1,0 +1,47 @@
+name: S4 register-residency candidate plan
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  plan-authority:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.96.0 --profile minimal
+          rustup component add --toolchain 1.96.0 rustfmt clippy
+          rustup default 1.96.0
+      - name: Validate parent authorities
+        run: |
+          python3 scripts/license_transition.py
+          python3 scripts/s4_register_residency_contract.py
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Lint reviewed candidate-plan emitter
+        run: cargo clippy --locked -p naux --example naux_s4_register_residency_plan -- -D warnings
+      - name: Build reviewed candidate-plan emitter
+        run: cargo build --locked -p naux --example naux_s4_register_residency_plan
+      - name: Emit twice and require byte identity
+        run: |
+          target/debug/examples/naux_s4_register_residency_plan > "$RUNNER_TEMP/wp8c-plan-a.tsv"
+          target/debug/examples/naux_s4_register_residency_plan > "$RUNNER_TEMP/wp8c-plan-b.tsv"
+          cmp "$RUNNER_TEMP/wp8c-plan-a.tsv" "$RUNNER_TEMP/wp8c-plan-b.tsv"
+      - name: Replay frozen report through both verifiers
+        run: |
+          target/debug/examples/naux_s4_register_residency_plan --verify "$RUNNER_TEMP/wp8c-plan-a.tsv"
+          python3 scripts/s4_register_residency_plan_authority.py --report "$RUNNER_TEMP/wp8c-plan-a.tsv"
+      - name: Run fail-closed authority tests
+        env:
+          NAUX_S4_WP8C_REPORT: ${{ runner.temp }}/wp8c-plan-a.tsv
+        run: python3 -m unittest -v scripts.tests.test_s4_register_residency_plan_authority
+      - name: Run focused Rust proof tests
+        run: cargo test --locked -p naux --example naux_s4_register_residency_plan
+      - name: Reject whitespace damage
+        run: git diff --check

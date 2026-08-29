@@ -1,0 +1,46 @@
+NAUX-S4-REGISTER-RESIDENCY-PLAN-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-wp8b-contract	a84f27fd54793cb8d09ebd56d0733544203b84a1de66e05f07ea31c02d64edab
+meta	parent-wp8b-authority	55bc1f788a1a4caad779049f9c0f0c6962c653b1a7091c821030b4ceac9c8733
+meta	frozen-wp5d-source-sha256	1424d65d5c108095b9179b1af7280c688d64dfd5006d1249c7ef6286e5a36a0f
+meta	transform-id	one-hot-loop-index-r12-v1
+meta	target	x86_64-unknown-linux-gnu
+meta	status	candidate-plan-semantically-admitted
+meta	implementation-status	plan-only
+meta	encoding-status	forbidden
+meta	native-execution-status	forbidden
+meta	measurement-status	forbidden
+meta	claim-status	not-admitted
+meta	plan-identity	domain-separated-sha256-v1
+meta	replay-identity	domain-separated-sha256-v1
+meta	report-identity	domain-separated-sha256-v1
+meta	replay-step-limit	30000000
+meta	report-root	87e41ae9c0752ffe7738c8ea76e4df4d56751fc3a89f78cef8ece9e79083438e
+meta	report-sha256	42fcfa68e40631d0c4b578c67b87412bf6ae422ae751e7c5809e5f619d3b5174
+meta	report-bytes	12180
+meta	report-lines	276
+meta	kernel-count	4
+gate	01	parent-chain	required	exact-wp8b-contract-and-authority
+gate	02	baseline-source	required	exact-untouched-wp5d-source
+gate	03	report-identity	required	exact-domain-root-and-document-sha256
+gate	04	determinism	required	byte-identical-double-emission
+gate	05	promotion-cardinality	required	exactly-one-i64-slot-per-kernel
+gate	06	definite-initialization	required	forward-cfg-must-initialize-before-read
+gate	07	structural-erasure	required	reconstruct-complete-source-machine-ir
+gate	08	semantic-replay	required	independent-baseline-and-candidate-states
+gate	09	oracle-and-work	required	exact-result-and-step-count
+gate	10	overflow-and-ownership	required	exact-overflow-allocation-release-and-live-owner-state
+gate	11	abi-preservation	required	r12-save-restore-and-nonreturning-error
+gate	12	frame-boundary	required	unchanged-wp5d-frame
+gate	13	encoding-quarantine	required	no-candidate-machine-bytes
+gate	14	measurement-quarantine	required	no-wp7c-replacement-or-remeasurement
+gate	15	claim-boundary	required	not-admitted
+kernel	01	sum-dense	97d8699e9449d53f4f3c9386839099be194b7db985709122092dfac3eacb8f2d	98e3ac1191dbb078730f024f12a8f4b310f542bfed72830b32cfce127b705e27	288	s5	i64	r12	3	2	7	7a934673aedec04568958827fbd0a3c876dafe8d43d9ba46cb762f51fc340de3	6710476800	17204168	0	1	1	0	r12-restored
+kernel	02	branch-mix	8095c962d36b2a6876770412feac0df8fdd5f4e3627481f97f6b78f9bc489888	68ef1e141aac58454b2b1dde0bcf8d2ea100c4faa1ee43323ce121b6471a86ad	352	s6	i64	r12	3	2	12	c0dbaa15ff88b05f1936ced3013292d2093f33422cb4c85a46d9258b4589d369	-69189632	22406362	0	1	1	0	r12-restored
+kernel	03	dot-product	b2fa698b60cb29e50d14e7f56650d1f09657562e3160e99bc7930e60f7c9e857	c3a3bb75473b90689646c413552de32005ea27594d0565b72cc1984c731b7a3b	288	s5	i64	r12	3	2	7	c3850403ce4de28570939793eb48e07fe6a4731cafb01a5ae049d085a5f80a6c	73294064435200	15565768	0	1	1	0	r12-restored
+kernel	04	list-update	c6ac1a97cad0ec0529e7f5f49bb91d316fa63a2b9abb2c7452a0040fe4150199	de4e36706adc23c47bae3c95d0b45719867684423897b59b462e0cd937c6f982	336	s5	i64	r12	4	2	7	1038cd8fff86c8c4ec93e44031986f0848e0292ffa2fb8bb348b00c076e0bc42	6730547200	19661768	0	1	1	0	r12-restored
+verification	cfg-must-initialize-r12-before-every-read
+verification	erasure-reconstructs-source-machine-ir
+verification	independent-baseline-candidate-semantic-parity
+verification	oracle-overflow-owner-state-and-r12-restore
+seal	2669d74517889dc65ec25562e501d9ddb07da298966cc75644e8b20cd4bf0d47
