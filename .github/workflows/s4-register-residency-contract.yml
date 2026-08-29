@@ -1,0 +1,34 @@
+name: S4 register-residency contract
+
+on:
+  push:
+    paths:
+      - "distribution/s4-performance/WP8B-*"
+      - "scripts/s4_register_residency_contract.py"
+      - "scripts/tests/test_s4_register_residency_contract.py"
+      - ".github/workflows/s4-register-residency-contract.yml"
+      - "distribution/license-transition/**"
+      - "scripts/license_transition.py"
+  pull_request:
+    paths:
+      - "distribution/s4-performance/WP8B-*"
+      - "scripts/s4_register_residency_contract.py"
+      - "scripts/tests/test_s4_register_residency_contract.py"
+      - ".github/workflows/s4-register-residency-contract.yml"
+      - "distribution/license-transition/**"
+      - "scripts/license_transition.py"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Apache transition bridge
+        run: python3 scripts/license_transition.py
+      - name: Validate bounded transform contract
+        run: python3 scripts/s4_register_residency_contract.py
+      - name: Run fail-closed contract tests
+        run: python3 -m unittest -v scripts.tests.test_s4_register_residency_contract
