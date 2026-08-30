@@ -1,0 +1,43 @@
+NAUX-S4-REGISTER-RESIDENCY-ELF64-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-wp8e-contract	179c724165ee4fdb8965f0f196294310723dbd70d0127dbba0afe039c14d529c
+meta	parent-wp8e-authority	9a6ee8f48c65bf7daf797c2e8189981ceeac17609a8521fe7b30966ef65a5ea3
+meta	parent-wp8e-report-root	605153686e716e2d9ea3c20b44c41d9c0e4b85a3369b4e091c467a8b8db68fd5
+meta	frozen-wp5d-source-sha256	1424d65d5c108095b9179b1af7280c688d64dfd5006d1249c7ef6286e5a36a0f
+meta	envelope-id	wp5d-linker-free-elf64-v1
+meta	target	x86_64-unknown-linux-gnu
+meta	status	candidate-elf-structurally-admitted
+meta	artifact-status	report-hex-only
+meta	native-execution-status	forbidden
+meta	measurement-status	forbidden
+meta	claim-status	not-admitted
+meta	entry	4194560
+meta	target-offset	272
+meta	load-flags	5
+meta	stack-flags	6
+meta	report-root	50fe50575497b2a93e0f7fd48f5e81eddd339cb486c8b974c98d7cc0c5891398
+meta	report-sha256	5535f57f6e27457a1ff4591173a0a241af5ad12cafe2ce90e0ff15537107350a
+meta	report-bytes	12270
+meta	report-lines	21
+meta	kernel-count	4
+gate	01	parent-chain	required	exact-wp8e-contract-authority-and-report-root
+gate	02	determinism	required	byte-identical-double-emission
+gate	03	report-identity	required	domain-root-and-document-sha256
+gate	04	identity	required	elf64-little-endian-system-v-x86-64
+gate	05	entry	required	fixed-entry-calls-target-offset-272
+gate	06	load-segment	required	single-rx-file-backed-image-no-writable-code
+gate	07	stack-segment	required	gnu-stack-rw-and-non-executable
+gate	08	sections	required	no-section-table
+gate	09	target	required	exact-wp8e-target-bytes-and-hash
+gate	10	reconstruction	required	independent-full-image-byte-reconstruction
+gate	11	negative-tests	required	header-segment-startup-target-hash-and-receipt-mutations
+gate	12	quarantine	required	report-hex-only-no-file-execution-clock-or-measurement
+gate	13	rollback	required	failed-verification-retains-wp5d-target
+gate	14	claim-boundary	required	not-admitted
+kernel	01	sum-dense	97d8699e9449d53f4f3c9386839099be194b7db985709122092dfac3eacb8f2d	98e3ac1191dbb078730f024f12a8f4b310f542bfed72830b32cfce127b705e27	84578fc8a90dcfeb655e984dee5677c4a1164e866378825fd276a95ecf28e7ef	e07bbe5ea0fd2494061393a107f6fd818758fb84cc640c90d9bb0ffe18763008	972	1244	272	4194560	5	6
+kernel	02	branch-mix	8095c962d36b2a6876770412feac0df8fdd5f4e3627481f97f6b78f9bc489888	68ef1e141aac58454b2b1dde0bcf8d2ea100c4faa1ee43323ce121b6471a86ad	362c5dc7b3857358d2826b0a2f2dcbe376920514d948844a08c2b4433343ed42	e4ea9e017940bd87d1f9dd5059149bd659add95b0a6d4b5d112f64345e1b35d3	1167	1439	272	4194560	5	6
+kernel	03	dot-product	b2fa698b60cb29e50d14e7f56650d1f09657562e3160e99bc7930e60f7c9e857	c3a3bb75473b90689646c413552de32005ea27594d0565b72cc1984c731b7a3b	87ab3713c01593e5746e331ddf363fd500699d74c40d3b5db19ff72c2bc2b41a	d7ea5990d1069328f2c139d8139ef3fcbbe6eaf7ab1d5d27b0a12fcd359e26f9	929	1201	272	4194560	5	6
+kernel	04	list-update	c6ac1a97cad0ec0529e7f5f49bb91d316fa63a2b9abb2c7452a0040fe4150199	de4e36706adc23c47bae3c95d0b45719867684423897b59b462e0cd937c6f982	a0b5e4316250342f7c9739d4adf021036b3badcdef7f62a0aec7c4b2c79b6c17	cd4d2e4d7d5b9965fd2c0ef32f081926382ed1917feb1485960819a198eac26c	1043	1315	272	4194560	5	6
+verification	independent-elf-parser-accepted
+verification	no-file-no-execution-no-measurement
+seal	c653e98c392903f3c8007b3703480030c60aeffd48c1b10fb138a4c34f0fe69c

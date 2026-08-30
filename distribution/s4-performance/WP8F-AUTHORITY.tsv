@@ -1,0 +1,22 @@
+NAUX-S4-REGISTER-RESIDENCY-ELF64-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8F
+meta	authority-id	s4-one-hot-loop-index-r12-elf64-v1
+meta	status	candidate-elf-structurally-admitted
+meta	artifact-status	report-hex-only
+meta	native-execution-status	forbidden
+meta	measurement-status	forbidden
+meta	claim-status	not-admitted
+meta	file-count	8
+component	elf-contract	distribution/s4-performance/WP8F-ELF64-CONTRACT.tsv	c653e98c392903f3c8007b3703480030c60aeffd48c1b10fb138a4c34f0fe69c
+parent	wp8e-contract	distribution/s4-performance/WP8E-CANDIDATE-ENCODING.tsv	179c724165ee4fdb8965f0f196294310723dbd70d0127dbba0afe039c14d529c
+parent	wp8e-authority	distribution/s4-performance/WP8E-AUTHORITY.tsv	9a6ee8f48c65bf7daf797c2e8189981ceeac17609a8521fe7b30966ef65a5ea3
+file	100644	1905	870f92237df6d0a5d73fd417cad44a8339e433bf6f915ebafd47cf7b5703cca7	.github/workflows/s4-register-residency-elf.yml	register-residency-elf64
+file	100644	3331	1bb8eda63fd0820936cdd6630c69acf05c3830da4058e08d4fd8f18d88a4da3a	distribution/s4-performance/WP8F-ELF64-CONTRACT.tsv	register-residency-elf64
+file	100644	492	e470e0caf84e128e250b2b9ed5f5276ec4c117be69d49ae98be1d2a7535c1f1f	distribution/s4-performance/WP8F-NONCLAIMS.md	register-residency-elf64
+file	100644	1198	6f08ddc5a5018c262785d0604caab05d69e0bf851fd9f1598fa568bafc06b45d	distribution/s4-performance/WP8F-README.md	register-residency-elf64
+file	100644	10387	885a4071867bcff1262929c5d8d736207c7d30a2a9da8ae24b3376422b3adf33	naux-lang/examples/naux_s4_register_residency_elf.rs	register-residency-elf64
+file	100644	16985	72fd22b3025aa054fbacf01710c0eab6f921a5a0f540b423c17a97db67c0d783	naux-lang/examples/support/s4_register_residency_elf.rs	register-residency-elf64
+file	100644	17676	7c8492ead6f8c3fbc1ea7516b986105748551a3fc5128ece76e969a3b8f6c96c	scripts/s4_register_residency_elf_authority.py	register-residency-elf64
+file	100644	3055	3099691efde1bca37d20f91b5ba889bf89614a7d96c378b90fcb332927f02333	scripts/tests/test_s4_register_residency_elf_authority.py	register-residency-elf64
+seal	fcb1cda5837ecfcda7ab36b60dbdc107bf93aff4eb27882d436233a78145ce4f
