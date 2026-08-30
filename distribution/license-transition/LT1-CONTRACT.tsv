@@ -4,7 +4,7 @@ meta	pre-transition-commit	7d270a54c0af7530585fde7be4d9f3f67c15e142
 meta	previous-license	MIT
 meta	current-license	Apache-2.0
 meta	apache-license-sha256	cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
-meta	transition-count	32
+meta	transition-count	31
 meta	historical-s2-surface-seal	031d82feef5f7f9c0ddab11d58059d3ca99384e49aa6f62b43bc8626ed0ee7c9
 meta	historical-s3-audit-seal	6fe6a1a75f003d491edf3dad6a36d4c8b115de94d4489f7bf9d2d12b3906ffe0
 meta	historical-s4-wp1-seal	b23533c4e96ec9e3b66482e96b79fdeb5985c823ce012d827e69eb1c14a4b659
@@ -40,11 +40,10 @@ transition	28	authority-routing	1684	0b53dce03b2bffc35b89bd2fcbc5d670bb4672ada16
 transition	29	authority-routing	1768	43d4b313605d75fcebbe0a472e783e39a93a3691050c00eef485a023e7ec4e68	2093	0c12920afbd5d686a240bdbd29b61db82bba52db439c01eb301f409bb2a1f0ee	.github/workflows/s4-residual-timing.yml
 transition	30	authority-routing	828	8beace291c6f28ef2248c127900e4965affb80325f4e3012a78bbbd1ea97ce0b	1064	66278ab66986494967e411c1611892a3f9a301564cae09de483a2b12c4db4753	.github/workflows/s4-threshold-evaluator.yml
 transition	31	spdx-license-metadata	311	53779aecf68af0cb6c2c89effbd8b3cbd3ac8c02da69fa7d0863a0e4d749a152	334	6d4c1f8630ce314c0bf872befaf92ab9f81c4201a3be880d4a6444b3e8abd9ec	tools/perf-gates/Cargo.toml
-transition	32	spdx-license-metadata	137	2b3b09bd039bd4422c66caa4554c05939ed444e66cf109781e73a572fc402823	160	42f9d1218bf6b77a8ea8a175af015766769a16f937b15d7ef8bca8f444238b1c	benchmarks/rust/Cargo.toml
 gate	01	exact-before-after-inventory	required
 gate	02	canonical-apache-license	required
 gate	03	legal-only-delta-replay	required
 gate	04	historical-authority-snapshot	required
 gate	05	current-target-identity	required
 gate	06	claim-boundary	not-admitted
-seal	ed859274c39dd23fbb48c13255715985001ab0a848d1a6965d21cbf442fb236e
+seal	eb526e513c3c6d475b5a8e9f9cdbb719bddf522cecaf64239ea0cc9f37b8b4f8

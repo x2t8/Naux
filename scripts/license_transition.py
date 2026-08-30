@@ -44,7 +44,7 @@ METADATA = (
     ("previous-license", "MIT"),
     ("current-license", "Apache-2.0"),
     ("apache-license-sha256", APACHE_HASH),
-    ("transition-count", "32"),
+    ("transition-count", "31"),
     ("historical-s2-surface-seal", S2_SEAL),
     ("historical-s3-audit-seal", S3_SEAL),
     ("historical-s4-wp1-seal", WP1_SEAL),
@@ -90,7 +90,6 @@ TRANSITIONS = (
     ("29", "authority-routing", 1768, "43d4b313605d75fcebbe0a472e783e39a93a3691050c00eef485a023e7ec4e68", 2093, "0c12920afbd5d686a240bdbd29b61db82bba52db439c01eb301f409bb2a1f0ee", ".github/workflows/s4-residual-timing.yml"),
     ("30", "authority-routing", 828, "8beace291c6f28ef2248c127900e4965affb80325f4e3012a78bbbd1ea97ce0b", 1064, "66278ab66986494967e411c1611892a3f9a301564cae09de483a2b12c4db4753", ".github/workflows/s4-threshold-evaluator.yml"),
     ("31", "spdx-license-metadata", 311, "53779aecf68af0cb6c2c89effbd8b3cbd3ac8c02da69fa7d0863a0e4d749a152", 334, "6d4c1f8630ce314c0bf872befaf92ab9f81c4201a3be880d4a6444b3e8abd9ec", "tools/perf-gates/Cargo.toml"),
-    ("32", "spdx-license-metadata", 137, "2b3b09bd039bd4422c66caa4554c05939ed444e66cf109781e73a572fc402823", 160, "42f9d1218bf6b77a8ea8a175af015766769a16f937b15d7ef8bca8f444238b1c", "benchmarks/rust/Cargo.toml"),
 )
 
 AUTHORITY_METADATA = (
@@ -99,7 +98,7 @@ AUTHORITY_METADATA = (
     ("authority-id", "apache-2-transition-v1"),
     ("status", "transition-protocol-admitted"),
     ("claim-status", "not-admitted"),
-    ("file-count", "39"),
+    ("file-count", "38"),
 )
 EXPECTED_FILES = (
     ".github/workflows/license-transition.yml",
@@ -109,7 +108,6 @@ EXPECTED_FILES = (
     "distribution/license-transition/pre-apache/LICENSE",
     "distribution/license-transition/pre-apache/README.md",
     "distribution/license-transition/pre-apache/tools/perf-gates/Cargo.toml",
-    "distribution/license-transition/pre-apache/benchmarks/rust/Cargo.toml",
     "distribution/license-transition/pre-apache/naux-lang/Cargo.toml",
     "distribution/license-transition/pre-apache/naux-lang/LICENSE",
     "distribution/license-transition/pre-apache/naux-lang/src/cli/new.rs",
@@ -315,7 +313,7 @@ def _verify_legal_deltas(root: Path) -> None:
     if generated != current("naux-lang/Cargo.toml"):
         raise TransitionError("Cargo manifest contains a non-license transition delta")
 
-    for relative in ("tools/perf-gates/Cargo.toml", "benchmarks/rust/Cargo.toml"):
+    for relative in ("tools/perf-gates/Cargo.toml",):
         generated = _replace_once(
             before(relative),
             b'edition = "2021"\n',
@@ -403,7 +401,7 @@ def _report(contract: Contract, authority: Authority, historical: bool, target_i
         REPORT_MAGIC,
         f"contract-seal\t{contract.seal}",
         f"authority-seal\t{authority.seal}",
-        "transition-count\t32",
+        "transition-count\t31",
         "current-license\tApache-2.0",
         "inventory-status\texact",
         "legal-delta-status\texact",

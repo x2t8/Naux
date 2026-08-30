@@ -97,11 +97,7 @@ class LicenseTransitionStaticTests(unittest.TestCase):
             self.assertEqual(stat.S_IMODE(info.st_mode), 0o644)
 
     def test_all_rust_packages_declare_apache_2_0(self) -> None:
-        manifests = (
-            "naux-lang/Cargo.toml",
-            "tools/perf-gates/Cargo.toml",
-            "benchmarks/rust/Cargo.toml",
-        )
+        manifests = ("naux-lang/Cargo.toml", "tools/perf-gates/Cargo.toml")
         for relative in manifests:
             package = tomllib.loads((ROOT / relative).read_text())["package"]
             self.assertEqual(package.get("license"), "Apache-2.0", relative)
