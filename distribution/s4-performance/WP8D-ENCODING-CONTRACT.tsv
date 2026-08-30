@@ -1,9 +1,9 @@
 NAUX-S4-REGISTER-RESIDENCY-ENCODING-CONTRACT	1
 meta	policy-version	1.0.0
-meta	parent-wp8c-contract	99343d13e873f694fdc95bc01db9fbd6afd6685a647e40bd59b612e6d6cfca77
-meta	parent-wp8c-authority	e1cfb42d7fd81dcc8e0d4afe875d764e5930f577dd623875c483ad3179f36bdc
-meta	parent-wp8c-plan-report-root	8c6c21e538595f53fc4a5ca0478cf9619adead5d741c7fcf99ee413c7f67e6e2
-meta	parent-wp8c-admission-root	784372e66940d80d3d1706fda07df511b21b3c04c8561a9678b01b02db916773
+meta	parent-wp8c-contract	5c34570988951e9a17c277bd823373b4f58e1bced6be3340d3e4010d24662989
+meta	parent-wp8c-authority	736d5a466beab724ef5346997ece214e9b10df170f0578f58be13089c4e6b6d0
+meta	parent-wp8c-plan-report-root	8953eaeba2f3ab88d8259eae65d000b547bd50ba9dda8f1b5d73a249467fa677
+meta	parent-wp8c-admission-root	e30b381d58affe314ef0e2b246915834107dce13b1b36e57f5edf0619ad0f6f2
 meta	frozen-wp5d-contract	4219b6842f92d659daa4ed5bc144ae312710010d7f763b0e27bfd4ba3957518c
 meta	frozen-wp5d-source-sha256	1424d65d5c108095b9179b1af7280c688d64dfd5006d1249c7ef6286e5a36a0f
 meta	transform-id	one-hot-loop-index-r12-v1
@@ -46,4 +46,4 @@ verification	no-candidate-byte-payload
 verification	exact-width-equation-per-kernel
 verification	promoted-slot-is-caller-r12-shadow-only
 verification	unchanged-frame-cfg-error-suffix-and-rollback
-seal	430bbc008eb0a75c1dc9df3e5830c4bf6009a6336631071f766dda880d69a23f
+seal	846b18f6ccebeaf79bb995e64713bc9fe892d8af650643dd40c6f1e3ab869e27

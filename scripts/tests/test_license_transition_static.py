@@ -8,6 +8,7 @@ import shutil
 import stat
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -94,6 +95,16 @@ class LicenseTransitionStaticTests(unittest.TestCase):
             self.assertTrue(stat.S_ISREG(info.st_mode))
             self.assertFalse(path.is_symlink())
             self.assertEqual(stat.S_IMODE(info.st_mode), 0o644)
+
+    def test_all_rust_packages_declare_apache_2_0(self) -> None:
+        manifests = (
+            "naux-lang/Cargo.toml",
+            "tools/perf-gates/Cargo.toml",
+            "benchmarks/rust/Cargo.toml",
+        )
+        for relative in manifests:
+            package = tomllib.loads((ROOT / relative).read_text())["package"]
+            self.assertEqual(package.get("license"), "Apache-2.0", relative)
 
 
 if __name__ == "__main__":
