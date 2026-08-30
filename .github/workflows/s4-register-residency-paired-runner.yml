@@ -1,0 +1,32 @@
+name: S4 register-residency paired runner
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-register-residency-paired-runner.yml"
+      - "distribution/s4-performance/WP8M-*"
+      - "scripts/s4_register_residency_paired_runner.py"
+      - "scripts/tests/test_s4_register_residency_paired_runner*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-register-residency-paired-runner.yml"
+      - "distribution/s4-performance/WP8M-*"
+      - "scripts/s4_register_residency_paired_runner.py"
+      - "scripts/tests/test_s4_register_residency_paired_runner*.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate static paired-runner authority
+        run: python3 scripts/s4_register_residency_paired_runner.py
+      - name: Test fail-closed paired-runner logic
+        run: |
+          python3 -m unittest \
+            scripts.tests.test_s4_register_residency_paired_runner \
+            scripts.tests.test_s4_register_residency_paired_runner_static

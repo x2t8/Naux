@@ -1,0 +1,21 @@
+NAUX-S4-REGISTER-RESIDENCY-PAIRED-RUNNER-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8M
+meta	authority-id	s4-register-residency-paired-runner-v1
+meta	runner-status	same-session-paired-runner-structurally-admitted
+meta	acquisition-status	retained-eligible-wp8i-host-required
+meta	claim-status	not-admitted
+meta	file-count	7
+component	paired-runner-contract	distribution/s4-performance/WP8M-PAIRED-RUNNER.tsv	218794532dae9820babfda71859b3227b0d4f64ec277c876e13f28b2adca553a
+parent	candidate-runner-authority	distribution/s4-performance/WP8K-AUTHORITY.tsv	3c7f1ce549764dd5a2d3bc28dfeec3c091aaae835f44490ac6a3418e0f852fc2
+parent	candidate-host-authority	distribution/s4-performance/WP8I-AUTHORITY.tsv	5f9e36d9f9994a5449fd6492b083b934799723fdc9b89e79d0003bc594beebb7
+parent	candidate-carrier-authority	distribution/s4-performance/WP8J-AUTHORITY.tsv	aaa90c3a2674f7c13208bbb895b8365c01bd5cc9b60c86ff26fa29727d9c11f1
+parent	baseline-carrier-authority	distribution/s4-performance/WP7B-AUTHORITY.tsv	dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed
+file	100644	1075	79cfaa8e76d986c70b0c7a70670de5551d392820ad77909a14f26e3105cf7a96	.github/workflows/s4-register-residency-paired-runner.yml	same-session-paired-runner
+file	100644	2331	962ae76e5b00cb4d41175fb41b054cfd32391bafb82f2c650f6d8378b868f04c	distribution/s4-performance/WP8M-PAIRED-RUNNER.tsv	same-session-paired-runner
+file	100644	424	14e6dd3d855efb02916bf8c7f297ebc5c4b7633d050b54abc347fd9df52dc19e	distribution/s4-performance/WP8M-NONCLAIMS.md	same-session-paired-runner
+file	100644	1142	851ea78ef456fa0de562f23a5d77dfcb9124801fde9bbfdfc1421a7f07d0f12f	distribution/s4-performance/WP8M-README.md	same-session-paired-runner
+file	100644	31160	72b74941693c7c68185be6469e22e0cd51d62b1a1e0eec79cddb64e61bc6ad02	scripts/s4_register_residency_paired_runner.py	same-session-paired-runner
+file	100644	10599	70ef6d99987244dc04d6a6efdc50ca666ef66f73df82d3f404f9e1751af973b5	scripts/tests/test_s4_register_residency_paired_runner.py	same-session-paired-runner
+file	100644	4444	9a9128def7ed6564822e307b31d35784cad995eaa065afec1056bf0e18df10f8	scripts/tests/test_s4_register_residency_paired_runner_static.py	same-session-paired-runner
+seal	f5de98a15378454b28ed89593180f2d8f682fef07abb4ef925a5867dd1292a42

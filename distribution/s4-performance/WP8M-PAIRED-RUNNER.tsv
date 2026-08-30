@@ -1,0 +1,39 @@
+NAUX-S4-REGISTER-RESIDENCY-PAIRED-RUNNER-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-candidate-runner-authority	3c7f1ce549764dd5a2d3bc28dfeec3c091aaae835f44490ac6a3418e0f852fc2
+meta	parent-candidate-host-authority	5f9e36d9f9994a5449fd6492b083b934799723fdc9b89e79d0003bc594beebb7
+meta	parent-candidate-carrier-authority	aaa90c3a2674f7c13208bbb895b8365c01bd5cc9b60c86ff26fa29727d9c11f1
+meta	parent-baseline-carrier-authority	dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed
+meta	runner-status	same-session-paired-runner-structurally-admitted
+meta	acquisition-status	retained-eligible-wp8i-host-required
+meta	claim-status	not-admitted
+meta	default-mode	static-no-host-no-clock-no-build-no-execution
+meta	acquire-mode	explicit-only
+meta	build-policy	same-session-same-resolved-cargo-rustc
+meta	warmup-policy	paired-abba-retain-until-both-cumulative-100000000ns
+meta	sample-policy	kernel-major-exact30-pairs-odd-ab-even-ba
+meta	sample-invocations	240
+meta	result-policy	fixed-le56-exact-role-owner-and-parity
+meta	publication-policy	atomic-new-output-or-no-bundle
+meta	target	x86_64-unknown-linux-gnu
+role	01	naux-residual	native-clean	1
+role	04	naux-register-residency-candidate	candidate-isolated	4
+kernel	01	sum-dense	6710476800
+kernel	02	branch-mix	-69189632
+kernel	03	dot-product	73294064435200
+kernel	04	list-update	6730547200
+gate	01	static-isolation	required	no-host-no-clock-no-build-no-execution
+gate	02	retained-attestation	required	exact-eligible-wp8i-report
+gate	03	live-reattestation	required	before-build-after-build-after-samples
+gate	04	checkout	required	clean-exact-attested-commit
+gate	05	toolchains	required	same-resolved-cargo-rustc-identities
+gate	06	artifacts	required	four-baseline-and-four-candidate-artifacts
+gate	07	warmup	required	paired-all-retained-both-cumulative-minimum
+gate	08	schedule	required	odd-ab-even-ba-no-drop-no-retry
+gate	09	samples	required	exact120-pairs-and240-invocations
+gate	10	parity	required	exact-oracle-and-role-owner-every-invocation
+gate	11	atomic-publication	required	complete-paired-raw-bundle-only
+closure	01	cross-session-comparison-bias	closed	same-session-abba-pairing
+blocker	01	eligible-candidate-host-attestation-unavailable
+blocker	02	paired-raw-measurement-evidence-unavailable
+seal	218794532dae9820babfda71859b3227b0d4f64ec277c876e13f28b2adca553a
