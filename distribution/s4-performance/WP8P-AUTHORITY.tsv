@@ -1,0 +1,18 @@
+NAUX-S4-REGISTER-RESIDENCY-CLAIM-ADMISSION-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8P
+meta	authority-id	s4-register-residency-claim-admission-v1
+meta	protocol-status	register-residency-claim-protocol-structurally-admitted
+meta	admission-status	blocked
+meta	claim-status	not-admitted
+meta	file-count	7
+component	claim-contract	distribution/s4-performance/WP8P-CLAIM.tsv	cd2913e9d388dff4a36eca525c6884280c8e9a60b7956f43e63eb7dd00e6ef2f
+parent	paired-threshold-authority	distribution/s4-performance/WP8O-AUTHORITY.tsv	d7a8e91ec84af273d43ba03f5af86372a62b476a2a0dda2bfd4d988cf68cb263
+file	100644	1099	43f5929ecacc80dfc23cc29181ed07c90f085a11ca5024523f85f7706499d8fb	.github/workflows/s4-register-residency-claim-admission.yml	claim-admission
+file	100644	1706	b771c6a0d7a00ace517b61e832c934af26704a699f4c8aeb7987306fe3967975	distribution/s4-performance/WP8P-CLAIM.tsv	claim-admission
+file	100644	674	f0b5d32b70a81007dc24cbc1b09af2d5259b4317eee9444f4ffbd02d2bfff501	distribution/s4-performance/WP8P-NONCLAIMS.md	claim-admission
+file	100644	1027	ba0a6915df5e917fef400cad5af9440d4fb37a8a5bf9105a0cfb3e8e48f8d3cb	distribution/s4-performance/WP8P-README.md	claim-admission
+file	100644	11174	2a30d331f6a7002f69281f23e0460dcb11e13b44f18922b3fc5b2fbbfb3f33e5	scripts/s4_register_residency_claim_admission.py	claim-admission
+file	100644	2273	a07785a4fcc19e218d4c3ae56b1cb491557909b4ee238f39ba7c444188da4494	scripts/tests/test_s4_register_residency_claim_admission_refusal.py	claim-admission
+file	100644	4213	fd4a807a8305e0b3a76a58f158a57ecb2ec735458a664a51c2ed102a27108d08	scripts/tests/test_s4_register_residency_claim_admission_static.py	claim-admission
+seal	cb5f606dc361bb95ff329cd516c613f2c8f0e9089d5de40230ffc6675c3366c9

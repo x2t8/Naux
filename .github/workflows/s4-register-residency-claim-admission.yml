@@ -1,0 +1,32 @@
+name: S4 register-residency claim admission
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-register-residency-claim-admission.yml"
+      - "distribution/s4-performance/WP8P-*"
+      - "scripts/s4_register_residency_claim_admission.py"
+      - "scripts/tests/test_s4_register_residency_claim_admission*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-register-residency-claim-admission.yml"
+      - "distribution/s4-performance/WP8P-*"
+      - "scripts/s4_register_residency_claim_admission.py"
+      - "scripts/tests/test_s4_register_residency_claim_admission*.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate blocked claim protocol
+        run: python3 scripts/s4_register_residency_claim_admission.py
+      - name: Test static boundary and refusal surface
+        run: |
+          python3 -m unittest \
+            scripts.tests.test_s4_register_residency_claim_admission_refusal \
+            scripts.tests.test_s4_register_residency_claim_admission_static

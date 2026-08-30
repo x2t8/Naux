@@ -1,0 +1,27 @@
+NAUX-S4-REGISTER-RESIDENCY-CLAIM-ADMISSION-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-paired-threshold-authority	d7a8e91ec84af273d43ba03f5af86372a62b476a2a0dda2bfd4d988cf68cb263
+meta	protocol-status	register-residency-claim-protocol-structurally-admitted
+meta	admission-status	blocked
+meta	default-mode	static-no-host-no-network-no-clock-no-execution
+meta	claim-status	not-admitted
+meta	claim-class	exact-four-kernel-register-residency-threshold-observation
+meta	claim-scope	exact-host-commit-bundle-candidate-and-four-kernels-only
+meta	target	x86_64-unknown-linux-gnu
+class	01	exact-four-kernel-register-residency-threshold-observation	permitted-only-after-all-gates
+class	02	language-wide-naux-speedup	forbidden
+class	03	c-cpp-or-compiler-leadership	forbidden
+class	04	unmeasured-workload-or-platform-extrapolation	forbidden
+gate	01	public-protocol	required	exact-tracked-wp8b-through-wp8p-commit-and-green-ci
+gate	02	eligible-bundle	required	exact-public-wp8m-root-and-inventory
+gate	03	paired-evidence	required	exact-wp8n-read-only-replay
+gate	04	paired-threshold	required	exact-wp8o-all-four-kernel-pass
+gate	05	claim-text	required	host-commit-bundle-threshold-and-four-kernel-qualified
+gate	06	public-artifacts	required	bundle-candidate-and-reproduction-receipt-addressable
+gate	07	release-approval	required	distinct-explicit-owner-approval
+gate	08	non-self-admission	required	checker-cannot-grant-claim-authority
+blocker	01	tracked-public-protocol-acceptance-unavailable
+blocker	02	eligible-public-paired-bundle-unavailable
+blocker	03	exact-public-claim-request-unavailable
+blocker	04	distinct-release-approval-unavailable
+seal	cd2913e9d388dff4a36eca525c6884280c8e9a60b7956f43e63eb7dd00e6ef2f
