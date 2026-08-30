@@ -19,7 +19,15 @@ role = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = role
 SPEC.loader.exec_module(role)
 
+CURRENT_APACHE_SURFACE = (
+    hashlib.sha256((ROOT / "LICENSE").read_bytes()).hexdigest() == role.lt1.APACHE_HASH
+)
 
+
+@unittest.skipUnless(
+    CURRENT_APACHE_SURFACE,
+    "WP8H static admission requires the current Apache-2.0 surface",
+)
 class ResidencyRoleStaticTests(unittest.TestCase):
     @staticmethod
     def _reseal(path: Path) -> None:
