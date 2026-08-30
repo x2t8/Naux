@@ -1,0 +1,38 @@
+NAUX-S4-REGISTER-RESIDENCY-ROLE	1
+meta	policy-version	1.0.0
+meta	parent-baseline-role-authority	1d85ad923f5db2eb520cee9d3582bbc97f63b711c67d5d4b44d5859fb0fa92bd
+meta	parent-license-transition-authority	225cda9b967bd6c0bf93330721bfed1d41841fce11cc7e2677b4885678e5d5be
+meta	parent-candidate-process-contract	050107eff2a80a6dc6a4af0f9d2c64eedae8732dafa038e430bfab9303cc03bb
+meta	parent-candidate-process-authority	930c22a75eafb7c36255389f99e219fc46c9f82fd529c5665c1cd086a42caa77
+meta	role-status	untimed-register-residency-candidate-admitted
+meta	claim-status	untimed-candidate-role-only
+meta	timing-status	forbidden
+meta	required-role	naux-register-residency-candidate
+meta	baseline-role	naux-residual
+meta	role-isolation	does-not-replace-wp5f
+meta	target	x86_64-unknown-linux-gnu
+meta	dataset	static-n16384-r50
+meta	artifact	linker-free-standalone-elf64
+meta	frontend	ordinary-naux-frontend
+meta	transform	one-hot-inner-loop-index-r12-residency
+meta	runtime-envelope	no-vm-jit-libc-system-linker
+meta	artifact-count	4
+meta	replay-count	2
+authority	01	baseline-role	1d85ad923f5db2eb520cee9d3582bbc97f63b711c67d5d4b44d5859fb0fa92bd
+authority	02	license-transition	225cda9b967bd6c0bf93330721bfed1d41841fce11cc7e2677b4885678e5d5be
+authority	03	candidate-process	930c22a75eafb7c36255389f99e219fc46c9f82fd529c5665c1cd086a42caa77
+gate	01	license-transition	closed	exact-apache-authority-bridge
+gate	02	baseline-role	closed	exact-wp5f-retained
+gate	03	candidate-process	closed	exact-wp8g-artifacts
+gate	04	workload-identity	closed	same-four-oracles-and-work-hashes
+gate	05	work-preservation	closed	terminal-register-and-frame-state
+gate	06	artifact-sovereignty	closed	no-vm-jit-libc-system-linker
+gate	07	fresh-process-parity	closed	four-exact-results-two-passes-no-fallback
+gate	08	independent-replay	closed	candidate-target-process-elf-result
+gate	09	role-isolation	closed	baseline-remains-authoritative
+artifact	01	sum-dense	6710476800	5594c78b156929f021990ba06ebc045d17316f2c45b432a1009f210f6b985cac	d8a2ff6b4e4e91d8c98c634fecaaa53f9bb5955ae8dc9d75825382bfd872aba5	c13f847f443403baf6d3152122b2f8f9bd52dd60b8c740247be5e703530700f8
+artifact	02	branch-mix	-69189632	1f188884b4bb04d85dc00608cf436c6b07d8a665d17f63d7d8ab8192749ba195	897defb6998bc6c95c5e60b48fce2415edbf54e9e8c939bf7728e7f0db4ea870	cf31d1407677213a85ba3dbb395a06895e8c5c63dce46a42ac13fe916769f0a7
+artifact	03	dot-product	73294064435200	62291dc2f6662fdcb8f0a0e0d6f04a8a6f31ce498e6572a5908602b1ed7f2f7f	0171b94556cb4ab82805171c84f09975b678ce91b4321d69dc851ce704800964	b33c2f464595c9c07e6482288917874e22e271296f428d535ddcda15ba8d6846
+artifact	04	list-update	6730547200	a7937fa3e64d75cf6a96165d0e63baa4a0dc66b365647af8a87b3ea07079dc55	8114b4c85fe5b3062645aaf625342715f5d170f6f0acda6834ae66c22707306a	18cd00a4b3f4b43c300b6643e248574c8f956ad52971915997d0482ba2c351cd
+closure	01	candidate-role-unavailable	closed	wp8h-composition-authority
+seal	387ef6a1385363ec1ceb260851c0c606e1410d5962bc99d76cb99904cc75bd5f

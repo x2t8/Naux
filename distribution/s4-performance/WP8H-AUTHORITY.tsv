@@ -1,0 +1,21 @@
+NAUX-S4-REGISTER-RESIDENCY-ROLE-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8H
+meta	authority-id	s4-register-residency-candidate-role-v1
+meta	role-status	untimed-register-residency-candidate-admitted
+meta	claim-status	untimed-candidate-role-only
+meta	timing-status	forbidden
+meta	kernel-count	4
+meta	file-count	7
+component	candidate-role-contract	distribution/s4-performance/WP8H-CANDIDATE-ROLE.tsv	387ef6a1385363ec1ceb260851c0c606e1410d5962bc99d76cb99904cc75bd5f
+parent	baseline-role-authority	distribution/s4-performance/WP5F-AUTHORITY.tsv	1d85ad923f5db2eb520cee9d3582bbc97f63b711c67d5d4b44d5859fb0fa92bd
+parent	license-transition-authority	distribution/license-transition/LT1-AUTHORITY.tsv	225cda9b967bd6c0bf93330721bfed1d41841fce11cc7e2677b4885678e5d5be
+parent	candidate-process-authority	distribution/s4-performance/WP8G-AUTHORITY.tsv	930c22a75eafb7c36255389f99e219fc46c9f82fd529c5665c1cd086a42caa77
+file	100644	1693	0ed70c5b1f561bc3b239790d552b00b757db9b36dbb4f59ac7046f6528198f1f	.github/workflows/s4-register-residency-role.yml	candidate-role
+file	100644	2959	1e067d62fb8a6eb4e5e26ee829ecc95279dea1bb96fe2ffa4c62d32963a2dba1	distribution/s4-performance/WP8H-CANDIDATE-ROLE.tsv	candidate-role
+file	100644	576	7d055fd51370a098b9095fd3579b59586290b7bb6e48cef8cd6ae8e136ea976d	distribution/s4-performance/WP8H-NONCLAIMS.md	candidate-role
+file	100644	985	573d50343c004b39f93dfb4eb3ba6deb3e2a90eb823fc55e2714922fc5374282	distribution/s4-performance/WP8H-README.md	candidate-role
+file	100644	18743	579a1310e9a430d83e6eb9dbc09219350a529b92a252750e0662482d9d063b78	scripts/s4_register_residency_role.py	candidate-role
+file	100644	4299	a15204cb788558deeb9176267832127ff3dc3c1a5cdbf5896fbfa35f976684c4	scripts/tests/test_s4_register_residency_role.py	candidate-role
+file	100644	5896	f6d9e0d0445fbbc7e1d3a2a35265943752b2aadb16107ce99498c7c6788d3683	scripts/tests/test_s4_register_residency_role_static.py	candidate-role
+seal	649d341bb797e350d864a23af80ae8829f49d7cafa8265feec9424fced4f1dee
