@@ -1,0 +1,32 @@
+name: S4 register-residency paired threshold
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-register-residency-paired-threshold.yml"
+      - "distribution/s4-performance/WP8O-*"
+      - "scripts/s4_register_residency_paired_threshold.py"
+      - "scripts/tests/test_s4_register_residency_paired_threshold*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-register-residency-paired-threshold.yml"
+      - "distribution/s4-performance/WP8O-*"
+      - "scripts/s4_register_residency_paired_threshold.py"
+      - "scripts/tests/test_s4_register_residency_paired_threshold*.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate static paired-threshold authority
+        run: python3 scripts/s4_register_residency_paired_threshold.py
+      - name: Test exact decision law and refusal paths
+        run: |
+          python3 -m unittest \
+            scripts.tests.test_s4_register_residency_paired_threshold_replay \
+            scripts.tests.test_s4_register_residency_paired_threshold_static

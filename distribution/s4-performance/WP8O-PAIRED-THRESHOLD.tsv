@@ -1,0 +1,29 @@
+NAUX-S4-REGISTER-RESIDENCY-PAIRED-THRESHOLD-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-paired-evidence-authority	b616acf7d4b641bd753b129180dfc5aa26a42cc1bd15377f36c19798f3e08c4f
+meta	status	paired-threshold-structurally-admitted
+meta	input	exact-wp8n-paired-evidence-v1
+meta	clock-policy	forbidden
+meta	execution-policy	forbidden
+meta	arithmetic	exact-integer-rational-cross-products
+meta	tie-policy	disclosed-and-excluded-from-effective-sign-pairs
+meta	minimum-effective-pairs	24
+meta	one-sided-sign-alpha	1/100
+meta	minimum-total-speedup	21/20
+meta	paired-median-policy	strictly-negative-candidate-minus-baseline
+meta	family-policy	all-four-kernels-must-pass-every-gate
+meta	result	paired-threshold-candidate-only
+meta	claim-status	not-admitted
+meta	target	x86_64-unknown-linux-gnu
+gate	01	parent	required	exact-wp8n-authority-and-evidence-replay
+gate	02	bundle	required	exact-wp8m-paired-bundle-v1
+gate	03	coverage	required	at-least24-nontied-pairs-per-kernel
+gate	04	direction	required	strictly-negative-paired-median-per-kernel
+gate	05	sign-tail	required	exact-one-sided-binomial-tail-at-most1-over100
+gate	06	magnitude	required	baseline-total-over-candidate-total-at-least21-over20
+gate	07	family	required	all-four-kernels-pass-all-gates
+gate	08	claim-boundary	required	candidate-never-self-admits-claim
+closure	01	paired-inference-threshold-authority-unavailable	closed	wp8o-exact-law
+blocker	01	eligible-paired-raw-bundle-unavailable
+blocker	02	performance-claim-authority-unavailable
+seal	f9814b36ed6eb1beea99d78e68215866a8ce09852423ab2db414a6e87a1878ac

@@ -1,0 +1,18 @@
+NAUX-S4-REGISTER-RESIDENCY-PAIRED-THRESHOLD-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8O
+meta	authority-id	s4-register-residency-paired-threshold-v1
+meta	status	paired-threshold-structurally-admitted
+meta	claim-status	not-admitted
+meta	execution-policy	forbidden
+meta	file-count	7
+component	paired-threshold-contract	distribution/s4-performance/WP8O-PAIRED-THRESHOLD.tsv	f9814b36ed6eb1beea99d78e68215866a8ce09852423ab2db414a6e87a1878ac
+parent	paired-evidence-authority	distribution/s4-performance/WP8N-AUTHORITY.tsv	b616acf7d4b641bd753b129180dfc5aa26a42cc1bd15377f36c19798f3e08c4f
+file	100644	1120	09f38d16aa910180262db3fb5c18b556eed8382c7f4d5f1d81a4a5b5b3e948b5	.github/workflows/s4-register-residency-paired-threshold.yml	paired-threshold
+file	100644	1569	82ea1cd05c6d504cdb168cc5770c6dfde460ee593a2bcbd1dd4ab8997a10bdbb	distribution/s4-performance/WP8O-PAIRED-THRESHOLD.tsv	paired-threshold
+file	100644	619	fec53279c7f34245471781d68e9079106db836e53d31598d634b96d7cae954d7	distribution/s4-performance/WP8O-NONCLAIMS.md	paired-threshold
+file	100644	1170	bcd67e29e49360282114a2c1504158db5d25b951cc64749d2ea62a48bdb9677d	distribution/s4-performance/WP8O-README.md	paired-threshold
+file	100644	15380	629c93ebc5bd8b0273503d845cc2d262a308047b7479da0862d55a7eccf8f4f2	scripts/s4_register_residency_paired_threshold.py	paired-threshold
+file	100644	6146	a6c4b8f3ced55fd0d7072596f0ae5d1ab7a4a39220e8df347deecb45dcad3daf	scripts/tests/test_s4_register_residency_paired_threshold_replay.py	paired-threshold
+file	100644	4345	a3dce1cbb2cfc66285f9fdebb715f2154a65b7b0324b0c45bb82c97dba11dd43	scripts/tests/test_s4_register_residency_paired_threshold_static.py	paired-threshold
+seal	d7a8e91ec84af273d43ba03f5af86372a62b476a2a0dda2bfd4d988cf68cb263
