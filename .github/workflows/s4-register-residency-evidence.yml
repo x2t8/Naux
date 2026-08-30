@@ -1,0 +1,32 @@
+name: S4 register-residency evidence replay
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-register-residency-evidence.yml"
+      - "distribution/s4-performance/WP8L-*"
+      - "scripts/s4_register_residency_evidence.py"
+      - "scripts/tests/test_s4_register_residency_evidence*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-register-residency-evidence.yml"
+      - "distribution/s4-performance/WP8L-*"
+      - "scripts/s4_register_residency_evidence.py"
+      - "scripts/tests/test_s4_register_residency_evidence*.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate static evidence authority
+        run: python3 scripts/s4_register_residency_evidence.py
+      - name: Test independent replay and refusal paths
+        run: |
+          python3 -m unittest \
+            scripts.tests.test_s4_register_residency_evidence_replay \
+            scripts.tests.test_s4_register_residency_evidence_static

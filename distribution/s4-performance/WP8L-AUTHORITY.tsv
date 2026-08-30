@@ -1,0 +1,19 @@
+NAUX-S4-REGISTER-RESIDENCY-EVIDENCE-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8L
+meta	authority-id	s4-register-residency-evidence-v1
+meta	status	candidate-evidence-replay-structurally-admitted
+meta	claim-status	not-admitted
+meta	execution-policy	forbidden
+meta	file-count	7
+component	candidate-evidence-contract	distribution/s4-performance/WP8L-EVIDENCE.tsv	2050c6c79685568b5481189d483f561ef45c8b318c892fa15b7dd5ce1ae941e6
+parent	candidate-runner-authority	distribution/s4-performance/WP8K-AUTHORITY.tsv	3c7f1ce549764dd5a2d3bc28dfeec3c091aaae835f44490ac6a3418e0f852fc2
+parent	candidate-carrier-authority	distribution/s4-performance/WP8J-AUTHORITY.tsv	aaa90c3a2674f7c13208bbb895b8365c01bd5cc9b60c86ff26fa29727d9c11f1
+file	100644	1039	246958e2aedfe544722dd42e04db30cade222c733f10758ac29f11754f34fa31	.github/workflows/s4-register-residency-evidence.yml	candidate-evidence-replay
+file	100644	1762	5606595daa9d8f9097b15125c86f2c7a2dd31097c277e5fe0d9650c3ba3d4c56	distribution/s4-performance/WP8L-EVIDENCE.tsv	candidate-evidence-replay
+file	100644	414	070c33e6613848dfe34aa8ca5dc573fef486dbd8a40807f834e475c346f1f33f	distribution/s4-performance/WP8L-NONCLAIMS.md	candidate-evidence-replay
+file	100644	839	e2a51c0781196c83edea83dcc73c10ecce70205e7dbdf5b5f7275f10bc6a308d	distribution/s4-performance/WP8L-README.md	candidate-evidence-replay
+file	100644	31633	975487e7dccc760c03cd189753d78dc329b56791bfc9ecb621a7d3eb0b118266	scripts/s4_register_residency_evidence.py	candidate-evidence-replay
+file	100644	13877	a9d597d29a28893ba01e6f19b3e39974cc003088e22bf987ba753c2feb98e813	scripts/tests/test_s4_register_residency_evidence_replay.py	candidate-evidence-replay
+file	100644	4260	f6e053702aae4d5cbf24a03a4015e6092833e5b8f6c10cb1f78607e660cafee6	scripts/tests/test_s4_register_residency_evidence_static.py	candidate-evidence-replay
+seal	a50fd9f7d863e60b91702bb5c6a56eb7707570d8f90db8a2ba3586e90a3a72b6

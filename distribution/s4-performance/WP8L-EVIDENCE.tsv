@@ -1,0 +1,29 @@
+NAUX-S4-REGISTER-RESIDENCY-EVIDENCE-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-candidate-runner-authority	3c7f1ce549764dd5a2d3bc28dfeec3c091aaae835f44490ac6a3418e0f852fc2
+meta	parent-candidate-carrier-authority	aaa90c3a2674f7c13208bbb895b8365c01bd5cc9b60c86ff26fa29727d9c11f1
+meta	status	candidate-evidence-replay-structurally-admitted
+meta	input	exact-wp8k-raw-bundle-v1
+meta	default-mode	static-no-bundle-no-host-no-clock-no-execution
+meta	replay-mode	explicit-read-only
+meta	inventory-policy	exact-eight-payload-files-and-manifest
+meta	sample-policy	four-kernels-exact30-no-drop-no-retry
+meta	statistics-policy	exact-integer-min-max-total-median
+meta	artifact-policy	exact-four-wp8j-timing-images
+meta	claim-status	not-admitted
+meta	target	x86_64-unknown-linux-gnu
+gate	01	static-isolation	required	no-bundle-no-host-no-clock-no-execution
+gate	02	bundle-root	required	exact-wp8k-manifest-and-inventory
+gate	03	host-attestation	required	exact-eligible-retained-wp8i-report
+gate	04	session-root	required	exact-warmups-and-120-samples
+gate	05	artifact-identity	required	exact-four-wp8j-images-and-role-aggregate
+gate	06	toolchain-identity	required	exact-portable-receipts-and-role-aggregate
+gate	07	result-parity	required	every-checksum-matches-frozen-oracle
+gate	08	reproduction	required	exact-source-host-runner-binding
+gate	09	statistics	required	exact-clock-free-reduction-only
+gate	10	claim-boundary	required	replay-never-self-admits-claim
+closure	01	candidate-raw-bundle-verifier-unavailable	closed	wp8l-independent-replay
+blocker	01	eligible-candidate-raw-bundle-unavailable
+blocker	02	baseline-candidate-comparison-unavailable
+blocker	03	performance-claim-authority-unavailable
+seal	2050c6c79685568b5481189d483f561ef45c8b318c892fa15b7dd5ce1ae941e6
