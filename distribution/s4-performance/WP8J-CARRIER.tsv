@@ -1,0 +1,40 @@
+NAUX-S4-REGISTER-RESIDENCY-TIMING-CARRIER-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-license-transition-authority	225cda9b967bd6c0bf93330721bfed1d41841fce11cc7e2677b4885678e5d5be
+meta	parent-candidate-role-authority	9a128600ba9ce4f2d6d503a393d41c54d413b75717e5687f9118b0e169bac3f1
+meta	parent-timing-wrapper-authority	dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed
+meta	status	candidate-timing-carrier-structurally-admitted
+meta	execution-status	forbidden
+meta	claim-status	not-admitted
+meta	role	naux-register-residency-candidate
+meta	role-owner	4
+meta	clock-source	clock-monotonic-raw
+meta	clock-reads	2
+meta	clock-placement	before-exact-target-after-target-and-checksum-validation
+meta	target-preservation	byte-exact-wp8g-process-target
+meta	wrapper-preservation	exact-wp7b-wrapper-except-post-clock-role-owner
+meta	result-protocol	fixed-le56-v1
+meta	allowed-syscalls	mmap-munmap-clock-gettime-write-exit
+meta	linker	none
+meta	libc	none
+meta	target	x86_64-unknown-linux-gnu
+meta	candidate-report-sha256	9c5090cee4db9a9f2d84ed9eadf78d838e5dbaa6fe593fc65b42a1bd8f37e885
+meta	candidate-report-bytes	23747
+meta	candidate-report-lines	23
+meta	kernel-count	4
+kernel	01	sum-dense	6710476800	5594c78b156929f021990ba06ebc045d17316f2c45b432a1009f210f6b985cac	1052	d8a2ff6b4e4e91d8c98c634fecaaa53f9bb5955ae8dc9d75825382bfd872aba5	1660	345	608	e1ec7d57cd8e1db4f050c04f35529307a52f7db0bc52ffb4fe8493480135b969
+kernel	02	branch-mix	-69189632	1f188884b4bb04d85dc00608cf436c6b07d8a665d17f63d7d8ab8192749ba195	1247	897defb6998bc6c95c5e60b48fce2415edbf54e9e8c939bf7728e7f0db4ea870	1855	345	608	07928d332d46ab19b2ac418abea9cca079f1ab210d0ad15da27260fe721681d2
+kernel	03	dot-product	73294064435200	62291dc2f6662fdcb8f0a0e0d6f04a8a6f31ce498e6572a5908602b1ed7f2f7f	1009	0171b94556cb4ab82805171c84f09975b678ce91b4321d69dc851ce704800964	1617	345	608	d4c9e8adda3905ecdadc7e0a87064678feefb3c79fdec4279f608a533a559164
+kernel	04	list-update	6730547200	a7937fa3e64d75cf6a96165d0e63baa4a0dc66b365647af8a87b3ea07079dc55	1123	8114b4c85fe5b3062645aaf625342715f5d170f6f0acda6834ae66c22707306a	1731	345	608	c82e887d9e109a476146b7945154b19ebe09b86cfa1e7081c52dc835a4293611
+gate	01	license-transition	required	exact-current-apache-authority
+gate	02	candidate-role	required	exact-wp8h-isolated-role
+gate	03	timing-wrapper	required	exact-wp7b-clock-and-result-envelope
+gate	04	target-preservation	required	byte-exact-four-wp8g-process-targets
+gate	05	role-specialization	required	exactly-one-owner-literal-one-to-four
+gate	06	independent-reconstruction	required	complete-elf-and-order-replay
+gate	07	static-isolation	required	no-clock-no-generated-image-execution
+closure	01	candidate-in-role-timing-carrier-unavailable	closed	wp8j-exact-wrapper-specialization
+blocker	01	eligible-candidate-host-attestation-unavailable
+blocker	02	candidate-measurement-runner-unavailable
+blocker	03	candidate-raw-measurement-evidence-unavailable
+seal	d3c2b8f1489f30aeec4c31edbac4b4db725cc30d7415f91cd589e28ec5f40ec4

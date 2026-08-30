@@ -1,0 +1,43 @@
+name: S4 register-residency timing carrier
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-register-residency-timing.yml"
+      - "distribution/s4-performance/WP8J-*"
+      - "naux-lang/examples/naux_s4_register_residency_timing.rs"
+      - "naux-lang/examples/support/s4_register_residency_timing_elf.rs"
+      - "scripts/s4_register_residency_timing.py"
+      - "scripts/tests/test_s4_register_residency_timing*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-register-residency-timing.yml"
+      - "distribution/s4-performance/WP8J-*"
+      - "naux-lang/examples/naux_s4_register_residency_timing.rs"
+      - "naux-lang/examples/support/s4_register_residency_timing_elf.rs"
+      - "scripts/s4_register_residency_timing.py"
+      - "scripts/tests/test_s4_register_residency_timing*.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Validate static authority
+        run: python3 scripts/s4_register_residency_timing.py
+      - name: Test candidate timing carrier
+        run: cargo test --locked --offline -p naux --example naux_s4_register_residency_timing
+      - name: Build reviewed emitter
+        run: cargo build --locked --offline -p naux --example naux_s4_register_residency_timing
+      - name: Replay exact bytes without executing timing images
+        env:
+          NAUX_S4_REGISTER_RESIDENCY_TIMING_BINARY: target/debug/examples/naux_s4_register_residency_timing
+        run: |
+          python3 -m unittest \
+            scripts.tests.test_s4_register_residency_timing \
+            scripts.tests.test_s4_register_residency_timing_static
