@@ -1,0 +1,37 @@
+NAUX-S4-REGISTER-RESIDENCY-MEASUREMENT-RUNNER-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-candidate-host-authority	5f9e36d9f9994a5449fd6492b083b934799723fdc9b89e79d0003bc594beebb7
+meta	parent-candidate-carrier-authority	aaa90c3a2674f7c13208bbb895b8365c01bd5cc9b60c86ff26fa29727d9c11f1
+meta	parent-runner-engine-authority	b9dbfa5708eceac818f3b33904551ee7a86bc47f687b5d268e7470efc8d7a130
+meta	runner-status	candidate-measurement-runner-structurally-admitted
+meta	acquisition-status	retained-eligible-wp8i-host-required
+meta	claim-status	not-admitted
+meta	default-mode	static-no-host-no-clock-no-build-no-execution
+meta	acquire-mode	explicit-only
+meta	role	naux-register-residency-candidate
+meta	role-owner	4
+meta	artifact-policy	four-exact-wp8j-role-kernel-artifacts
+meta	build-policy	fixed-argv-no-shell
+meta	warmup-policy	retain-every-invocation-until-cumulative-100000000ns
+meta	sample-policy	kernel-major-exact30-no-drop-no-retry
+meta	result-policy	fixed-le56-owner-four-exact-parity
+meta	publication-policy	atomic-new-output-or-no-bundle
+meta	target	x86_64-unknown-linux-gnu
+kernel	01	sum-dense	6710476800
+kernel	02	branch-mix	-69189632
+kernel	03	dot-product	73294064435200
+kernel	04	list-update	6730547200
+gate	01	static-isolation	required	no-host-no-clock-no-build-no-execution
+gate	02	retained-attestation	required	exact-eligible-wp8i-report
+gate	03	live-reattestation	required	exact-facts-fingerprint-commit
+gate	04	checkout	required	clean-exact-attested-commit
+gate	05	toolchains	required	stable-cargo-rustc-identities
+gate	06	artifacts	required	exact-wp8j-replay-and-aggregate-identity
+gate	07	warmup	required	all-invocations-retained-cumulative-minimum
+gate	08	samples	required	exact120-no-retry
+gate	09	parity	required	every-record-exact-owner-four
+gate	10	atomic-publication	required	complete-raw-bundle-only
+closure	01	candidate-measurement-runner-unavailable	closed	wp8k-explicit-runner
+blocker	01	eligible-candidate-host-attestation-unavailable
+blocker	02	candidate-raw-measurement-evidence-unavailable
+seal	fe93623ad43a452ea7d1f8915d8a4ea152a366a396177cf693e18a253d5cc3f9
