@@ -1,0 +1,21 @@
+NAUX-S4-REGISTER-RESIDENCY-PROCESS-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8G
+meta	authority-id	s4-one-hot-loop-index-r12-process-v1
+meta	status	fresh-process-checksum-work-parity-admitted
+meta	claim-status	untimed-parity-only
+meta	timing-status	forbidden
+meta	kernel-count	4
+meta	file-count	8
+component	process-contract	distribution/s4-performance/WP8G-PROCESS.tsv	050107eff2a80a6dc6a4af0f9d2c64eedae8732dafa038e430bfab9303cc03bb
+parent	wp8f-contract	distribution/s4-performance/WP8F-ELF64-CONTRACT.tsv	c653e98c392903f3c8007b3703480030c60aeffd48c1b10fb138a4c34f0fe69c
+parent	wp8f-authority	distribution/s4-performance/WP8F-AUTHORITY.tsv	fcb1cda5837ecfcda7ab36b60dbdc107bf93aff4eb27882d436233a78145ce4f
+file	100644	1569	87915520fcbcfc6084d5d478e7b14108312a05f10dca7583d0e38879dd24f892	.github/workflows/s4-register-residency-process.yml	register-residency-process
+file	100644	594	e35de583783b0b0b1ab999a0a8f45c96af3d5f3a15d2d6ce534357617bcef0b0	distribution/s4-performance/WP8G-NONCLAIMS.md	register-residency-process
+file	100644	3411	c69a93f14642187cb235ecc98f91c5e1fda763c0d7541b3e27ae2f58b5a1984e	distribution/s4-performance/WP8G-PROCESS.tsv	register-residency-process
+file	100644	1385	5ce9281bb3656699c33268064e23828db55f83ded79a7e008e519bcd90cd3f03	distribution/s4-performance/WP8G-README.md	register-residency-process
+file	100644	10858	a39a2ce91d33e675174d0a629c1dc382f4eb7bc162c1a5f912cb2c3ebe3fb1a7	naux-lang/examples/naux_s4_register_residency_process.rs	register-residency-process
+file	100644	13105	ee86532cc299174b6fb419badf1e685f7073cf356a4ed8a5b531bf12c94351a4	naux-lang/examples/support/s4_register_residency_process.rs	register-residency-process
+file	100644	27063	623284a9efca69e0c363baf155e9042b4220d562a71d4246316b8d9faef05b04	scripts/s4_register_residency_process.py	register-residency-process
+file	100644	7320	5efee03ecb22973217ea3c33651e305cd0bc5ae0a50fd86bf8dfd501e1e552d8	scripts/tests/test_s4_register_residency_process.py	register-residency-process
+seal	930c22a75eafb7c36255389f99e219fc46c9f82fd529c5665c1cd086a42caa77

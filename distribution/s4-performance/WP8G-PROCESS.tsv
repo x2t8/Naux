@@ -1,0 +1,40 @@
+NAUX-S4-REGISTER-RESIDENCY-PROCESS-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-wp8f-contract	c653e98c392903f3c8007b3703480030c60aeffd48c1b10fb138a4c34f0fe69c
+meta	parent-wp8f-authority	fcb1cda5837ecfcda7ab36b60dbdc107bf93aff4eb27882d436233a78145ce4f
+meta	parent-wp8f-report-root	50fe50575497b2a93e0f7fd48f5e81eddd339cb486c8b974c98d7cc0c5891398
+meta	status	fresh-process-checksum-work-parity-admitted
+meta	claim-status	untimed-parity-only
+meta	timing-status	forbidden
+meta	target	x86_64-unknown-linux-gnu
+meta	dataset	static-n16384-r50
+meta	result-protocol	fixed-le48-v1
+meta	work-proof	sealed-residency-structure-plus-terminal-register-and-frame-state
+meta	pipeline	single-wp8e-target-to-process-wrapper
+meta	candidate-report-sha256	34cc3b7f1b0d7bd0810e0fb9db472a46071d62b3eed8409893a023bc89295ef2
+meta	candidate-report-bytes	30401
+meta	candidate-report-lines	27
+meta	kernel-count	4
+meta	replay-count	2
+meta	linker	none
+meta	libc	none
+meta	allowed-syscalls	mmap-munmap-write-exit
+gate	01	parent-chain	required	exact-wp8f-contract-authority-and-report-root
+gate	02	candidate-parent	required	exact-wp8e-target-hash-for-each-kernel
+gate	03	completion-patch	required	one-final-restore-return-range-to-jump
+gate	04	register-state	required	capture-promoted-counter-from-r12-before-abi-restore
+gate	05	frame-state	required	outer-inner-owner-terminal-values
+gate	06	result-protocol	required	exact-le48-record
+gate	07	fresh-process	required	two-replays-per-kernel
+gate	08	preexecution	required	exact-hash-and-owned-regular-file
+gate	09	resource-bound	required	private-tempdir-timeout-and-bounded-output
+gate	10	determinism	required	byte-identical-double-emission
+gate	11	negative-tests	required	candidate-target-elf-state-protocol-and-hash-mutations
+gate	12	timing-boundary	required	no-clock-or-measurement
+gate	13	rollback	required	failed-verification-retains-wp5d-target
+gate	14	claim-boundary	required	untimed-parity-only
+kernel	01	sum-dense	6710476800	5594c78b156929f021990ba06ebc045d17316f2c45b432a1009f210f6b985cac	84578fc8a90dcfeb655e984dee5677c4a1164e866378825fd276a95ecf28e7ef	d8a2ff6b4e4e91d8c98c634fecaaa53f9bb5955ae8dc9d75825382bfd872aba5	c13f847f443403baf6d3152122b2f8f9bd52dd60b8c740247be5e703530700f8	972	1052	958	942	972	-288	-32	-48	-24	50	16384	1436	117	384
+kernel	02	branch-mix	-69189632	1f188884b4bb04d85dc00608cf436c6b07d8a665d17f63d7d8ab8192749ba195	362c5dc7b3857358d2826b0a2f2dcbe376920514d948844a08c2b4433343ed42	897defb6998bc6c95c5e60b48fce2415edbf54e9e8c939bf7728e7f0db4ea870	cf31d1407677213a85ba3dbb395a06895e8c5c63dce46a42ac13fe916769f0a7	1167	1247	1153	1137	1167	-344	-32	-56	-24	50	16384	1631	117	384
+kernel	03	dot-product	73294064435200	62291dc2f6662fdcb8f0a0e0d6f04a8a6f31ce498e6572a5908602b1ed7f2f7f	87ab3713c01593e5746e331ddf363fd500699d74c40d3b5db19ff72c2bc2b41a	0171b94556cb4ab82805171c84f09975b678ce91b4321d69dc851ce704800964	b33c2f464595c9c07e6482288917874e22e271296f428d535ddcda15ba8d6846	929	1009	915	899	929	-288	-32	-48	-24	50	16384	1393	117	384
+kernel	04	list-update	6730547200	a7937fa3e64d75cf6a96165d0e63baa4a0dc66b365647af8a87b3ea07079dc55	a0b5e4316250342f7c9739d4adf021036b3badcdef7f62a0aec7c4b2c79b6c17	8114b4c85fe5b3062645aaf625342715f5d170f6f0acda6834ae66c22707306a	18cd00a4b3f4b43c300b6643e248574c8f956ad52971915997d0482ba2c351cd	1043	1123	1029	1013	1043	-328	-32	-48	-24	50	16384	1507	117	384
+seal	050107eff2a80a6dc6a4af0f9d2c64eedae8732dafa038e430bfab9303cc03bb
