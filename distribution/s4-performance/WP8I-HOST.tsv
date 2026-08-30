@@ -1,0 +1,30 @@
+NAUX-S4-REGISTER-RESIDENCY-HOST-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-license-transition-authority	225cda9b967bd6c0bf93330721bfed1d41841fce11cc7e2677b4885678e5d5be
+meta	parent-host-protocol-contract	64f3ee8279085c35857845ee7c4a4c6d2660695e3c74f43695126c7e5329e123
+meta	parent-host-protocol-authority	3062a5197fa1fcbe50f60b624b75b2be37c55a0c1193d1eeeffc03e7f03caaf0
+meta	parent-candidate-role-contract	387ef6a1385363ec1ceb260851c0c606e1410d5962bc99d76cb99904cc75bd5f
+meta	parent-candidate-role-authority	9a128600ba9ce4f2d6d503a393d41c54d413b75717e5687f9118b0e169bac3f1
+meta	protocol-status	candidate-controlled-host-protocol-admitted
+meta	host-status	runtime-attestation-required
+meta	role	naux-register-residency-candidate
+meta	baseline-role	naux-residual
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	target	x86_64-unknown-linux-gnu
+meta	observation	ephemeral-canonical-stdout-only
+meta	host-policy	reuse-exact-wp6-facts-refusals-and-fingerprint
+gate	01	license-transition	required	exact-current-apache-authority
+gate	02	candidate-role	required	exact-wp8h-isolated-role
+gate	03	host-protocol	required	exact-wp6-historical-authority
+gate	04	host-facts	required	exact-wp6-fact-schema
+gate	05	host-refusals	required	exact-wp6-refusal-schema
+gate	06	source-state	required	clean-exact-caller-commit
+gate	07	static-isolation	required	no-host-no-clock-no-execution
+gate	08	role-isolation	required	does-not-replace-wp5f
+gate	09	observation	required	ephemeral-only-no-retention
+closure	01	candidate-controlled-host-protocol-unavailable	closed	wp8i-authority
+blocker	01	eligible-candidate-host-attestation-unavailable
+blocker	02	candidate-measurement-runner-unavailable
+blocker	03	candidate-raw-measurement-evidence-unavailable
+seal	1da0e075623f18bed18f2ef3df464a152d1facf45c0a16f5e98d23c216d3f441

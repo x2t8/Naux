@@ -1,0 +1,21 @@
+NAUX-S4-REGISTER-RESIDENCY-HOST-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8I
+meta	authority-id	s4-register-residency-controlled-host-v1
+meta	protocol-status	candidate-controlled-host-protocol-admitted
+meta	host-status	runtime-attestation-required
+meta	claim-status	not-admitted
+meta	timing-status	forbidden
+meta	file-count	7
+component	host-contract	distribution/s4-performance/WP8I-HOST.tsv	1da0e075623f18bed18f2ef3df464a152d1facf45c0a16f5e98d23c216d3f441
+parent	license-transition-authority	distribution/license-transition/LT1-AUTHORITY.tsv	225cda9b967bd6c0bf93330721bfed1d41841fce11cc7e2677b4885678e5d5be
+parent	host-protocol-authority	distribution/s4-performance/WP6-AUTHORITY.tsv	3062a5197fa1fcbe50f60b624b75b2be37c55a0c1193d1eeeffc03e7f03caaf0
+parent	candidate-role-authority	distribution/s4-performance/WP8H-AUTHORITY.tsv	9a128600ba9ce4f2d6d503a393d41c54d413b75717e5687f9118b0e169bac3f1
+file	100644	1035	5f0fc853ccdf8d42de7ba24e515a16ae3b0ced523999b480d32c1e7881359760	.github/workflows/s4-register-residency-host.yml	candidate-host
+file	100644	1819	fc55e92c03b883e0b4044a3f77e132562150d26725244f4214b66097ffbb2a41	distribution/s4-performance/WP8I-HOST.tsv	candidate-host
+file	100644	416	0b779d525c00c9f52d809273ea773896d2dfe5aeaf0d921a518e4a25117b87fe	distribution/s4-performance/WP8I-NONCLAIMS.md	candidate-host
+file	100644	887	c5e4efcfa3699e300a3abaed992e1b79fbe08e01febe1989489d1ca961515985	distribution/s4-performance/WP8I-README.md	candidate-host
+file	100644	17611	00b0320172d444aaaa9bed853d8114d303a40a3f90a05e592517b5b9b992398e	scripts/s4_register_residency_host.py	candidate-host
+file	100644	4348	f6453350c263925d71856936bc561491eeacf60f9ab0c3ffda765b82d105496a	scripts/tests/test_s4_register_residency_host.py	candidate-host
+file	100644	5444	0671496654c4f7371c44cdd579af142a157300b428725b671f009844ca58207b	scripts/tests/test_s4_register_residency_host_static.py	candidate-host
+seal	5f9e36d9f9994a5449fd6492b083b934799723fdc9b89e79d0003bc594beebb7

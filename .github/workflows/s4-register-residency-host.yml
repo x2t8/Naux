@@ -1,0 +1,29 @@
+name: S4 register-residency controlled-host admission
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-host-protocol:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate repository authorities
+        run: python3 scripts/license_transition.py
+      - name: Validate static candidate-host composition
+        run: python3 scripts/s4_register_residency_host.py
+      - name: Exercise ephemeral observation without admitting hosted CI
+        run: |
+          python3 scripts/s4_register_residency_host.py \
+            --observe --expected-commit "$(git rev-parse HEAD)"
+      - name: Run static fail-closed tests
+        run: python3 -m unittest -v scripts.tests.test_s4_register_residency_host_static
+      - name: Run observation fail-closed tests
+        run: python3 -m unittest -v scripts.tests.test_s4_register_residency_host
+      - name: Check patch hygiene
+        run: git diff --check
