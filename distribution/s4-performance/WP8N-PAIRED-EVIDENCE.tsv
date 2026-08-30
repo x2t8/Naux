@@ -1,0 +1,32 @@
+NAUX-S4-REGISTER-RESIDENCY-PAIRED-EVIDENCE-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-paired-runner-authority	f5de98a15378454b28ed89593180f2d8f682fef07abb4ef925a5867dd1292a42
+meta	parent-baseline-carrier-authority	dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed
+meta	parent-candidate-carrier-authority	aaa90c3a2674f7c13208bbb895b8365c01bd5cc9b60c86ff26fa29727d9c11f1
+meta	status	paired-evidence-replay-structurally-admitted
+meta	input	exact-wp8m-paired-raw-bundle-v1
+meta	default-mode	static-no-bundle-no-host-no-clock-no-execution
+meta	replay-mode	explicit-read-only
+meta	inventory-policy	exact-twelve-payload-files-and-manifest
+meta	schedule-policy	four-kernels-exact30-pairs-odd-ab-even-ba
+meta	statistics-policy	exact-integer-paired-reduction-no-float
+meta	comparison-policy	totals-medians-paired-deltas-wins-ties-losses-ratio
+meta	claim-status	not-admitted
+meta	target	x86_64-unknown-linux-gnu
+gate	01	static-isolation	required	no-bundle-no-host-no-clock-no-execution
+gate	02	bundle-root	required	exact-wp8m-manifest-and-inventory
+gate	03	host-attestation	required	exact-eligible-retained-wp8i-report
+gate	04	session-root	required	exact-paired-warmups-and240-sample-runs
+gate	05	artifact-identity	required	exact-four-wp7b-and-four-wp8j-images
+gate	06	toolchain-identity	required	same-exact-portable-receipts-both-roles
+gate	07	schedule	required	odd-ab-even-ba-complete-no-drop-no-retry
+gate	08	result-parity	required	every-checksum-matches-frozen-oracle
+gate	09	statistics	required	exact-clock-free-paired-reduction-only
+gate	10	reproduction	required	exact-source-host-runner-binding
+gate	11	claim-boundary	required	replay-never-self-admits-claim
+closure	01	paired-raw-bundle-verifier-unavailable	closed	wp8n-independent-replay
+closure	02	baseline-candidate-comparison-unavailable	closed	wp8n-exact-paired-reduction
+blocker	01	eligible-paired-raw-bundle-unavailable
+blocker	02	paired-inference-threshold-authority-unavailable
+blocker	03	performance-claim-authority-unavailable
+seal	14c721c74a0b1b4c7f13e4413b620dfb8fb466d221cd7777afc49b640dc73598
