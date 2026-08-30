@@ -1,0 +1,45 @@
+name: S4 register-residency candidate bytes
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-authority:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.96.0 --profile minimal
+          rustup component add --toolchain 1.96.0 rustfmt clippy
+          rustup default 1.96.0
+      - name: Validate parent authorities
+        run: python3 scripts/license_transition.py
+      - name: Validate WP8D encoding contract
+        run: python3 scripts/s4_register_residency_encoding_contract.py
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Lint candidate-byte emitter
+        run: cargo clippy --locked -p naux --example naux_s4_register_residency_encoding -- -D warnings
+      - name: Build candidate-byte emitter
+        run: cargo build --locked -p naux --example naux_s4_register_residency_encoding
+      - name: Emit twice and require byte identity
+        run: |
+          target/debug/examples/naux_s4_register_residency_encoding > "$RUNNER_TEMP/wp8e-a.tsv"
+          target/debug/examples/naux_s4_register_residency_encoding > "$RUNNER_TEMP/wp8e-b.tsv"
+          cmp "$RUNNER_TEMP/wp8e-a.tsv" "$RUNNER_TEMP/wp8e-b.tsv"
+      - name: Verify candidate authority
+        run: python3 scripts/s4_register_residency_candidate_authority.py --report "$RUNNER_TEMP/wp8e-a.tsv"
+      - name: Run fail-closed authority tests
+        env:
+          NAUX_S4_WP8E_REPORT: ${{ runner.temp }}/wp8e-a.tsv
+        run: python3 -m unittest -v scripts.tests.test_s4_register_residency_candidate_authority
+      - name: Run focused Rust byte tests
+        run: cargo test --locked -p naux --example naux_s4_register_residency_encoding
+      - name: Reject whitespace damage
+        run: git diff --check

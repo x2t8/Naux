@@ -1,0 +1,22 @@
+NAUX-S4-REGISTER-RESIDENCY-CANDIDATE-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8E
+meta	authority-id	s4-one-hot-loop-index-r12-candidate-bytes-v1
+meta	status	candidate-function-bytes-structurally-admitted
+meta	elf-status	absent
+meta	native-execution-status	forbidden
+meta	measurement-status	forbidden
+meta	claim-status	not-admitted
+meta	file-count	8
+component	candidate-contract	distribution/s4-performance/WP8E-CANDIDATE-ENCODING.tsv	179c724165ee4fdb8965f0f196294310723dbd70d0127dbba0afe039c14d529c
+parent	wp8d-contract	distribution/s4-performance/WP8D-ENCODING-CONTRACT.tsv	ebe81a4dce396afa1b510b470c331bf63aa7d8d3acb898079c0c6f68c07c43a6
+parent	wp8d-authority	distribution/s4-performance/WP8D-AUTHORITY.tsv	38418de42556a3c8962a880c7a4a5be4d7504d93a47259841f2ab612da255e36
+file	100644	1936	f4582706422f1bf7136161a57b977b245722c28b0b71e0f0399472c4202336b0	.github/workflows/s4-register-residency-candidate.yml	register-residency-candidate-bytes
+file	100644	3047	3bd7eb454d9edc95f2ee7d0c5e58bac9629f2667a2358c92031dd9f3fae38261	distribution/s4-performance/WP8E-CANDIDATE-ENCODING.tsv	register-residency-candidate-bytes
+file	100644	486	8c202f18f8c099cbd417bac64611e52882141a54b72b661fc25fd04ed3f807f4	distribution/s4-performance/WP8E-NONCLAIMS.md	register-residency-candidate-bytes
+file	100644	1443	f63bcc6f737852ecc6c5124acefc5b3f20110df717f4d0ee287daf2148a416ff	distribution/s4-performance/WP8E-README.md	register-residency-candidate-bytes
+file	100644	12463	dbfe1ddbe914ec1e0396644d5dcb149fdd3997332cf6075116565fae8c1024da	naux-lang/examples/naux_s4_register_residency_encoding.rs	register-residency-candidate-bytes
+file	100644	37143	4a8cd6828d8830ecb0d43bec7bbe81a41ba1e79ef4403679af732ce2d8ba953e	naux-lang/examples/support/s4_register_residency_encoding.rs	register-residency-candidate-bytes
+file	100644	17688	d4c49d0d30f1e093bd4b072114a2f45972ae2c8ceeda5a5154c8a10e2f3df311	scripts/s4_register_residency_candidate_authority.py	register-residency-candidate-bytes
+file	100644	2796	d4985160ae4f8547faad8c43aa9478417b995b558ee1b23464941958309fa926	scripts/tests/test_s4_register_residency_candidate_authority.py	register-residency-candidate-bytes
+seal	9a6ee8f48c65bf7daf797c2e8189981ceeac17609a8521fe7b30966ef65a5ea3
