@@ -163,6 +163,54 @@ Definition instruction_admissible
   | StoreHome source => source <> resident_register
   end.
 
+(**
+  Executable admission check for a concrete transform plan.  The reflection
+  theorem below connects this Boolean boundary to the proposition consumed by
+  the semantic proof.
+*)
+Definition instruction_admissibleb
+    (resident_register : nat) (instruction : resident_instruction) : bool :=
+  match instruction with
+  | UpdateHome _ => true
+  | LoadHome destination => negb (Nat.eqb destination resident_register)
+  | StoreHome source => negb (Nat.eqb source resident_register)
+  end.
+
+Theorem instruction_admissibleb_reflect :
+  forall resident_register instruction,
+    instruction_admissibleb resident_register instruction = true <->
+    instruction_admissible resident_register instruction.
+Proof.
+  intros resident_register instruction.
+  destruct instruction as [op | destination | source]; simpl.
+  - tauto.
+  - rewrite Bool.negb_true_iff. apply Nat.eqb_neq.
+  - rewrite Bool.negb_true_iff. apply Nat.eqb_neq.
+Qed.
+
+Definition program_admissibleb
+    (resident_register : nat) (program : list resident_instruction) : bool :=
+  forallb (instruction_admissibleb resident_register) program.
+
+Theorem program_admissibleb_reflect :
+  forall resident_register program,
+    program_admissibleb resident_register program = true <->
+    Forall (instruction_admissible resident_register) program.
+Proof.
+  intros resident_register program.
+  unfold program_admissibleb.
+  rewrite forallb_forall, Forall_forall.
+  split.
+  - intros Hcheck instruction Hin.
+    apply (proj1
+      (instruction_admissibleb_reflect resident_register instruction)).
+    now apply Hcheck.
+  - intros Hadmissible instruction Hin.
+    apply (proj2
+      (instruction_admissibleb_reflect resident_register instruction)).
+    now apply Hadmissible.
+Qed.
+
 Definition baseline_instruction_step
     (home_slot : nat) (instruction : resident_instruction) (st : machine_state)
     : machine_state :=
@@ -435,6 +483,32 @@ Proof.
   - exact Hadmissible.
   - apply enter_residency_establishes_equiv.
 Qed.
+
+Theorem resident_instruction_trace_checked_correct :
+  forall program home_slot resident_register initial,
+    program_admissibleb resident_register program = true ->
+    observable_equiv resident_register
+      (baseline_execute home_slot program initial)
+      (spill_home home_slot resident_register
+        (resident_execute resident_register program
+          (enter_residency home_slot resident_register initial))).
+Proof.
+  intros program home_slot resident_register initial Hcheck.
+  apply resident_instruction_trace_from_common_state_correct.
+  apply (proj1 (program_admissibleb_reflect resident_register program)).
+  exact Hcheck.
+Qed.
+
+(** The checker refuses a plan that overwrites the resident register. *)
+Example self_clobbering_plan_is_rejected :
+  program_admissibleb 12 [LoadHome 12] = false.
+Proof. reflexivity. Qed.
+
+(** A representative non-clobbering plan is admitted by computation. *)
+Example distinct_register_plan_is_admitted :
+  program_admissibleb 12
+    [UpdateHome (AddConst 1); LoadHome 3; StoreHome 4] = true.
+Proof. reflexivity. Qed.
 
 (** A concrete loop-shaped update trace, checked by computation. *)
 Example four_iterations_preserve_result :

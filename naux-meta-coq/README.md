@@ -14,8 +14,10 @@ are generated locally and must not be committed.
 ordinary machine state, a selected stack slot may be loaded into a reserved
 register, updated by an admissible straight-line trace, and spilled back. The
 resulting stack and every non-reserved register agree with the baseline
-execution. It deliberately does not claim an x86-64, allocator, aliasing,
-call, trap, control-flow-selection, or whole-language proof.
+execution. A reflected Boolean checker rejects concrete plans that clobber or
+self-source the reserved register. The model deliberately does not claim an
+x86-64, allocator, aliasing, call, trap, control-flow-selection, or
+whole-language proof.
 
 ```bash
 make -C naux-meta-coq
