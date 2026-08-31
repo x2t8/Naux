@@ -1,0 +1,85 @@
+name: Formal residency bridge
+
+on:
+  push:
+    paths:
+      - "naux-meta-coq/**"
+      - "naux-lang/examples/naux_s4_register_residency_plan.rs"
+      - "naux-lang/examples/support/s4_register_residency_plan.rs"
+      - "distribution/s4-performance/WP8B-*.tsv"
+      - "distribution/s4-performance/WP8C-*.tsv"
+      - "scripts/s4_register_residency_contract.py"
+      - "scripts/s4_register_residency_plan_authority.py"
+      - "scripts/s4_residency_coq_certificate.py"
+      - ".github/workflows/formal-residency-bridge.yml"
+  pull_request:
+    paths:
+      - "naux-meta-coq/**"
+      - "naux-lang/examples/naux_s4_register_residency_plan.rs"
+      - "naux-lang/examples/support/s4_register_residency_plan.rs"
+      - "distribution/s4-performance/WP8B-*.tsv"
+      - "distribution/s4-performance/WP8C-*.tsv"
+      - "scripts/s4_register_residency_contract.py"
+      - "scripts/s4_register_residency_plan_authority.py"
+      - "scripts/s4_residency_coq_certificate.py"
+      - ".github/workflows/formal-residency-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  admitted-report-to-rocq:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup toolchain install 1.96.0 --profile minimal
+          rustup default 1.96.0
+      - name: Emit and authenticate the WP8C report
+        run: |
+          cargo build --locked -p naux --example naux_s4_register_residency_plan
+          target/debug/examples/naux_s4_register_residency_plan > "$RUNNER_TEMP/wp8c-plan.tsv"
+          python3 scripts/s4_register_residency_plan_authority.py \
+            --report "$RUNNER_TEMP/wp8c-plan.tsv"
+      - name: Generate the untrusted Rocq certificate
+        run: |
+          python3 -m py_compile scripts/s4_residency_coq_certificate.py
+          python3 scripts/s4_residency_coq_certificate.py \
+            --report "$RUNNER_TEMP/wp8c-plan.tsv" \
+            --output "$RUNNER_TEMP/wp8c-certificates-a.v"
+          python3 scripts/s4_residency_coq_certificate.py \
+            --report "$RUNNER_TEMP/wp8c-plan.tsv" \
+            --output "$RUNNER_TEMP/wp8c-certificates-b.v"
+          cmp "$RUNNER_TEMP/wp8c-certificates-a.v" \
+            "$RUNNER_TEMP/wp8c-certificates-b.v"
+          cp "$RUNNER_TEMP/wp8c-certificates-a.v" \
+            naux-meta-coq/GeneratedWP8CCertificates.v
+      - name: Admit the report inside Rocq 9.1
+        uses: rocq-prover/docker-opam-action@126d4ac196f8133729a1cb0d2aa1ee7106efec58 # v1.5.2
+        with:
+          custom_image: rocq/rocq-prover:9.1
+          custom_script: |
+            set -eo pipefail
+            eval "$(opam env)"
+            sudo chown -R "$(id -u):$(id -g)" .
+
+            make -C naux-meta-coq clean all
+            rocq c -Q naux-meta-coq NauxCore \
+              naux-meta-coq/GeneratedWP8CCertificates.v
+            rocq check -silent -o -Q naux-meta-coq NauxCore \
+                NauxCore.GeneratedWP8CCertificates 2>&1 \
+              | tee /tmp/naux-wp8c-coqchk-context.txt
+            grep -Fq '* Axioms: <none>' /tmp/naux-wp8c-coqchk-context.txt
+            if grep -n -E '\b(Admitted|admit|Axiom|Parameter)\b' \
+              naux-meta-coq/GeneratedWP8CCertificates.v; then
+              echo "Unchecked generated declaration found" >&2
+              exit 1
+            fi
+            make -C naux-meta-coq clean
+            rm -f naux-meta-coq/GeneratedWP8CCertificates.v
+      - name: Restore workspace ownership
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"

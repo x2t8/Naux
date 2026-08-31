@@ -30,6 +30,12 @@ facts. The soundness theorem covers every finite path from the entry block and
 rules out a load or update before the physical home is initialized on that
 path.
 
+The formal-residency bridge rebuilds the reviewed WP8C emitter, authenticates
+its complete 276-line report through the sealed authority, translates the four
+physical-access CFGs into untrusted Rocq certificates, and admits them again
+with the checked Boolean boundary. The generated proof source is ephemeral and
+is not a new sealed project artifact.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
