@@ -28,6 +28,10 @@ jobs:
             # variable before assigning it, so nounset aborts before Rocq can
             # run. Keep errexit and pipefail for the proof gates themselves.
             set -eo pipefail
+            # The official image normally exposes Rocq through its
+            # `opam exec --` entrypoint. docker-opam-action replaces that
+            # entrypoint for custom scripts, so restore the switch explicitly.
+            eval "$(opam env)"
             sudo chown -R "$(id -u):$(id -g)" .
 
             startGroup "Build formal model"
