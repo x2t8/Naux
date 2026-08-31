@@ -86,6 +86,9 @@ class RegisterResidencyTimingStaticTests(unittest.TestCase):
     def test_workflow_builds_and_replays_only_the_reviewed_emitter(self) -> None:
         workflow = (ROOT / ".github/workflows/s4-register-residency-timing.yml").read_text()
         self.assertIn("naux_s4_register_residency_timing", workflow)
+        self.assertIn("cargo fetch --locked", workflow)
+        self.assertIn("cargo test --locked --offline", workflow)
+        self.assertIn("cargo build --locked --offline", workflow)
         self.assertNotIn("--acquire", workflow)
         self.assertNotIn("taskset", workflow)
 

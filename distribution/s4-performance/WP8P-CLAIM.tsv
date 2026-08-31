@@ -1,6 +1,6 @@
 NAUX-S4-REGISTER-RESIDENCY-CLAIM-ADMISSION-CONTRACT	1
 meta	policy-version	1.0.0
-meta	parent-paired-threshold-authority	d7a8e91ec84af273d43ba03f5af86372a62b476a2a0dda2bfd4d988cf68cb263
+meta	parent-paired-threshold-authority	582e3b7036a1909ed0234c1c421226891a52184c819a1b3f0d8d96b8b4c3209c
 meta	protocol-status	register-residency-claim-protocol-structurally-admitted
 meta	admission-status	blocked
 meta	default-mode	static-no-host-no-network-no-clock-no-execution
@@ -24,4 +24,4 @@ blocker	01	tracked-public-protocol-acceptance-unavailable
 blocker	02	eligible-public-paired-bundle-unavailable
 blocker	03	exact-public-claim-request-unavailable
 blocker	04	distinct-release-approval-unavailable
-seal	cd2913e9d388dff4a36eca525c6884280c8e9a60b7956f43e63eb7dd00e6ef2f
+seal	136460bfdeaf96f9c9ac24af5ff106ac5962100511d73aab043a0fef8db0c318

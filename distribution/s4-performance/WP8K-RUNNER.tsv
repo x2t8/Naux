@@ -1,7 +1,7 @@
 NAUX-S4-REGISTER-RESIDENCY-MEASUREMENT-RUNNER-CONTRACT	1
 meta	policy-version	1.0.0
 meta	parent-candidate-host-authority	5f9e36d9f9994a5449fd6492b083b934799723fdc9b89e79d0003bc594beebb7
-meta	parent-candidate-carrier-authority	aaa90c3a2674f7c13208bbb895b8365c01bd5cc9b60c86ff26fa29727d9c11f1
+meta	parent-candidate-carrier-authority	84b9eba966b094db1caec4cf85d1fe0bf98645e964b2ae3ec2064c2660a64cd2
 meta	parent-runner-engine-authority	b9dbfa5708eceac818f3b33904551ee7a86bc47f687b5d268e7470efc8d7a130
 meta	runner-status	candidate-measurement-runner-structurally-admitted
 meta	acquisition-status	retained-eligible-wp8i-host-required
@@ -34,4 +34,4 @@ gate	10	atomic-publication	required	complete-raw-bundle-only
 closure	01	candidate-measurement-runner-unavailable	closed	wp8k-explicit-runner
 blocker	01	eligible-candidate-host-attestation-unavailable
 blocker	02	candidate-raw-measurement-evidence-unavailable
-seal	fe93623ad43a452ea7d1f8915d8a4ea152a366a396177cf693e18a253d5cc3f9
+seal	739ee7c3620f9830102a4446045a74f5165860fd3498e1c74ff8637a32e8a62e

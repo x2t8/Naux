@@ -24,7 +24,10 @@ jobs:
         with:
           custom_image: rocq/rocq-prover:9.1
           custom_script: |
-            set -euo pipefail
+            # docker-opam-action's group helpers read an optional shell
+            # variable before assigning it, so nounset aborts before Rocq can
+            # run. Keep errexit and pipefail for the proof gates themselves.
+            set -eo pipefail
             sudo chown -R "$(id -u):$(id -g)" .
 
             startGroup "Build formal model"

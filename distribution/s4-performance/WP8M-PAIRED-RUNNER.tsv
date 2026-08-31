@@ -1,8 +1,8 @@
 NAUX-S4-REGISTER-RESIDENCY-PAIRED-RUNNER-CONTRACT	1
 meta	policy-version	1.0.0
-meta	parent-candidate-runner-authority	3c7f1ce549764dd5a2d3bc28dfeec3c091aaae835f44490ac6a3418e0f852fc2
+meta	parent-candidate-runner-authority	ada971239eec363499167157770a8245b1ee6118e5350aec2ecbdef64615f3b8
 meta	parent-candidate-host-authority	5f9e36d9f9994a5449fd6492b083b934799723fdc9b89e79d0003bc594beebb7
-meta	parent-candidate-carrier-authority	aaa90c3a2674f7c13208bbb895b8365c01bd5cc9b60c86ff26fa29727d9c11f1
+meta	parent-candidate-carrier-authority	84b9eba966b094db1caec4cf85d1fe0bf98645e964b2ae3ec2064c2660a64cd2
 meta	parent-baseline-carrier-authority	dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed
 meta	runner-status	same-session-paired-runner-structurally-admitted
 meta	acquisition-status	retained-eligible-wp8i-host-required
@@ -36,4 +36,4 @@ gate	11	atomic-publication	required	complete-paired-raw-bundle-only
 closure	01	cross-session-comparison-bias	closed	same-session-abba-pairing
 blocker	01	eligible-candidate-host-attestation-unavailable
 blocker	02	paired-raw-measurement-evidence-unavailable
-seal	218794532dae9820babfda71859b3227b0d4f64ec277c876e13f28b2adca553a
+seal	7c8b3d8c1f39bdaef15de4346e00d552b359f8734a7ce6db7a6119ce85935a57

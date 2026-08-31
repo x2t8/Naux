@@ -1,8 +1,8 @@
 NAUX-S4-REGISTER-RESIDENCY-PAIRED-EVIDENCE-CONTRACT	1
 meta	policy-version	1.0.0
-meta	parent-paired-runner-authority	f5de98a15378454b28ed89593180f2d8f682fef07abb4ef925a5867dd1292a42
+meta	parent-paired-runner-authority	1426d1d363763006a4f8316c8561f179cedcd7df38467778d6fbb577c421a191
 meta	parent-baseline-carrier-authority	dbde9cb35d1687b47f7e3c96081bc2d62e750013656ba7ba57933f0f186661ed
-meta	parent-candidate-carrier-authority	aaa90c3a2674f7c13208bbb895b8365c01bd5cc9b60c86ff26fa29727d9c11f1
+meta	parent-candidate-carrier-authority	84b9eba966b094db1caec4cf85d1fe0bf98645e964b2ae3ec2064c2660a64cd2
 meta	status	paired-evidence-replay-structurally-admitted
 meta	input	exact-wp8m-paired-raw-bundle-v1
 meta	default-mode	static-no-bundle-no-host-no-clock-no-execution
@@ -29,4 +29,4 @@ closure	02	baseline-candidate-comparison-unavailable	closed	wp8n-exact-paired-re
 blocker	01	eligible-paired-raw-bundle-unavailable
 blocker	02	paired-inference-threshold-authority-unavailable
 blocker	03	performance-claim-authority-unavailable
-seal	14c721c74a0b1b4c7f13e4413b620dfb8fb466d221cd7777afc49b640dc73598
+seal	e23a2d2386f319efa6941fb8f7c4355417b00482ef51048b9f2b00a7c907e424

@@ -30,6 +30,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Validate static authority
         run: python3 scripts/s4_register_residency_timing.py
+      - name: Fetch locked Rust dependencies
+        run: cargo fetch --locked
       - name: Test candidate timing carrier
         run: cargo test --locked --offline -p naux --example naux_s4_register_residency_timing
       - name: Build reviewed emitter
