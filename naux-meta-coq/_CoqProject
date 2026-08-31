@@ -5,4 +5,5 @@ Smallstep.v
 Soundness.v
 DataAlgo.v
 RegisterResidency.v
+DefiniteInitialization.v
 NauxCore.v

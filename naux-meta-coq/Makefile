@@ -1,7 +1,7 @@
 COQC=rocq c
 COQFLAGS=-Q . NauxCore
 
-FILES=Syntax Typing Smallstep Soundness DataAlgo RegisterResidency NauxCore
+FILES=Syntax Typing Smallstep Soundness DataAlgo RegisterResidency DefiniteInitialization NauxCore
 
 all: $(FILES:%=%.vo)
 
