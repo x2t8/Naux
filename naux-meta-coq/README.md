@@ -30,17 +30,29 @@ facts. The soundness theorem covers every finite path from the entry block and
 rules out a load or update before the physical home is initialized on that
 path.
 
+`ProjectedCFGResidency.v` joins that admitted path property to the bounded
+physical-access semantics. Before the first store, the candidate may hide only
+the reserved register. The first store establishes the resident invariant;
+later accesses preserve it; final spill and callee-saved restoration recover
+the complete baseline stack and register state. The theorem consumes the same
+CFG paths checked by `DefiniteInitialization.v`. Its boundary is intentionally
+the projected `resident_instruction` trace: pass-through Machine IR semantics,
+report parsing, and whole-compiler correctness remain separate obligations.
+
 The formal-residency bridge rebuilds the reviewed WP8C emitter, authenticates
 its complete 276-line report through the sealed authority, translates the four
 physical-access CFGs into untrusted Rocq certificates, and admits them again
-with the checked Boolean boundary. The generated proof source is ephemeral and
-is not a new sealed project artifact.
+with the checked initialization and operand boundaries. For every finite path
+through each generated graph, Rocq then derives full-state equivalence for the
+physical-access projection after spill and ABI restoration. The generated
+proof source is ephemeral and is not a new sealed project artifact; omitted
+pass-through instructions are still outside this semantic claim.
 
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.NauxCore NauxCore.Soundness NauxCore.RegisterResidency \
-  NauxCore.DefiniteInitialization
+  NauxCore.DefiniteInitialization NauxCore.ProjectedCFGResidency
 make -C naux-meta-coq clean
 ```
 

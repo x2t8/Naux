@@ -3,8 +3,8 @@
 
 The Python translation is not trusted for the theorem.  It first replays the
 existing sealed WP8C authority, emits only fixed Rocq constructors and numeric
-block identifiers, and leaves admission to DefiniteInitialization.v's
-executable checker inside the Rocq kernel.
+block identifiers, and leaves initialization, operand, and projected-semantic
+admission to executable checkers and proofs inside the Rocq kernel.
 """
 
 from __future__ import annotations
@@ -226,12 +226,13 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         "(**",
         "  Generated from the sealed S4-WP8C candidate-plan report.",
         f"  Report root: {report_root}",
-        "  The translation is untrusted; every certificate is admitted again",
-        "  by NauxCore.DefiniteInitialization inside the Rocq kernel.",
+        "  The translation is untrusted; every certificate and projected",
+        "  operand trace is admitted again inside the Rocq kernel.",
         "*)",
         "",
         "From Stdlib Require Import List.",
-        "From NauxCore Require Import RegisterResidency DefiniteInitialization.",
+        "From NauxCore Require Import RegisterResidency DefiniteInitialization",
+        "  ProjectedCFGResidency.",
         "Import ListNotations.",
         "",
     ]
@@ -277,6 +278,30 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
                 "  eapply admitted_cfg_initialization_certificate_paths_safe",
                 f"    with (proposed := {prefix}_certificate)",
                 f"      (accepted := {prefix}_certificate).",
+                "  - reflexivity.",
+                "  - exact Hpath.",
+                "Qed.",
+                "",
+                f"Theorem {prefix}_all_paths_preserve_projected_state :",
+                "  forall path home_slot initial replacement,",
+                f"    initialization_path_from {prefix}_graph 0 path ->",
+                "    exists program path_out candidate_out,",
+                f"      projected_path_program {prefix}_graph path = Some program /\\",
+                f"      initialization_path_execute {prefix}_graph path false =",
+                "        Some path_out /\\",
+                "      projected_candidate_execute 12 false program",
+                "        (hide_reserved_register 12 replacement initial) =",
+                "        Some (path_out, candidate_out) /\\",
+                "      full_state_equiv",
+                "        (baseline_execute home_slot program initial)",
+                "        (projected_finalize home_slot 12",
+                "          (register_cells initial 12) path_out candidate_out).",
+                "Proof.",
+                "  intros path home_slot initial replacement Hpath.",
+                "  eapply admitted_cfg_all_projected_paths_abi_correct",
+                f"    with (proposed := {prefix}_certificate)",
+                f"      (accepted := {prefix}_certificate).",
+                "  - reflexivity.",
                 "  - reflexivity.",
                 "  - exact Hpath.",
                 "Qed.",

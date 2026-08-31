@@ -620,6 +620,33 @@ Proof.
       now rewrite map_update_neq by exact Hreg.
 Qed.
 
+(** The same first-store transition remains valid when the reserved register
+    is already hidden from observation, provided the source is not that
+    register.  This is the entry condition used by the CFG projection. *)
+Theorem store_home_from_observable_state_establishes_equiv :
+  forall home_slot resident_register source_register baseline candidate,
+    source_register <> resident_register ->
+    observable_equiv resident_register baseline candidate ->
+    resident_equiv home_slot resident_register
+      (baseline_instruction_step home_slot
+        (StoreHome source_register) baseline)
+      (resident_instruction_step resident_register
+        (StoreHome source_register) candidate).
+Proof.
+  intros home_slot resident_register source_register baseline candidate
+    Hsource [Hstack Hregister].
+  split.
+  - simpl. repeat rewrite map_update_eq.
+    now apply Hregister.
+  - split.
+    + intros slot Hslot. simpl.
+      rewrite map_update_neq by exact Hslot.
+      apply Hstack.
+    + intros reg Hreg. simpl.
+      rewrite map_update_neq by exact Hreg.
+      now apply Hregister.
+Qed.
+
 Definition store_initialized_program_admissibleb
     (resident_register : nat) (program : list resident_instruction) : bool :=
   match program with
