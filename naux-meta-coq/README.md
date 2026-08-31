@@ -1,4 +1,4 @@
-# NAUX Coq model
+# NAUX Rocq model
 
 This directory contains the separately checked formal model for NAUX semantic
 claims. The tracked authority is deliberately small:
@@ -12,16 +12,17 @@ are generated locally and must not be committed.
 
 `RegisterResidency.v` proves a bounded compiler theorem: starting from one
 ordinary machine state, a selected stack slot may be loaded into a reserved
-register, updated by an admissible straight-line trace, and spilled back. The
-resulting stack and every non-reserved register agree with the baseline
-execution. A reflected Boolean checker rejects concrete plans that clobber or
-self-source the reserved register. The model deliberately does not claim an
-x86-64, allocator, aliasing, call, trap, control-flow-selection, or
-whole-language proof.
+register, updated by an admitted instruction trace or a bounded repetition of
+one admitted loop body, and spilled back. The resulting stack and every
+non-reserved register agree with the baseline execution. A reflected Boolean
+checker rejects complete plans that clobber or self-source the reserved
+register before they reach the semantic transform. The model deliberately does
+not claim an x86-64, allocator, aliasing, call, trap, arbitrary-CFG, plan-parser,
+or whole-language proof.
 
 ```bash
 make -C naux-meta-coq
-coqchk -silent -o -Q naux-meta-coq NauxCore \
+rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.NauxCore NauxCore.Soundness NauxCore.RegisterResidency
 make -C naux-meta-coq clean
 ```
