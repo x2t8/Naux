@@ -35,12 +35,12 @@ jobs:
             sudo chown -R "$(id -u):$(id -g)" .
 
             startGroup "Build formal model"
-              coqc --version
+              rocq --version
               make -C naux-meta-coq clean all
             endGroup
 
             startGroup "Replay proof objects in the kernel"
-              coqchk -silent -o -Q naux-meta-coq NauxCore \
+              rocq check -silent -o -Q naux-meta-coq NauxCore \
                   NauxCore.NauxCore \
                   NauxCore.Soundness \
                   NauxCore.RegisterResidency 2>&1 \

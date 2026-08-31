@@ -1,4 +1,4 @@
-COQC=coqc
+COQC=rocq c
 COQFLAGS=-Q . NauxCore
 
 FILES=Syntax Typing Smallstep Soundness DataAlgo RegisterResidency NauxCore

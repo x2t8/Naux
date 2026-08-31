@@ -499,6 +499,75 @@ Proof.
   exact Hcheck.
 Qed.
 
+(**
+  A complete transform plan packages the physical home, reserved register,
+  and instruction trace behind one executable admission boundary.  This is
+  still the bounded semantic model above: parsing WP8C reports and connecting
+  symbolic Machine IR to this record remain separate obligations.
+*)
+Record residency_plan : Type := {
+  plan_home_slot : nat;
+  plan_resident_register : nat;
+  plan_program : list resident_instruction
+}.
+
+Definition residency_plan_admissibleb (plan : residency_plan) : bool :=
+  program_admissibleb
+    (plan_resident_register plan) (plan_program plan).
+
+Definition baseline_plan_execute
+    (plan : residency_plan) (initial : machine_state) : machine_state :=
+  baseline_execute
+    (plan_home_slot plan) (plan_program plan) initial.
+
+Definition resident_plan_execute
+    (plan : residency_plan) (initial : machine_state) : machine_state :=
+  spill_home (plan_home_slot plan) (plan_resident_register plan)
+    (resident_execute (plan_resident_register plan) (plan_program plan)
+      (enter_residency
+        (plan_home_slot plan) (plan_resident_register plan) initial)).
+
+Theorem residency_plan_checked_correct :
+  forall plan initial,
+    residency_plan_admissibleb plan = true ->
+    observable_equiv (plan_resident_register plan)
+      (baseline_plan_execute plan initial)
+      (resident_plan_execute plan initial).
+Proof.
+  intros [home_slot resident_register program] initial Hcheck.
+  simpl in *.
+  now apply resident_instruction_trace_checked_correct.
+Qed.
+
+(** A rejected plan cannot cross the semantic transform boundary. *)
+Definition admit_residency_plan
+    (plan : residency_plan) : option residency_plan :=
+  if residency_plan_admissibleb plan then Some plan else None.
+
+Theorem admit_residency_plan_sound :
+  forall proposed accepted,
+    admit_residency_plan proposed = Some accepted ->
+    accepted = proposed /\ residency_plan_admissibleb accepted = true.
+Proof.
+  intros proposed accepted Hadmitted.
+  unfold admit_residency_plan in Hadmitted.
+  destruct (residency_plan_admissibleb proposed) eqn:Hcheck;
+    inversion Hadmitted; subst.
+  now split.
+Qed.
+
+Theorem admitted_residency_plan_correct :
+  forall proposed accepted initial,
+    admit_residency_plan proposed = Some accepted ->
+    observable_equiv (plan_resident_register accepted)
+      (baseline_plan_execute accepted initial)
+      (resident_plan_execute accepted initial).
+Proof.
+  intros proposed accepted initial Hadmitted.
+  apply residency_plan_checked_correct.
+  now apply (proj2 (admit_residency_plan_sound proposed accepted Hadmitted)).
+Qed.
+
 (** The checker refuses a plan that overwrites the resident register. *)
 Example self_clobbering_plan_is_rejected :
   program_admissibleb 12 [LoadHome 12] = false.
@@ -509,6 +578,28 @@ Example distinct_register_plan_is_admitted :
   program_admissibleb 12
     [UpdateHome (AddConst 1); LoadHome 3; StoreHome 4] = true.
 Proof. reflexivity. Qed.
+
+Definition representative_residency_plan : residency_plan :=
+  {| plan_home_slot := 5;
+     plan_resident_register := 12;
+     plan_program :=
+       [UpdateHome (AddConst 1); LoadHome 3; StoreHome 4] |}.
+
+Example representative_residency_plan_is_admitted :
+  admit_residency_plan representative_residency_plan =
+    Some representative_residency_plan.
+Proof. reflexivity. Qed.
+
+Example representative_residency_plan_is_correct :
+  forall initial,
+    observable_equiv 12
+      (baseline_plan_execute representative_residency_plan initial)
+      (resident_plan_execute representative_residency_plan initial).
+Proof.
+  intro initial.
+  apply residency_plan_checked_correct.
+  reflexivity.
+Qed.
 
 (** A concrete loop-shaped update trace, checked by computation. *)
 Example four_iterations_preserve_result :
