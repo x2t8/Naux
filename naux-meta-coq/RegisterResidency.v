@@ -61,6 +61,41 @@ Definition resident_equiv
       reg <> resident_register ->
       register_cells candidate reg = register_cells baseline reg).
 
+(**
+  Once the resident value has been spilled, the selected physical register is
+  the only location intentionally hidden from observation.  Every stack slot
+  and every other register must agree with the baseline execution.
+*)
+Definition observable_equiv
+    (reserved_register : nat) (baseline candidate : machine_state) : Prop :=
+  (forall slot,
+      stack_cells candidate slot = stack_cells baseline slot) /\
+  (forall reg,
+      reg <> reserved_register ->
+      register_cells candidate reg = register_cells baseline reg).
+
+(** Establish residency from an ordinary state by loading the home slot. *)
+Definition enter_residency
+    (home_slot resident_register : nat) (st : machine_state)
+    : machine_state :=
+  with_registers st
+    (map_update (register_cells st) resident_register
+      (stack_cells st home_slot)).
+
+Theorem enter_residency_establishes_equiv :
+  forall home_slot resident_register st,
+    resident_equiv home_slot resident_register st
+      (enter_residency home_slot resident_register st).
+Proof.
+  intros home_slot resident_register st.
+  split.
+  - simpl. apply map_update_eq.
+  - split.
+    + intros slot Hslot. reflexivity.
+    + intros reg Hreg. simpl.
+      now apply map_update_neq.
+Qed.
+
 Inductive scalar_update : Type :=
 | SetConst (value : Z)
 | AddConst (value : Z)
@@ -304,6 +339,21 @@ Proof.
     apply Hstack. exact Hneq.
 Qed.
 
+Theorem spill_restores_observable_state :
+  forall home_slot resident_register baseline candidate,
+    resident_equiv home_slot resident_register baseline candidate ->
+    observable_equiv resident_register baseline
+      (spill_home home_slot resident_register candidate).
+Proof.
+  intros home_slot resident_register baseline candidate
+    Hequiv.
+  split.
+  - intro slot. now apply spill_restores_stack.
+  - intros reg Hreg. simpl.
+    destruct Hequiv as [_ [_ Hregister]].
+    now apply Hregister.
+Qed.
+
 Theorem resident_program_spill_correct :
   forall program home_slot resident_register baseline candidate,
     resident_equiv home_slot resident_register baseline candidate ->
@@ -362,6 +412,28 @@ Proof.
     (resident_execute_preserves_equiv program home_slot resident_register
       baseline candidate Hadmissible Hequiv) as Hrun.
   exact (proj1 Hrun).
+Qed.
+
+(**
+  End-to-end correctness of the bounded straight-line transform.  Both
+  executions start from the same ordinary state.  The candidate enters
+  residency, executes the admissible trace, and spills.  Its entire stack and
+  every non-reserved register then agree with the baseline execution.
+*)
+Theorem resident_instruction_trace_from_common_state_correct :
+  forall program home_slot resident_register initial,
+    Forall (instruction_admissible resident_register) program ->
+    observable_equiv resident_register
+      (baseline_execute home_slot program initial)
+      (spill_home home_slot resident_register
+        (resident_execute resident_register program
+          (enter_residency home_slot resident_register initial))).
+Proof.
+  intros program home_slot resident_register initial Hadmissible.
+  apply spill_restores_observable_state.
+  apply resident_execute_preserves_equiv.
+  - exact Hadmissible.
+  - apply enter_residency_establishes_equiv.
 Qed.
 
 (** A concrete loop-shaped update trace, checked by computation. *)
