@@ -14,12 +14,14 @@ are generated locally and must not be committed.
 ordinary machine state, a selected stack slot may become resident through an
 entry load or an initializing first store, be updated by an admitted
 instruction trace or a bounded repetition of one admitted loop body, and be
-spilled back. The resulting stack and every
-non-reserved register agree with the baseline execution. A reflected Boolean
-checker rejects complete plans that clobber or self-source the reserved
-register before they reach the semantic transform. The model deliberately does
-not claim an x86-64, allocator, aliasing, call, trap, arbitrary-CFG, plan-parser,
-or whole-language proof.
+spilled back. A residency certificate records which entry strategy establishes
+the physical home. A reflected Boolean checker rejects complete certificates
+that clobber or self-source the reserved register, or claim the first-store
+strategy without an initializing store. After spilling the home slot and
+restoring the saved callee-owned register, every stack and register cell agrees
+with the baseline execution. The model deliberately does not claim an x86-64,
+allocator, aliasing, call, trap, arbitrary-CFG, plan-parser, or whole-language
+proof.
 
 ```bash
 make -C naux-meta-coq

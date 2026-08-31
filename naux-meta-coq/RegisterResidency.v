@@ -74,6 +74,38 @@ Definition observable_equiv
       reg <> reserved_register ->
       register_cells candidate reg = register_cells baseline reg).
 
+(** No location is hidden once the callee-saved register is restored. *)
+Definition full_state_equiv
+    (baseline candidate : machine_state) : Prop :=
+  (forall slot,
+      stack_cells candidate slot = stack_cells baseline slot) /\
+  (forall reg,
+      register_cells candidate reg = register_cells baseline reg).
+
+Definition restore_reserved_register
+    (reserved_register : nat) (saved_value : Z) (candidate : machine_state)
+    : machine_state :=
+  with_registers candidate
+    (map_update (register_cells candidate) reserved_register saved_value).
+
+Theorem restore_reserved_register_closes_equiv :
+  forall reserved_register baseline candidate saved_value,
+    observable_equiv reserved_register baseline candidate ->
+    saved_value = register_cells baseline reserved_register ->
+    full_state_equiv baseline
+      (restore_reserved_register reserved_register saved_value candidate).
+Proof.
+  intros reserved_register baseline candidate saved_value
+    [Hstack Hregister] Hsaved.
+  split.
+  - exact Hstack.
+  - intro reg.
+    destruct (Nat.eq_dec reg reserved_register) as [Heq | Hneq].
+    + subst. simpl. now rewrite map_update_eq.
+    + simpl. rewrite map_update_neq by exact Hneq.
+      now apply Hregister.
+Qed.
+
 (** Establish residency from an ordinary state by loading the home slot. *)
 Definition enter_residency
     (home_slot resident_register : nat) (st : machine_state)
@@ -242,6 +274,21 @@ Definition resident_instruction_step
           (register_cells st source))
   end.
 
+Theorem baseline_instruction_preserves_reserved_register :
+  forall home_slot reserved_register instruction st,
+    instruction_admissible reserved_register instruction ->
+    register_cells
+      (baseline_instruction_step home_slot instruction st)
+      reserved_register =
+    register_cells st reserved_register.
+Proof.
+  intros home_slot reserved_register instruction st Hadmissible.
+  destruct instruction as [op | destination | source]; simpl in *.
+  - reflexivity.
+  - rewrite map_update_neq by lia. reflexivity.
+  - reflexivity.
+Qed.
+
 Theorem resident_instruction_preserves_equiv :
   forall home_slot resident_register baseline candidate instruction,
     instruction_admissible resident_register instruction ->
@@ -316,6 +363,22 @@ Fixpoint resident_execute
       resident_execute resident_register rest
         (resident_instruction_step resident_register instruction st)
   end.
+
+Theorem baseline_execute_preserves_reserved_register :
+  forall program home_slot reserved_register initial,
+    Forall (instruction_admissible reserved_register) program ->
+    register_cells (baseline_execute home_slot program initial)
+      reserved_register =
+    register_cells initial reserved_register.
+Proof.
+  induction program as [|instruction rest IH];
+    intros home_slot reserved_register initial Hadmissible; simpl.
+  - reflexivity.
+  - inversion Hadmissible as [|? ? Hinstruction Hrest]; subst.
+    rewrite (IH home_slot reserved_register
+      (baseline_instruction_step home_slot instruction initial) Hrest).
+    now apply baseline_instruction_preserves_reserved_register.
+Qed.
 
 Theorem resident_execute_preserves_equiv :
   forall program home_slot resident_register baseline candidate,
@@ -484,6 +547,24 @@ Proof.
   - apply enter_residency_establishes_equiv.
 Qed.
 
+Theorem resident_instruction_trace_from_common_state_abi_correct :
+  forall program home_slot resident_register initial,
+    Forall (instruction_admissible resident_register) program ->
+    full_state_equiv
+      (baseline_execute home_slot program initial)
+      (restore_reserved_register resident_register
+        (register_cells initial resident_register)
+        (spill_home home_slot resident_register
+          (resident_execute resident_register program
+            (enter_residency home_slot resident_register initial)))).
+Proof.
+  intros program home_slot resident_register initial Hadmissible.
+  apply restore_reserved_register_closes_equiv.
+  - now apply resident_instruction_trace_from_common_state_correct.
+  - symmetry.
+    now apply baseline_execute_preserves_reserved_register.
+Qed.
+
 Theorem resident_instruction_trace_checked_correct :
   forall program home_slot resident_register initial,
     program_admissibleb resident_register program = true ->
@@ -495,6 +576,23 @@ Theorem resident_instruction_trace_checked_correct :
 Proof.
   intros program home_slot resident_register initial Hcheck.
   apply resident_instruction_trace_from_common_state_correct.
+  apply (proj1 (program_admissibleb_reflect resident_register program)).
+  exact Hcheck.
+Qed.
+
+Theorem resident_instruction_trace_checked_abi_correct :
+  forall program home_slot resident_register initial,
+    program_admissibleb resident_register program = true ->
+    full_state_equiv
+      (baseline_execute home_slot program initial)
+      (restore_reserved_register resident_register
+        (register_cells initial resident_register)
+        (spill_home home_slot resident_register
+          (resident_execute resident_register program
+            (enter_residency home_slot resident_register initial)))).
+Proof.
+  intros program home_slot resident_register initial Hcheck.
+  apply resident_instruction_trace_from_common_state_abi_correct.
   apply (proj1 (program_admissibleb_reflect resident_register program)).
   exact Hcheck.
 Qed.
@@ -560,6 +658,38 @@ Proof.
   - apply store_home_from_common_state_establishes_equiv.
 Qed.
 
+Theorem store_initialized_program_is_admissible :
+  forall resident_register program,
+    store_initialized_program_admissibleb resident_register program = true ->
+    program_admissibleb resident_register program = true.
+Proof.
+  intros resident_register program Hcheck.
+  destruct program as [|instruction rest]; [discriminate|].
+  destruct instruction as [op | destination | source];
+    try discriminate.
+  exact Hcheck.
+Qed.
+
+Theorem store_initialized_instruction_trace_checked_abi_correct :
+  forall program home_slot resident_register initial,
+    store_initialized_program_admissibleb resident_register program = true ->
+    full_state_equiv
+      (baseline_execute home_slot program initial)
+      (restore_reserved_register resident_register
+        (register_cells initial resident_register)
+        (spill_home home_slot resident_register
+          (resident_execute resident_register program initial))).
+Proof.
+  intros program home_slot resident_register initial Hcheck.
+  apply restore_reserved_register_closes_equiv.
+  - now apply store_initialized_instruction_trace_checked_correct.
+  - symmetry.
+    apply baseline_execute_preserves_reserved_register.
+    apply (proj1
+      (program_admissibleb_reflect resident_register program)).
+    now apply store_initialized_program_is_admissible.
+Qed.
+
 (**
   A complete transform plan packages the physical home, reserved register,
   and instruction trace behind one executable admission boundary.  This is
@@ -588,6 +718,12 @@ Definition resident_plan_execute
       (enter_residency
         (plan_home_slot plan) (plan_resident_register plan) initial)).
 
+Definition resident_plan_execute_abi
+    (plan : residency_plan) (initial : machine_state) : machine_state :=
+  restore_reserved_register (plan_resident_register plan)
+    (register_cells initial (plan_resident_register plan))
+    (resident_plan_execute plan initial).
+
 Theorem residency_plan_checked_correct :
   forall plan initial,
     residency_plan_admissibleb plan = true ->
@@ -598,6 +734,104 @@ Proof.
   intros [home_slot resident_register program] initial Hcheck.
   simpl in *.
   now apply resident_instruction_trace_checked_correct.
+Qed.
+
+Theorem residency_plan_checked_abi_correct :
+  forall plan initial,
+    residency_plan_admissibleb plan = true ->
+    full_state_equiv
+      (baseline_plan_execute plan initial)
+      (resident_plan_execute_abi plan initial).
+Proof.
+  intros [home_slot resident_register program] initial Hcheck.
+  simpl in *.
+  now apply resident_instruction_trace_checked_abi_correct.
+Qed.
+
+(**
+  The certificate records how the real lowering establishes the physical
+  home.  [EntryLoadHome] models an explicit entry load; [EntryFirstStore]
+  models the WP8C shape whose first transformed store initializes [r12].
+*)
+Inductive residency_entry_strategy : Type :=
+| EntryLoadHome
+| EntryFirstStore.
+
+Record residency_certificate : Type := {
+  certificate_plan : residency_plan;
+  certificate_entry : residency_entry_strategy
+}.
+
+Definition residency_certificate_admissibleb
+    (certificate : residency_certificate) : bool :=
+  let plan := certificate_plan certificate in
+  match certificate_entry certificate with
+  | EntryLoadHome => residency_plan_admissibleb plan
+  | EntryFirstStore =>
+      store_initialized_program_admissibleb
+        (plan_resident_register plan) (plan_program plan)
+  end.
+
+Definition resident_certificate_execute
+    (certificate : residency_certificate) (initial : machine_state)
+    : machine_state :=
+  let plan := certificate_plan certificate in
+  match certificate_entry certificate with
+  | EntryLoadHome => resident_plan_execute_abi plan initial
+  | EntryFirstStore =>
+      restore_reserved_register (plan_resident_register plan)
+        (register_cells initial (plan_resident_register plan))
+        (spill_home (plan_home_slot plan) (plan_resident_register plan)
+          (resident_execute (plan_resident_register plan)
+            (plan_program plan) initial))
+  end.
+
+Theorem residency_certificate_checked_correct :
+  forall certificate initial,
+    residency_certificate_admissibleb certificate = true ->
+    full_state_equiv
+      (baseline_plan_execute (certificate_plan certificate) initial)
+      (resident_certificate_execute certificate initial).
+Proof.
+  intros [plan strategy] initial Hcheck.
+  destruct strategy; simpl in *.
+  - now apply residency_plan_checked_abi_correct.
+  - destruct plan as [home_slot resident_register program].
+    simpl in *.
+    now apply store_initialized_instruction_trace_checked_abi_correct.
+Qed.
+
+Definition admit_residency_certificate
+    (certificate : residency_certificate)
+    : option residency_certificate :=
+  if residency_certificate_admissibleb certificate
+  then Some certificate
+  else None.
+
+Theorem admit_residency_certificate_sound :
+  forall proposed accepted,
+    admit_residency_certificate proposed = Some accepted ->
+    accepted = proposed /\
+    residency_certificate_admissibleb accepted = true.
+Proof.
+  intros proposed accepted Hadmitted.
+  unfold admit_residency_certificate in Hadmitted.
+  destruct (residency_certificate_admissibleb proposed) eqn:Hcheck;
+    inversion Hadmitted; subst.
+  now split.
+Qed.
+
+Theorem admitted_residency_certificate_correct :
+  forall proposed accepted initial,
+    admit_residency_certificate proposed = Some accepted ->
+    full_state_equiv
+      (baseline_plan_execute (certificate_plan accepted) initial)
+      (resident_certificate_execute accepted initial).
+Proof.
+  intros proposed accepted initial Hadmitted.
+  apply residency_certificate_checked_correct.
+  now apply (proj2
+    (admit_residency_certificate_sound proposed accepted Hadmitted)).
 Qed.
 
 (** A rejected plan cannot cross the semantic transform boundary. *)
@@ -626,6 +860,18 @@ Theorem admitted_residency_plan_correct :
 Proof.
   intros proposed accepted initial Hadmitted.
   apply residency_plan_checked_correct.
+  now apply (proj2 (admit_residency_plan_sound proposed accepted Hadmitted)).
+Qed.
+
+Theorem admitted_residency_plan_abi_correct :
+  forall proposed accepted initial,
+    admit_residency_plan proposed = Some accepted ->
+    full_state_equiv
+      (baseline_plan_execute accepted initial)
+      (resident_plan_execute_abi accepted initial).
+Proof.
+  intros proposed accepted initial Hadmitted.
+  apply residency_plan_checked_abi_correct.
   now apply (proj2 (admit_residency_plan_sound proposed accepted Hadmitted)).
 Qed.
 
@@ -681,6 +927,24 @@ Proof.
   exact Hcheck.
 Qed.
 
+Theorem repeated_residency_plan_checked_abi_correct :
+  forall iterations plan initial,
+    residency_plan_admissibleb plan = true ->
+    full_state_equiv
+      (baseline_plan_execute
+        (repeat_residency_plan iterations plan) initial)
+      (resident_plan_execute_abi
+        (repeat_residency_plan iterations plan) initial).
+Proof.
+  intros iterations plan initial Hcheck.
+  apply (residency_plan_checked_abi_correct
+    (repeat_residency_plan iterations plan) initial).
+  unfold residency_plan_admissibleb, repeat_residency_plan.
+  simpl.
+  apply repeat_program_admissible.
+  exact Hcheck.
+Qed.
+
 (** The checker refuses a plan that overwrites the resident register. *)
 Example self_clobbering_plan_is_rejected :
   program_admissibleb 12 [LoadHome 12] = false.
@@ -713,6 +977,40 @@ Proof.
   apply residency_plan_checked_correct.
   reflexivity.
 Qed.
+
+Definition store_initialized_residency_plan : residency_plan :=
+  {| plan_home_slot := 5;
+     plan_resident_register := 12;
+     plan_program :=
+       [StoreHome 4; UpdateHome (AddConst 1); LoadHome 3] |}.
+
+Definition store_initialized_residency_certificate
+    : residency_certificate :=
+  {| certificate_plan := store_initialized_residency_plan;
+     certificate_entry := EntryFirstStore |}.
+
+Example store_initialized_residency_certificate_is_admitted :
+  admit_residency_certificate store_initialized_residency_certificate =
+    Some store_initialized_residency_certificate.
+Proof. reflexivity. Qed.
+
+Example store_initialized_residency_certificate_is_correct :
+  forall initial,
+    full_state_equiv
+      (baseline_plan_execute store_initialized_residency_plan initial)
+      (resident_certificate_execute
+        store_initialized_residency_certificate initial).
+Proof.
+  intro initial.
+  apply residency_certificate_checked_correct.
+  reflexivity.
+Qed.
+
+Example wrong_entry_strategy_is_rejected :
+  residency_certificate_admissibleb
+    {| certificate_plan := representative_residency_plan;
+       certificate_entry := EntryFirstStore |} = false.
+Proof. reflexivity. Qed.
 
 (** A concrete loop-shaped update trace, checked by computation. *)
 Example four_iterations_preserve_result :
