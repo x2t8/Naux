@@ -10,11 +10,12 @@ claims. The tracked authority is deliberately small:
 Compiled Coq products (`*.vo`, `*.glob`, auxiliary caches, and related files)
 are generated locally and must not be committed.
 
-`RegisterResidency.v` proves a bounded compiler theorem: scalar updates to one
-selected stack slot can be executed against a resident register, preserving
-the selected value and all non-selected state, and a final spill restores the
-baseline stack exactly. It deliberately does not claim an x86-64, allocator,
-aliasing, call, trap, or whole-language proof.
+`RegisterResidency.v` proves a bounded compiler theorem: scalar updates and
+admissible physical-home loads/stores for one selected stack slot can execute
+against a resident register, preserving the selected value and all
+non-selected state; a final spill restores every baseline stack slot. It
+deliberately does not claim an x86-64, allocator, aliasing, call, trap,
+control-flow-selection, or whole-language proof.
 
 ```bash
 make -C naux-meta-coq

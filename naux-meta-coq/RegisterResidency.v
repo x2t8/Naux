@@ -3,7 +3,7 @@
 
   A small, separately checked model of one local compiler rewrite: keeping a
   selected stack-resident scalar in a register while a straight-line region
-  performs scalar updates on it.
+  updates it or transfers it through non-resident registers.
 
   This file does not model x86-64, register allocation, aliasing, calls, traps,
   or the full NAUX language.  Those obligations remain outside this theorem.
@@ -109,6 +109,149 @@ Proof.
       apply Hregister. exact Hreg.
 Qed.
 
+(**
+  The bounded physical-home interface used by the transform.  [LoadHome]
+  observes the selected value through another register; [StoreHome] replaces
+  it from another register.  Admissibility prevents either operation from
+  clobbering or self-sourcing the resident register.
+*)
+Inductive resident_instruction : Type :=
+| UpdateHome (op : scalar_update)
+| LoadHome (destination_register : nat)
+| StoreHome (source_register : nat).
+
+Definition instruction_admissible
+    (resident_register : nat) (instruction : resident_instruction) : Prop :=
+  match instruction with
+  | UpdateHome _ => True
+  | LoadHome destination => destination <> resident_register
+  | StoreHome source => source <> resident_register
+  end.
+
+Definition baseline_instruction_step
+    (home_slot : nat) (instruction : resident_instruction) (st : machine_state)
+    : machine_state :=
+  match instruction with
+  | UpdateHome op => baseline_step home_slot op st
+  | LoadHome destination =>
+      with_registers st
+        (map_update (register_cells st) destination
+          (stack_cells st home_slot))
+  | StoreHome source =>
+      with_stack st
+        (map_update (stack_cells st) home_slot
+          (register_cells st source))
+  end.
+
+Definition resident_instruction_step
+    (resident_register : nat)
+    (instruction : resident_instruction) (st : machine_state)
+    : machine_state :=
+  match instruction with
+  | UpdateHome op => resident_step resident_register op st
+  | LoadHome destination =>
+      with_registers st
+        (map_update (register_cells st) destination
+          (register_cells st resident_register))
+  | StoreHome source =>
+      with_registers st
+        (map_update (register_cells st) resident_register
+          (register_cells st source))
+  end.
+
+Theorem resident_instruction_preserves_equiv :
+  forall home_slot resident_register baseline candidate instruction,
+    instruction_admissible resident_register instruction ->
+    resident_equiv home_slot resident_register baseline candidate ->
+    resident_equiv home_slot resident_register
+      (baseline_instruction_step home_slot instruction baseline)
+      (resident_instruction_step resident_register instruction candidate).
+Proof.
+  intros home_slot resident_register baseline candidate instruction
+    Hadmissible [Hhome [Hstack Hregister]].
+  destruct instruction as [op | destination | source]; simpl in *.
+  - now apply resident_step_preserves_equiv.
+  - split.
+    + change
+        (map_update (register_cells candidate) destination
+          (register_cells candidate resident_register) resident_register =
+        stack_cells baseline home_slot).
+      rewrite map_update_neq by lia. exact Hhome.
+    + split.
+      * intros slot Hslot. apply Hstack. exact Hslot.
+      * intros reg Hreg.
+        change
+          (map_update (register_cells candidate) destination
+            (register_cells candidate resident_register) reg =
+          map_update (register_cells baseline) destination
+            (stack_cells baseline home_slot) reg).
+        destruct (Nat.eq_dec reg destination) as [Heq | Hneq].
+        -- subst. repeat rewrite map_update_eq. exact Hhome.
+        -- repeat rewrite map_update_neq by exact Hneq.
+           apply Hregister. exact Hreg.
+  - split.
+    + change
+        (map_update (register_cells candidate) resident_register
+          (register_cells candidate source) resident_register =
+        map_update (stack_cells baseline) home_slot
+          (register_cells baseline source) home_slot).
+      repeat rewrite map_update_eq.
+      apply Hregister. exact Hadmissible.
+    + split.
+      * intros slot Hslot.
+        change
+          (stack_cells candidate slot =
+          map_update (stack_cells baseline) home_slot
+            (register_cells baseline source) slot).
+        rewrite map_update_neq by exact Hslot.
+        apply Hstack. exact Hslot.
+      * intros reg Hreg.
+        change
+          (map_update (register_cells candidate) resident_register
+            (register_cells candidate source) reg =
+          register_cells baseline reg).
+        rewrite map_update_neq by exact Hreg.
+        apply Hregister. exact Hreg.
+Qed.
+
+Fixpoint baseline_execute
+    (home_slot : nat) (program : list resident_instruction)
+    (st : machine_state) : machine_state :=
+  match program with
+  | [] => st
+  | instruction :: rest =>
+      baseline_execute home_slot rest
+        (baseline_instruction_step home_slot instruction st)
+  end.
+
+Fixpoint resident_execute
+    (resident_register : nat) (program : list resident_instruction)
+    (st : machine_state) : machine_state :=
+  match program with
+  | [] => st
+  | instruction :: rest =>
+      resident_execute resident_register rest
+        (resident_instruction_step resident_register instruction st)
+  end.
+
+Theorem resident_execute_preserves_equiv :
+  forall program home_slot resident_register baseline candidate,
+    Forall (instruction_admissible resident_register) program ->
+    resident_equiv home_slot resident_register baseline candidate ->
+    resident_equiv home_slot resident_register
+      (baseline_execute home_slot program baseline)
+      (resident_execute resident_register program candidate).
+Proof.
+  induction program as [|instruction rest IH];
+    intros home_slot resident_register baseline candidate
+      Hadmissible Hequiv; simpl.
+  - exact Hequiv.
+  - inversion Hadmissible as [|? ? Hinstruction Hrest]; subst.
+    apply IH.
+    + exact Hrest.
+    + now apply resident_instruction_preserves_equiv.
+Qed.
+
 Fixpoint baseline_run
     (home_slot : nat) (program : list scalar_update) (st : machine_state)
     : machine_state :=
@@ -186,6 +329,38 @@ Proof.
   pose proof
     (resident_run_preserves_equiv program home_slot resident_register
       baseline candidate H) as Hrun.
+  exact (proj1 Hrun).
+Qed.
+
+Theorem resident_instruction_trace_spill_correct :
+  forall program home_slot resident_register baseline candidate,
+    Forall (instruction_admissible resident_register) program ->
+    resident_equiv home_slot resident_register baseline candidate ->
+    forall slot,
+      stack_cells
+        (spill_home home_slot resident_register
+          (resident_execute resident_register program candidate)) slot =
+      stack_cells (baseline_execute home_slot program baseline) slot.
+Proof.
+  intros program home_slot resident_register baseline candidate
+    Hadmissible Hequiv slot.
+  apply spill_restores_stack.
+  now apply resident_execute_preserves_equiv.
+Qed.
+
+Theorem resident_instruction_trace_result_correct :
+  forall program home_slot resident_register baseline candidate,
+    Forall (instruction_admissible resident_register) program ->
+    resident_equiv home_slot resident_register baseline candidate ->
+    register_cells (resident_execute resident_register program candidate)
+      resident_register =
+    stack_cells (baseline_execute home_slot program baseline) home_slot.
+Proof.
+  intros program home_slot resident_register baseline candidate
+    Hadmissible Hequiv.
+  pose proof
+    (resident_execute_preserves_equiv program home_slot resident_register
+      baseline candidate Hadmissible Hequiv) as Hrun.
   exact (proj1 Hrun).
 Qed.
 
