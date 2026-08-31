@@ -4,7 +4,7 @@
   - small-step semantics
 *)
 
-From Coq Require Import List Arith Bool.
+From Stdlib Require Import List Arith Bool.
 Import ListNotations.
 
 From NauxCore Require Import Syntax.

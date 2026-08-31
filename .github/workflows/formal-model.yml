@@ -1,0 +1,55 @@
+name: Formal model
+
+on:
+  push:
+    paths:
+      - "naux-meta-coq/**"
+      - ".github/workflows/formal-model.yml"
+  pull_request:
+    paths:
+      - "naux-meta-coq/**"
+      - ".github/workflows/formal-model.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rocq:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check proofs with Rocq 9.1
+        uses: rocq-prover/docker-opam-action@126d4ac196f8133729a1cb0d2aa1ee7106efec58 # v1.5.2
+        with:
+          custom_image: rocq/rocq-prover:9.1
+          custom_script: |
+            set -euo pipefail
+            sudo chown -R "$(id -u):$(id -g)" .
+
+            startGroup "Build formal model"
+              coqc --version
+              make -C naux-meta-coq clean all
+            endGroup
+
+            startGroup "Replay proof objects in the kernel"
+              coqchk -silent -o -Q naux-meta-coq NauxCore \
+                  NauxCore.NauxCore \
+                  NauxCore.Soundness \
+                  NauxCore.RegisterResidency 2>&1 \
+                | tee /tmp/naux-coqchk-context.txt
+              grep -Fq '* Axioms: <none>' /tmp/naux-coqchk-context.txt
+            endGroup
+
+            startGroup "Reject unchecked declarations"
+              if grep -R -n -E '\b(Admitted|admit|Axiom|Parameter)\b' \
+                --include='*.v' naux-meta-coq; then
+                echo "Unchecked formal declaration found" >&2
+                exit 1
+              fi
+            endGroup
+
+            make -C naux-meta-coq clean
+      - name: Restore workspace ownership
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"

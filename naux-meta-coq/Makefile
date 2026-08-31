@@ -1,7 +1,7 @@
 COQC=coqc
 COQFLAGS=-Q . NauxCore
 
-FILES=Syntax Typing Smallstep Soundness DataAlgo
+FILES=Syntax Typing Smallstep Soundness DataAlgo RegisterResidency NauxCore
 
 all: $(FILES:%=%.vo)
 
@@ -9,7 +9,7 @@ all: $(FILES:%=%.vo)
 	$(COQC) $(COQFLAGS) $<
 
 clean:
-	rm -f *.vo *.vos *.vok *.glob *.aux *.d
+	rm -f *.vo *.vos *.vok *.glob *.aux .*.aux *.d .lia.cache
+	rm -rf .coq-native
 
 .PHONY: all clean
-	

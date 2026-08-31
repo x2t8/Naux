@@ -4,3 +4,5 @@ Typing.v
 Smallstep.v
 Soundness.v
 DataAlgo.v
+RegisterResidency.v
+NauxCore.v

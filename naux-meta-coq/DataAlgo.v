@@ -1,6 +1,6 @@
 (** NAUX meta model in Coq — Sample data/algorithms lemmas. *)
 
-From Coq Require Import List Arith Bool Lia.
+From Stdlib Require Import List Arith Bool Lia.
 Import ListNotations.
 
 (** Simple nat add. *)

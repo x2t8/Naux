@@ -5,7 +5,7 @@
   - value: closed values
 *)
 
-From Coq Require Import List Arith Bool.
+From Stdlib Require Import List Arith Bool.
 Import ListNotations.
 
 Inductive ty : Type :=

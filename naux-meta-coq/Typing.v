@@ -2,7 +2,7 @@
   NauxCore.Typing (de Bruijn indices)
 *)
 
-From Coq Require Import List Arith.
+From Stdlib Require Import List Arith.
 Import ListNotations.
 
 From NauxCore Require Import Syntax.
