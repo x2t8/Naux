@@ -568,6 +568,58 @@ Proof.
   now apply (proj2 (admit_residency_plan_sound proposed accepted Hadmitted)).
 Qed.
 
+(**
+  A bounded loop is represented by repeating one admitted body.  This closes
+  the common case where the compiler keeps the same home resident across all
+  iterations; it does not yet model arbitrary CFG joins or early exits.
+*)
+Fixpoint repeat_program
+    (iterations : nat) (body : list resident_instruction)
+    : list resident_instruction :=
+  match iterations with
+  | O => []
+  | S rest => body ++ repeat_program rest body
+  end.
+
+Theorem repeat_program_admissible :
+  forall iterations resident_register body,
+    program_admissibleb resident_register body = true ->
+    program_admissibleb resident_register
+      (repeat_program iterations body) = true.
+Proof.
+  induction iterations as [|iterations IH];
+    intros resident_register body Hbody; simpl.
+  - reflexivity.
+  - unfold program_admissibleb in *.
+    rewrite forallb_app, Hbody.
+    simpl.
+    now apply IH.
+Qed.
+
+Definition repeat_residency_plan
+    (iterations : nat) (plan : residency_plan) : residency_plan :=
+  {| plan_home_slot := plan_home_slot plan;
+     plan_resident_register := plan_resident_register plan;
+     plan_program := repeat_program iterations (plan_program plan) |}.
+
+Theorem repeated_residency_plan_checked_correct :
+  forall iterations plan initial,
+    residency_plan_admissibleb plan = true ->
+    observable_equiv (plan_resident_register plan)
+      (baseline_plan_execute
+        (repeat_residency_plan iterations plan) initial)
+      (resident_plan_execute
+        (repeat_residency_plan iterations plan) initial).
+Proof.
+  intros iterations plan initial Hcheck.
+  apply (residency_plan_checked_correct
+    (repeat_residency_plan iterations plan) initial).
+  unfold residency_plan_admissibleb, repeat_residency_plan.
+  simpl.
+  apply repeat_program_admissible.
+  exact Hcheck.
+Qed.
+
 (** The checker refuses a plan that overwrites the resident register. *)
 Example self_clobbering_plan_is_rejected :
   program_admissibleb 12 [LoadHome 12] = false.
