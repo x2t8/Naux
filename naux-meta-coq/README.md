@@ -11,9 +11,10 @@ Compiled Coq products (`*.vo`, `*.glob`, auxiliary caches, and related files)
 are generated locally and must not be committed.
 
 `RegisterResidency.v` proves a bounded compiler theorem: starting from one
-ordinary machine state, a selected stack slot may be loaded into a reserved
-register, updated by an admitted instruction trace or a bounded repetition of
-one admitted loop body, and spilled back. The resulting stack and every
+ordinary machine state, a selected stack slot may become resident through an
+entry load or an initializing first store, be updated by an admitted
+instruction trace or a bounded repetition of one admitted loop body, and be
+spilled back. The resulting stack and every
 non-reserved register agree with the baseline execution. A reflected Boolean
 checker rejects complete plans that clobber or self-source the reserved
 register before they reach the semantic transform. The model deliberately does

@@ -500,6 +500,67 @@ Proof.
 Qed.
 
 (**
+  Some lowered regions establish residency with their first store rather than
+  a synthetic entry load.  From a common state, that store gives the baseline
+  home and candidate register the same authoritative value.
+*)
+Theorem store_home_from_common_state_establishes_equiv :
+  forall home_slot resident_register source_register initial,
+    resident_equiv home_slot resident_register
+      (baseline_instruction_step home_slot
+        (StoreHome source_register) initial)
+      (resident_instruction_step resident_register
+        (StoreHome source_register) initial).
+Proof.
+  intros home_slot resident_register source_register initial.
+  split.
+  - simpl. repeat rewrite map_update_eq. reflexivity.
+  - split.
+    + intros slot Hslot. simpl.
+      now rewrite map_update_neq by exact Hslot.
+    + intros reg Hreg. simpl.
+      now rewrite map_update_neq by exact Hreg.
+Qed.
+
+Definition store_initialized_program_admissibleb
+    (resident_register : nat) (program : list resident_instruction) : bool :=
+  match program with
+  | StoreHome source :: rest =>
+      instruction_admissibleb resident_register (StoreHome source) &&
+      program_admissibleb resident_register rest
+  | _ => false
+  end.
+
+Theorem store_initialized_instruction_trace_checked_correct :
+  forall program home_slot resident_register initial,
+    store_initialized_program_admissibleb resident_register program = true ->
+    observable_equiv resident_register
+      (baseline_execute home_slot program initial)
+      (spill_home home_slot resident_register
+        (resident_execute resident_register program initial)).
+Proof.
+  intros program home_slot resident_register initial Hcheck.
+  destruct program as [|instruction rest]; [discriminate|].
+  destruct instruction as [op | destination | source];
+    try discriminate.
+  apply Bool.andb_true_iff in Hcheck as [_ Hrest].
+  change
+    (observable_equiv resident_register
+      (baseline_execute home_slot rest
+        (baseline_instruction_step home_slot (StoreHome source) initial))
+      (spill_home home_slot resident_register
+        (resident_execute resident_register rest
+          (resident_instruction_step resident_register
+            (StoreHome source) initial)))).
+  apply spill_restores_observable_state.
+  apply resident_execute_preserves_equiv.
+  - apply (proj1
+      (program_admissibleb_reflect resident_register rest)).
+    exact Hrest.
+  - apply store_home_from_common_state_establishes_equiv.
+Qed.
+
+(**
   A complete transform plan packages the physical home, reserved register,
   and instruction trace behind one executable admission boundary.  This is
   still the bounded semantic model above: parsing WP8C reports and connecting
