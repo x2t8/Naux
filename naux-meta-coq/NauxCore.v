@@ -2,4 +2,4 @@
 
 From NauxCore Require Export
   Syntax Typing Smallstep Soundness DataAlgo RegisterResidency
-  DefiniteInitialization ProjectedCFGResidency.
+  DefiniteInitialization ProjectedCFGResidency ScalarMachineIRResidency.

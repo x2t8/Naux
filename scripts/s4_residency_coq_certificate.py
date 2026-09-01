@@ -26,6 +26,7 @@ class Block:
     block_id: int
     declared_instructions: int
     actions: list[str] = field(default_factory=list)
+    scalar_actions: list[str] = field(default_factory=list)
     raw_instruction_count: int = 0
     successors: list[int] | None = None
 
@@ -35,6 +36,7 @@ class Kernel:
     ordinal: str
     name: str
     declared_blocks: int
+    home_slot: int
     blocks: list[Block] = field(default_factory=list)
 
 
@@ -50,6 +52,12 @@ def _target(raw: str, label: str) -> int:
     return _unsigned(raw[1:], label)
 
 
+def _slot(raw: str, label: str) -> int:
+    if not raw.startswith("s"):
+        raise CertificateError(f"{label} is not a canonical stack slot")
+    return _unsigned(raw[1:], label)
+
+
 def _virtual_i64_register(raw: str, label: str) -> int:
     """Inject an i64 virtual register into a namespace disjoint from r12.
 
@@ -60,6 +68,13 @@ def _virtual_i64_register(raw: str, label: str) -> int:
     register, separator, machine_type = raw.partition(":")
     if separator != ":" or machine_type != "i64" or not register.startswith("r"):
         raise CertificateError(f"{label} is not a canonical i64 virtual register")
+    return _unsigned(register[1:], label) + 1
+
+
+def _virtual_bool_register(raw: str, label: str) -> int:
+    register, separator, machine_type = raw.partition(":")
+    if separator != ":" or machine_type != "bool" or not register.startswith("r"):
+        raise CertificateError(f"{label} is not a canonical bool virtual register")
     return _unsigned(register[1:], label) + 1
 
 
@@ -110,6 +125,92 @@ def _physical_action(parts: list[str]) -> str | None:
     return None
 
 
+def _scalar_action(parts: list[str]) -> str | None:
+    """Translate the exact scalar subset retained by the Rocq projection.
+
+    Heap/list/ownership operations are deliberately omitted.  Any scalar-like
+    opcode outside the closed subset fails instead of silently widening the
+    theorem boundary.
+    """
+
+    opcode = parts[4]
+    if opcode == "const-i64":
+        if len(parts) != 7:
+            raise CertificateError("const-i64 is malformed")
+        destination = _virtual_i64_register(parts[5], "const-i64 destination")
+        value = _signed_i64(parts[6], "const-i64 value")
+        return f"ScalarConst {_coq_nat(destination)} {_coq_z(value)}"
+    if opcode == "load-slot":
+        if len(parts) != 7:
+            raise CertificateError("load-slot is malformed")
+        if parts[5].endswith(":owned-list-i64"):
+            _slot(parts[6], "load-slot source")
+            return None
+        destination = _virtual_i64_register(parts[5], "load-slot destination")
+        slot = _slot(parts[6], "load-slot source")
+        return f"ScalarLoadSlot {_coq_nat(destination)} {_coq_nat(slot)}"
+    if opcode == "store-slot":
+        if len(parts) != 8 or parts[7] not in {"keep", "consume"}:
+            raise CertificateError("store-slot is malformed")
+        slot = _slot(parts[5], "store-slot destination")
+        if parts[6].endswith(":owned-list-i64") or parts[6].endswith(":unit"):
+            return None
+        source = _virtual_i64_register(parts[6], "store-slot source")
+        return f"ScalarStoreSlot {_coq_nat(slot)} {_coq_nat(source)}"
+    if opcode == "add-slot-const":
+        if len(parts) != 7:
+            raise CertificateError("add-slot-const is malformed")
+        slot = _slot(parts[5], "add-slot-const destination")
+        value = _signed_i64(parts[6], "add-slot-const value")
+        return f"ScalarAddSlotConst {_coq_nat(slot)} {_coq_z(value)}"
+    binary_operations = {
+        "i64-add": "ScalarAdd",
+        "i64-sub": "ScalarSub",
+        "i64-mul": "ScalarMul",
+    }
+    if opcode in binary_operations:
+        if len(parts) != 8:
+            raise CertificateError(f"{opcode} is malformed")
+        destination = _virtual_i64_register(parts[5], f"{opcode} destination")
+        left = _virtual_i64_register(parts[6], f"{opcode} left operand")
+        right = _virtual_i64_register(parts[7], f"{opcode} right operand")
+        return (
+            f"ScalarBinary {_coq_nat(destination)} {binary_operations[opcode]} "
+            f"{_coq_nat(left)} {_coq_nat(right)}"
+        )
+    compare_operations = {
+        "i64-eq": "ScalarEq",
+        "i64-ne": "ScalarNe",
+        "i64-gt": "ScalarGt",
+        "i64-ge": "ScalarGe",
+        "i64-lt": "ScalarLt",
+        "i64-le": "ScalarLe",
+    }
+    if opcode in compare_operations:
+        if len(parts) != 8:
+            raise CertificateError(f"{opcode} is malformed")
+        destination = _virtual_bool_register(parts[5], f"{opcode} destination")
+        left = _virtual_i64_register(parts[6], f"{opcode} left operand")
+        right = _virtual_i64_register(parts[7], f"{opcode} right operand")
+        return (
+            f"ScalarCompare {_coq_nat(destination)} {compare_operations[opcode]} "
+            f"{_coq_nat(left)} {_coq_nat(right)}"
+        )
+    if opcode.startswith("i64-"):
+        raise CertificateError(f"unsupported scalar instruction {opcode!r}")
+    if opcode in {
+        "range-allocate-init",
+        "list-length-static",
+        "list-load-checked",
+        "list-store-checked",
+        "release-owned-list",
+    }:
+        return None
+    if "physical" not in opcode:
+        raise CertificateError(f"unknown pass-through instruction {opcode!r}")
+    return None
+
+
 def _successors(parts: list[str]) -> list[int]:
     opcode = parts[3]
     if opcode == "goto" and len(parts) == 5:
@@ -148,7 +249,12 @@ def parse_verified_report(raw: bytes) -> list[Kernel]:
                 ordinal=ordinal,
                 name=parts[2],
                 declared_blocks=_unsigned(parts[11], "kernel block count"),
+                home_slot=_slot(parts[6], "kernel resident home"),
             )
+            if parts[7] != "i64" or parts[8] != "r12":
+                raise CertificateError(
+                    f"line {line_number}: kernel is outside the one-hot i64/r12 model"
+                )
             kernels.append(current_kernel)
         elif row == "block":
             if current_kernel is None or current_block is not None or len(parts) != 4:
@@ -166,16 +272,27 @@ def parse_verified_report(raw: bytes) -> list[Kernel]:
             if current_kernel is None or current_block is None or len(parts) < 5:
                 raise CertificateError(f"line {line_number}: instruction is outside a block")
             if parts[1] != current_kernel.ordinal:
-                raise CertificateError(f"line {line_number}: instruction belongs to another kernel")
+                raise CertificateError(
+                    f"line {line_number}: instruction belongs to another kernel"
+                )
             if _unsigned(parts[2], "instruction block") != current_block.block_id:
                 raise CertificateError(f"line {line_number}: instruction block drifted")
             instruction_id = _unsigned(parts[3], "instruction id")
             if instruction_id != current_block.raw_instruction_count:
                 raise CertificateError(f"line {line_number}: instruction ids are not contiguous")
             current_block.raw_instruction_count += 1
-            action = _physical_action(parts)
-            if action is not None:
-                current_block.actions.append(action)
+            physical_action = _physical_action(parts)
+            if physical_action is not None:
+                current_block.actions.append(physical_action)
+                current_block.scalar_actions.append(
+                    f"ResidencyAccess ({physical_action})"
+                )
+            else:
+                scalar_action = _scalar_action(parts)
+                if scalar_action is not None:
+                    current_block.scalar_actions.append(
+                        f"ScalarPassThrough ({scalar_action})"
+                    )
         elif row == "terminator":
             if current_kernel is None or current_block is None or len(parts) < 4:
                 raise CertificateError(f"line {line_number}: terminator is outside a block")
@@ -270,11 +387,13 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         "  The translation is untrusted; every certificate and projected",
         "  operand trace is admitted again inside the Rocq kernel.",
         "  Register 0 is physical r12; virtual rN is injected as S N.",
+        "  Heap/list effects and branch selection are outside the scalar",
+        "  projection and remain explicit non-claims.",
         "*)",
         "",
         "From Stdlib Require Import List ZArith.",
         "From NauxCore Require Import RegisterResidency DefiniteInitialization",
-        "  ProjectedCFGResidency.",
+        "  ProjectedCFGResidency ScalarMachineIRResidency.",
         "Import ListNotations.",
         "",
     ]
@@ -282,6 +401,9 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         reachable, incoming = derive_must_facts(kernel)
         prefix = f"wp8c_kernel_{kernel.ordinal}"
         block_rows = [_coq_list(block.actions) for block in kernel.blocks]
+        scalar_block_rows = [
+            _coq_list(block.scalar_actions) for block in kernel.blocks
+        ]
         successor_rows = [
             _coq_list([_coq_nat(value) for value in block.successors or []])
             for block in kernel.blocks
@@ -303,6 +425,17 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
                 f"Example {prefix}_certificate_is_admitted :",
                 f"  admit_cfg_initialization_certificate {prefix}_certificate =",
                 f"    Some {prefix}_certificate.",
+                "Proof. reflexivity. Qed.",
+                "",
+                f"Definition {prefix}_scalar_graph : scalar_residency_graph :=",
+                "  {| scalar_residency_entry := 0%nat;",
+                "     scalar_residency_blocks := "
+                f"{_coq_list(scalar_block_rows)};",
+                f"     scalar_residency_successors := {_coq_list(successor_rows)} |}}.",
+                "",
+                f"Example {prefix}_scalar_graph_projects_exactly :",
+                f"  scalar_residency_graph_projection {prefix}_scalar_graph =",
+                f"    {prefix}_graph.",
                 "Proof. reflexivity. Qed.",
                 "",
                 f"Theorem {prefix}_all_paths_are_initialized :",
@@ -343,6 +476,33 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
                 "  eapply admitted_cfg_all_projected_paths_abi_correct",
                 f"    with (proposed := {prefix}_certificate)",
                 f"      (accepted := {prefix}_certificate).",
+                "  - reflexivity.",
+                "  - reflexivity.",
+                "  - exact Hpath.",
+                "Qed.",
+                "",
+                f"Theorem {prefix}_all_paths_preserve_scalar_projection :",
+                "  forall path initial replacement,",
+                f"    initialization_path_from {prefix}_graph 0%nat path ->",
+                "    exists program path_out candidate_out,",
+                f"      scalar_residency_path_program {prefix}_scalar_graph path =",
+                "        Some program /\\",
+                f"      initialization_path_execute {prefix}_graph path false =",
+                "        Some path_out /\\",
+                "      scalar_residency_candidate_execute 0%nat false program",
+                "        (hide_reserved_register 0%nat replacement initial) =",
+                "        Some (path_out, candidate_out) /\\",
+                "      full_state_equiv",
+                f"        (scalar_residency_baseline_execute {_coq_nat(kernel.home_slot)}",
+                "          program initial)",
+                f"        (projected_finalize {_coq_nat(kernel.home_slot)} 0%nat",
+                "          (register_cells initial 0%nat) path_out candidate_out).",
+                "Proof.",
+                "  intros path initial replacement Hpath.",
+                "  eapply admitted_cfg_all_scalar_residency_paths_abi_correct",
+                f"    with (proposed := {prefix}_certificate)",
+                f"      (accepted := {prefix}_certificate).",
+                "  - reflexivity.",
                 "  - reflexivity.",
                 "  - reflexivity.",
                 "  - exact Hpath.",

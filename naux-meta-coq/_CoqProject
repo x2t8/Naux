@@ -7,4 +7,5 @@ DataAlgo.v
 RegisterResidency.v
 DefiniteInitialization.v
 ProjectedCFGResidency.v
+ScalarMachineIRResidency.v
 NauxCore.v

@@ -111,6 +111,110 @@ class S4ResidencyCoqCertificateTests(unittest.TestCase):
                 ]
             )
 
+    def test_scalar_actions_preserve_exact_operands_and_constants(self) -> None:
+        cases = (
+            (
+                ["instruction", "01", "0", "0", "const-i64", "r3:i64", "-7"],
+                "ScalarConst 4%nat (-7%Z)",
+            ),
+            (
+                ["instruction", "01", "0", "0", "load-slot", "r3:i64", "s5"],
+                "ScalarLoadSlot 4%nat 5%nat",
+            ),
+            (
+                [
+                    "instruction",
+                    "01",
+                    "0",
+                    "0",
+                    "store-slot",
+                    "s5",
+                    "r3:i64",
+                    "keep",
+                ],
+                "ScalarStoreSlot 5%nat 4%nat",
+            ),
+            (
+                ["instruction", "01", "0", "0", "add-slot-const", "s5", "17"],
+                "ScalarAddSlotConst 5%nat (17%Z)",
+            ),
+            (
+                [
+                    "instruction",
+                    "01",
+                    "0",
+                    "0",
+                    "i64-mul",
+                    "r3:i64",
+                    "r1:i64",
+                    "r2:i64",
+                ],
+                "ScalarBinary 4%nat ScalarMul 2%nat 3%nat",
+            ),
+            (
+                [
+                    "instruction",
+                    "01",
+                    "0",
+                    "0",
+                    "i64-ge",
+                    "r3:bool",
+                    "r1:i64",
+                    "r2:i64",
+                ],
+                "ScalarCompare 4%nat ScalarGe 2%nat 3%nat",
+            ),
+        )
+        for row, expected in cases:
+            with self.subTest(opcode=row[4]):
+                self.assertEqual(bridge._scalar_action(row), expected)
+
+    def test_heap_operations_are_explicitly_outside_scalar_projection(self) -> None:
+        self.assertIsNone(
+            bridge._scalar_action(
+                [
+                    "instruction",
+                    "01",
+                    "0",
+                    "0",
+                    "list-load-checked",
+                    "r3:i64",
+                    "r1:owned-list-i64",
+                    "r2:i64",
+                ]
+            )
+        )
+        with self.assertRaises(bridge.CertificateError):
+            bridge._scalar_action(
+                [
+                    "instruction",
+                    "01",
+                    "0",
+                    "0",
+                    "i64-div",
+                    "r3:i64",
+                    "r1:i64",
+                    "r2:i64",
+                ]
+            )
+
+    def test_kernel_home_slot_and_scalar_graph_are_emitted(self) -> None:
+        report = "\n".join(
+            (
+                "NAUX-S4-REGISTER-RESIDENCY-PLAN\t1",
+                "kernel\t01\ttest\ta\tb\t8\ts5\ti64\tr12\t3\t2\t1",
+                "block\t01\t0\t1",
+                "instruction\t01\t0\t0\tconst-i64\tr3:i64\t-7",
+                "terminator\t01\t0\treturn\tr3:i64",
+            )
+        )
+        kernels = bridge.parse_verified_report(report.encode("utf-8"))
+        self.assertEqual(kernels[0].home_slot, 5)
+        output = bridge.emit_rocq(kernels, "0" * 64)
+        self.assertIn("Definition wp8c_kernel_01_scalar_graph", output)
+        self.assertIn("ScalarPassThrough (ScalarConst 4%nat (-7%Z))", output)
+        self.assertIn("scalar_residency_baseline_execute 5%nat", output)
+
 
 if __name__ == "__main__":
     unittest.main()

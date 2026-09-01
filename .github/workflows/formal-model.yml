@@ -45,7 +45,8 @@ jobs:
                   NauxCore.Soundness \
                   NauxCore.RegisterResidency \
                   NauxCore.DefiniteInitialization \
-                  NauxCore.ProjectedCFGResidency 2>&1 \
+                  NauxCore.ProjectedCFGResidency \
+                  NauxCore.ScalarMachineIRResidency 2>&1 \
                 | tee /tmp/naux-coqchk-context.txt
               grep -Fq '* Axioms: <none>' /tmp/naux-coqchk-context.txt
             endGroup
