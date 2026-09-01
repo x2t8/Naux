@@ -81,6 +81,16 @@ bridge but are not a Rocq state component; host failures, bounded counter
 exhaustion, branch selection, and native x86-64 execution remain outside this
 theorem.
 
+`ControlFlowMachineIRResidency.v` retains the exact `goto`, `branch`, and
+`return` terminators that the earlier structural graph stored only as
+successor lists. Branch conditions and return values must be defined virtual
+registers outside physical `r12`; boolean observations accept only `0` or `1`
+and otherwise fail closed. For every successful admitted block, the kernel
+proof shows the baseline and register-resident execution select the same next
+block or return the same i64 value while preserving the ownership phase
+relation. Constructing the complete dynamic path remains a separate bounded
+execution theorem rather than an implicit claim.
+
 The formal-residency bridge rebuilds the reviewed WP8C emitter, authenticates
 its complete 276-line report through the sealed authority, translates the four
 physical-access CFGs into untrusted Rocq certificates, and admits them again
@@ -94,9 +104,12 @@ stack slot, length, and i64 constant. Its register encoding
 keeps namespaces disjoint: Rocq register `0` denotes physical `r12`, while
 virtual `rN` maps to `S N`. The generated ownership graph additionally retains
 every `keep`/`consume` bit and proves exact defined/undefined and overflow-event
-count agreement for successful paths. The proof source is ephemeral and is not
-a new sealed project artifact; control decisions, host/counter failures, and
-native semantics remain explicit non-claims.
+count agreement for successful paths. The generated control graph retains each
+condition/result register and true/false/goto target, and instantiates the
+per-block selection theorem for all four WP8C programs. The proof source is
+ephemeral and is not a new sealed project artifact; whole-CFG path
+construction, host/counter failures, and native semantics remain explicit
+non-claims.
 
 ```bash
 make -C naux-meta-coq
@@ -105,7 +118,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.RegisterResidency \
   NauxCore.DefiniteInitialization NauxCore.ProjectedCFGResidency \
   NauxCore.ScalarMachineIRResidency NauxCore.HeapMachineIRResidency \
-  NauxCore.OwnershipMachineIRResidency
+  NauxCore.OwnershipMachineIRResidency \
+  NauxCore.ControlFlowMachineIRResidency
 make -C naux-meta-coq clean
 ```
 

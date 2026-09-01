@@ -319,6 +319,7 @@ class S4ResidencyCoqCertificateTests(unittest.TestCase):
         self.assertIn("Definition wp8c_kernel_01_scalar_graph", output)
         self.assertIn("Definition wp8c_kernel_01_heap_graph", output)
         self.assertIn("Definition wp8c_kernel_01_ownership_graph", output)
+        self.assertIn("Definition wp8c_kernel_01_control_graph", output)
         self.assertIn("ScalarPassThrough (ScalarConst 4%nat (-7%Z))", output)
         self.assertIn(
             "OwnershipPlain (HeapScalarInstruction (ScalarPassThrough "
@@ -330,6 +331,40 @@ class S4ResidencyCoqCertificateTests(unittest.TestCase):
         self.assertIn(
             "all_successful_paths_preserve_ownership_projection", output
         )
+        self.assertIn("OwnershipControlReturn 4%nat", output)
+        self.assertIn(
+            "every_successful_control_block_preserves_selection", output
+        )
+
+    def test_control_terminators_preserve_exact_operands_and_targets(self) -> None:
+        self.assertEqual(
+            bridge._control_terminator(
+                ["terminator", "01", "0", "goto", "b7"]
+            ),
+            "OwnershipControlGoto 7%nat",
+        )
+        self.assertEqual(
+            bridge._control_terminator(
+                ["terminator", "01", "1", "branch", "r12:bool", "b4", "b9"]
+            ),
+            "OwnershipControlBranch 13%nat 4%nat 9%nat",
+        )
+        self.assertEqual(
+            bridge._control_terminator(
+                ["terminator", "01", "2", "return", "r28:i64"]
+            ),
+            "OwnershipControlReturn 29%nat",
+        )
+
+    def test_control_terminators_reject_noncanonical_types(self) -> None:
+        with self.assertRaises(bridge.CertificateError):
+            bridge._control_terminator(
+                ["terminator", "01", "1", "branch", "r2:i64", "b4", "b9"]
+            )
+        with self.assertRaises(bridge.CertificateError):
+            bridge._control_terminator(
+                ["terminator", "01", "2", "return", "r3:bool"]
+            )
 
 
 if __name__ == "__main__":

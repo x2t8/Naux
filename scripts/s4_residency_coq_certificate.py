@@ -30,6 +30,7 @@ class Block:
     heap_actions: list[str] = field(default_factory=list)
     ownership_actions: list[str] = field(default_factory=list)
     raw_instruction_count: int = 0
+    control_terminator: str | None = None
     successors: list[int] | None = None
 
 
@@ -376,6 +377,25 @@ def _successors(parts: list[str]) -> list[int]:
     raise CertificateError(f"unsupported or malformed terminator {opcode!r}")
 
 
+def _control_terminator(parts: list[str]) -> str:
+    opcode = parts[3]
+    if opcode == "goto" and len(parts) == 5:
+        target = _target(parts[4], "goto target")
+        return f"OwnershipControlGoto {_coq_nat(target)}"
+    if opcode == "branch" and len(parts) == 7:
+        condition = _virtual_bool_register(parts[4], "branch condition")
+        if_true = _target(parts[5], "true target")
+        if_false = _target(parts[6], "false target")
+        return (
+            f"OwnershipControlBranch {_coq_nat(condition)} "
+            f"{_coq_nat(if_true)} {_coq_nat(if_false)}"
+        )
+    if opcode == "return" and len(parts) == 5:
+        result = _virtual_i64_register(parts[4], "return result")
+        return f"OwnershipControlReturn {_coq_nat(result)}"
+    raise CertificateError(f"unsupported or malformed terminator {opcode!r}")
+
+
 def parse_verified_report(raw: bytes) -> list[Kernel]:
     try:
         text = raw.decode("utf-8")
@@ -466,6 +486,7 @@ def parse_verified_report(raw: bytes) -> list[Kernel]:
                 raise CertificateError(f"line {line_number}: terminator block drifted")
             if current_block.raw_instruction_count != current_block.declared_instructions:
                 raise CertificateError(f"line {line_number}: instruction extent drifted")
+            current_block.control_terminator = _control_terminator(parts)
             current_block.successors = _successors(parts)
             current_kernel.blocks.append(current_block)
             current_block = None
@@ -492,6 +513,11 @@ def parse_verified_report(raw: bytes) -> list[Kernel]:
             if block.successors is None:
                 raise CertificateError(
                     f"kernel {kernel.ordinal} block b{block.block_id} lacks a terminator"
+                )
+            if block.control_terminator is None:
+                raise CertificateError(
+                    f"kernel {kernel.ordinal} block b{block.block_id} "
+                    "lacks a control terminator"
                 )
             if any(successor >= len(kernel.blocks) for successor in block.successors):
                 raise CertificateError(
@@ -554,18 +580,24 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         "  Heap/list effects are retained by a partial successful-execution",
         "  model. Exact keep/consume definedness and release invalidation are",
         "  retained, including signed-i64 wrapping and overflow-event counts.",
-        "  Host failures, counter exhaustion, branch selection, and native",
-        "  semantics remain explicit non-claims.",
+        "  Exact terminator operands and per-block branch/return selection",
+        "  parity are retained. Host failures, counter exhaustion, whole-CFG",
+        "  path construction, and native semantics remain explicit non-claims.",
         "*)",
         "",
         "From Stdlib Require Import List ZArith.",
         "From NauxCore Require Import RegisterResidency DefiniteInitialization",
         "  ProjectedCFGResidency ScalarMachineIRResidency",
-        "  HeapMachineIRResidency OwnershipMachineIRResidency.",
+        "  HeapMachineIRResidency OwnershipMachineIRResidency",
+        "  ControlFlowMachineIRResidency.",
         "Import ListNotations.",
         "",
     ]
     for kernel in kernels:
+        if any(block.control_terminator is None for block in kernel.blocks):
+            raise CertificateError(
+                f"kernel {kernel.ordinal} has an unmodeled control terminator"
+            )
         reachable, incoming = derive_must_facts(kernel)
         prefix = f"wp8c_kernel_{kernel.ordinal}"
         block_rows = [_coq_list(block.actions) for block in kernel.blocks]
@@ -575,6 +607,13 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         heap_block_rows = [_coq_list(block.heap_actions) for block in kernel.blocks]
         ownership_block_rows = [
             _coq_list(block.ownership_actions) for block in kernel.blocks
+        ]
+        control_block_rows = [
+            "{| ownership_control_instructions := "
+            f"{_coq_list(block.ownership_actions)}; "
+            "ownership_control_block_terminator := "
+            f"{block.control_terminator} |}}"
+            for block in kernel.blocks
         ]
         successor_rows = [
             _coq_list([_coq_nat(value) for value in block.successors or []])
@@ -742,6 +781,56 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
                 f"    {_coq_nat(kernel.home_slot)} 0%nat",
                 f"    {prefix}_ownership_graph = true.",
                 "Proof. reflexivity. Qed.",
+                "",
+                f"Definition {prefix}_control_graph : ownership_control_graph :=",
+                f"  {{| ownership_control_entry := 0%nat;",
+                "     ownership_control_blocks := "
+                f"{_coq_list(control_block_rows)} |}}.",
+                "",
+                f"Example {prefix}_control_graph_projects_exactly :",
+                "  ownership_control_graph_projection",
+                f"    {prefix}_control_graph = {prefix}_ownership_graph.",
+                "Proof. reflexivity. Qed.",
+                "",
+                f"Example {prefix}_control_graph_is_admissible :",
+                "  ownership_control_graph_admissibleb",
+                f"    {_coq_nat(kernel.home_slot)} 0%nat",
+                f"    {prefix}_control_graph = true.",
+                "Proof. reflexivity. Qed.",
+                "",
+                f"Theorem {prefix}_every_successful_control_block_preserves_selection :",
+                "  forall block_id block initialized next baseline candidate",
+                "      baseline_out outcome,",
+                "    nth_error (ownership_control_blocks",
+                f"      {prefix}_control_graph) block_id = Some block ->",
+                "    initialization_block initialized",
+                "      (ownership_residency_program_projection",
+                "        (ownership_control_instructions block)) = Some next ->",
+                "    ownership_projected_phase_equiv",
+                f"      {_coq_nat(kernel.home_slot)} 0%nat initialized",
+                "      baseline candidate ->",
+                "    ownership_control_baseline_block",
+                f"      {_coq_nat(kernel.home_slot)} block baseline =",
+                "      Some (baseline_out, outcome) ->",
+                "    exists candidate_out,",
+                "      ownership_control_candidate_block",
+                f"        {_coq_nat(kernel.home_slot)} 0%nat initialized",
+                "        block candidate = Some (next, (candidate_out, outcome)) /\\",
+                "      ownership_projected_phase_equiv",
+                f"        {_coq_nat(kernel.home_slot)} 0%nat next",
+                "        baseline_out candidate_out.",
+                "Proof.",
+                "  intros block_id block initialized next baseline candidate",
+                "    baseline_out outcome Hblock Hinitialization Hphase Hbaseline.",
+                "  eapply ownership_control_graph_block_preserves_selection",
+                f"    with (graph := {prefix}_control_graph)",
+                "      (block_id := block_id).",
+                "  - reflexivity.",
+                "  - exact Hblock.",
+                "  - exact Hinitialization.",
+                "  - exact Hphase.",
+                "  - exact Hbaseline.",
+                "Qed.",
                 "",
                 f"Theorem {prefix}_all_successful_paths_preserve_ownership_projection :",
                 "  forall path initial replacement baseline_out,",

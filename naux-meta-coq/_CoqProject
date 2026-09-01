@@ -11,4 +11,5 @@ ProjectedCFGResidency.v
 ScalarMachineIRResidency.v
 HeapMachineIRResidency.v
 OwnershipMachineIRResidency.v
+ControlFlowMachineIRResidency.v
 NauxCore.v
