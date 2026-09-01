@@ -50,20 +50,61 @@ def _target(raw: str, label: str) -> int:
     return _unsigned(raw[1:], label)
 
 
+def _virtual_i64_register(raw: str, label: str) -> int:
+    """Inject an i64 virtual register into a namespace disjoint from r12.
+
+    Rocq register 0 denotes the physical resident home.  Virtual register rN
+    is encoded as S N, so a source virtual r12 never aliases physical r12.
+    """
+
+    register, separator, machine_type = raw.partition(":")
+    if separator != ":" or machine_type != "i64" or not register.startswith("r"):
+        raise CertificateError(f"{label} is not a canonical i64 virtual register")
+    return _unsigned(register[1:], label) + 1
+
+
+def _signed_i64(raw: str, label: str) -> int:
+    if raw.startswith("-"):
+        magnitude = raw[1:]
+        if not magnitude or magnitude == "0" or magnitude.startswith("0"):
+            raise CertificateError(f"{label} is not a canonical signed integer")
+        if not magnitude.isascii() or not magnitude.isdigit():
+            raise CertificateError(f"{label} is not a canonical signed integer")
+    else:
+        _unsigned(raw, label)
+    value = int(raw)
+    if value < -(1 << 63) or value > (1 << 63) - 1:
+        raise CertificateError(f"{label} is outside i64")
+    return value
+
+
+def _coq_z(value: int) -> str:
+    return f"({value}%Z)"
+
+
+def _coq_nat(value: int) -> str:
+    return f"{value}%nat"
+
+
 def _physical_action(parts: list[str]) -> str | None:
     opcode = parts[4]
     if opcode == "store-physical":
         if len(parts) != 8 or parts[5] != "r12":
             raise CertificateError("store-physical is outside the one-hot r12 model")
-        return "StoreHome 0"
+        source = _virtual_i64_register(parts[6], "store-physical source")
+        if parts[7] not in {"keep", "consume"}:
+            raise CertificateError("store-physical ownership mode is not canonical")
+        return f"StoreHome {_coq_nat(source)}"
     if opcode == "load-physical":
         if len(parts) != 7 or parts[6] != "r12":
             raise CertificateError("load-physical is outside the one-hot r12 model")
-        return "LoadHome 0"
+        destination = _virtual_i64_register(parts[5], "load-physical destination")
+        return f"LoadHome {_coq_nat(destination)}"
     if opcode == "add-physical-const":
         if len(parts) != 7 or parts[5] != "r12":
             raise CertificateError("add-physical-const is outside the one-hot r12 model")
-        return "UpdateHome (AddConst 0)"
+        value = _signed_i64(parts[6], "add-physical-const value")
+        return f"UpdateHome (AddConst {_coq_z(value)})"
     if "physical" in opcode:
         raise CertificateError(f"unsupported physical instruction {opcode!r}")
     return None
@@ -228,9 +269,10 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         f"  Report root: {report_root}",
         "  The translation is untrusted; every certificate and projected",
         "  operand trace is admitted again inside the Rocq kernel.",
+        "  Register 0 is physical r12; virtual rN is injected as S N.",
         "*)",
         "",
-        "From Stdlib Require Import List.",
+        "From Stdlib Require Import List ZArith.",
         "From NauxCore Require Import RegisterResidency DefiniteInitialization",
         "  ProjectedCFGResidency.",
         "Import ListNotations.",
@@ -241,13 +283,13 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         prefix = f"wp8c_kernel_{kernel.ordinal}"
         block_rows = [_coq_list(block.actions) for block in kernel.blocks]
         successor_rows = [
-            _coq_list([str(value) for value in block.successors or []])
+            _coq_list([_coq_nat(value) for value in block.successors or []])
             for block in kernel.blocks
         ]
         rows.extend(
             [
                 f"Definition {prefix}_graph : initialization_graph :=",
-                "  {| initialization_entry := 0;",
+                "  {| initialization_entry := 0%nat;",
                 f"     initialization_blocks := {_coq_list(block_rows)};",
                 f"     initialization_successors := {_coq_list(successor_rows)} |}}.",
                 "",
@@ -265,7 +307,7 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
                 "",
                 f"Theorem {prefix}_all_paths_are_initialized :",
                 "  forall path,",
-                f"    initialization_path_from {prefix}_graph 0 path ->",
+                f"    initialization_path_from {prefix}_graph 0%nat path ->",
                 "    exists path_out,",
                 f"      initialization_path_execute {prefix}_graph path false =",
                 "        Some path_out.",
@@ -284,18 +326,18 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
                 "",
                 f"Theorem {prefix}_all_paths_preserve_projected_state :",
                 "  forall path home_slot initial replacement,",
-                f"    initialization_path_from {prefix}_graph 0 path ->",
+                f"    initialization_path_from {prefix}_graph 0%nat path ->",
                 "    exists program path_out candidate_out,",
                 f"      projected_path_program {prefix}_graph path = Some program /\\",
                 f"      initialization_path_execute {prefix}_graph path false =",
                 "        Some path_out /\\",
-                "      projected_candidate_execute 12 false program",
-                "        (hide_reserved_register 12 replacement initial) =",
+                "      projected_candidate_execute 0%nat false program",
+                "        (hide_reserved_register 0%nat replacement initial) =",
                 "        Some (path_out, candidate_out) /\\",
                 "      full_state_equiv",
                 "        (baseline_execute home_slot program initial)",
-                "        (projected_finalize home_slot 12",
-                "          (register_cells initial 12) path_out candidate_out).",
+                "        (projected_finalize home_slot 0%nat",
+                "          (register_cells initial 0%nat) path_out candidate_out).",
                 "Proof.",
                 "  intros path home_slot initial replacement Hpath.",
                 "  eapply admitted_cfg_all_projected_paths_abi_correct",

@@ -11,6 +11,7 @@ on:
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_residency_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_coq_certificate.py"
       - ".github/workflows/formal-residency-bridge.yml"
   pull_request:
     paths:
@@ -22,6 +23,7 @@ on:
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_residency_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_coq_certificate.py"
       - ".github/workflows/formal-residency-bridge.yml"
   workflow_dispatch:
 
@@ -47,6 +49,8 @@ jobs:
       - name: Generate the untrusted Rocq certificate
         run: |
           python3 -m py_compile scripts/s4_residency_coq_certificate.py
+          python3 -m unittest -v \
+            scripts.tests.test_s4_residency_coq_certificate
           python3 scripts/s4_residency_coq_certificate.py \
             --report "$RUNNER_TEMP/wp8c-plan.tsv" \
             --output "$RUNNER_TEMP/wp8c-certificates-a.v"

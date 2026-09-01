@@ -45,8 +45,11 @@ physical-access CFGs into untrusted Rocq certificates, and admits them again
 with the checked initialization and operand boundaries. For every finite path
 through each generated graph, Rocq then derives full-state equivalence for the
 physical-access projection after spill and ABI restoration. The generated
-proof source is ephemeral and is not a new sealed project artifact; omitted
-pass-through instructions are still outside this semantic claim.
+certificate preserves each transformed virtual-register operand and i64
+constant. Its register encoding keeps namespaces disjoint: Rocq register `0`
+denotes physical `r12`, while virtual `rN` maps to `S N`. The proof source is
+ephemeral and is not a new sealed project artifact; omitted pass-through
+instructions are still outside this semantic claim.
 
 ```bash
 make -C naux-meta-coq
