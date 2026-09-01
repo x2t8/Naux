@@ -59,6 +59,18 @@ theorem does not model consuming moves or a released source slot as undefined
 cells, host allocation or handle exhaustion, fixed-width overflow accounting,
 control-flow selection, or native x86-64 execution.
 
+`OwnershipMachineIRResidency.v` adds an exact defined-cell projection around
+that heap semantics. Store instructions retain the report's `keep`/`consume`
+bit, consuming stores invalidate their virtual-register source, releases
+invalidate the owner slot, and every retained operand must be defined before
+it is read. The reflected frame checker prevents an erased store from being
+smuggled through the plain-instruction constructor. For every successful
+admitted CFG path, final stack/register definedness agrees exactly alongside
+the heap, scalar, initialization, and ABI observations proved by the lower
+layers. Machine types are validated by the closed report bridge but are not a
+Rocq state component; fixed-width/host failures, branch selection, and native
+x86-64 execution remain outside this theorem.
+
 The formal-residency bridge rebuilds the reviewed WP8C emitter, authenticates
 its complete 276-line report through the sealed authority, translates the four
 physical-access CFGs into untrusted Rocq certificates, and admits them again
@@ -70,16 +82,19 @@ derives equality of heap contents, live handles, and allocation/release counts.
 The generated certificate preserves every admitted virtual-register operand,
 stack slot, length, and i64 constant. Its register encoding
 keeps namespaces disjoint: Rocq register `0` denotes physical `r12`, while
-virtual `rN` maps to `S N`. The proof source is ephemeral and is not a new
-sealed project artifact; ownership consumption, control decisions,
-fixed-width/host failures, and native semantics remain explicit non-claims.
+virtual `rN` maps to `S N`. The generated ownership graph additionally retains
+every `keep`/`consume` bit and proves exact defined/undefined state agreement
+for successful paths. The proof source is ephemeral and is not a new sealed
+project artifact; control decisions, fixed-width/host failures, and native
+semantics remain explicit non-claims.
 
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.NauxCore NauxCore.Soundness NauxCore.RegisterResidency \
   NauxCore.DefiniteInitialization NauxCore.ProjectedCFGResidency \
-  NauxCore.ScalarMachineIRResidency NauxCore.HeapMachineIRResidency
+  NauxCore.ScalarMachineIRResidency NauxCore.HeapMachineIRResidency \
+  NauxCore.OwnershipMachineIRResidency
 make -C naux-meta-coq clean
 ```
 

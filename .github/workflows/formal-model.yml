@@ -47,7 +47,8 @@ jobs:
                   NauxCore.DefiniteInitialization \
                   NauxCore.ProjectedCFGResidency \
                   NauxCore.ScalarMachineIRResidency \
-                  NauxCore.HeapMachineIRResidency 2>&1 \
+                  NauxCore.HeapMachineIRResidency \
+                  NauxCore.OwnershipMachineIRResidency 2>&1 \
                 | tee /tmp/naux-coqchk-context.txt
               grep -Fq '* Axioms: <none>' /tmp/naux-coqchk-context.txt
             endGroup

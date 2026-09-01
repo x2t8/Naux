@@ -28,6 +28,7 @@ class Block:
     actions: list[str] = field(default_factory=list)
     scalar_actions: list[str] = field(default_factory=list)
     heap_actions: list[str] = field(default_factory=list)
+    ownership_actions: list[str] = field(default_factory=list)
     raw_instruction_count: int = 0
     successors: list[int] | None = None
 
@@ -326,6 +327,41 @@ def _heap_action(parts: list[str], scalar_action: str | None) -> str | None:
     return None
 
 
+def _ownership_action(parts: list[str], heap_action: str) -> str:
+    """Retain the report's keep/consume bit around the exact heap projection."""
+
+    opcode = parts[4]
+    if opcode == "store-physical":
+        if len(parts) != 8 or parts[5] != "r12":
+            raise CertificateError("store-physical is outside the one-hot r12 model")
+        source = _virtual_i64_register(parts[6], "store-physical source")
+        if parts[7] not in {"keep", "consume"}:
+            raise CertificateError("store-physical ownership mode is not canonical")
+        return (
+            f"OwnershipStoreHome {_coq_nat(source)} "
+            f"{_coq_bool(parts[7] == 'keep')}"
+        )
+    if opcode == "store-slot":
+        if len(parts) != 8 or parts[7] not in {"keep", "consume"}:
+            raise CertificateError("store-slot is malformed")
+        slot = _slot(parts[5], "store-slot destination")
+        _, separator, machine_type = parts[6].partition(":")
+        if separator != ":" or machine_type not in {
+            "i64",
+            "owned-list-i64",
+            "unit",
+        }:
+            raise CertificateError("store-slot type is outside the ownership projection")
+        source = _virtual_typed_register(
+            parts[6], machine_type, "store-slot source"
+        )
+        return (
+            f"OwnershipStoreSlot {_coq_nat(slot)} {_coq_nat(source)} "
+            f"{_coq_bool(parts[7] == 'keep')}"
+        )
+    return f"OwnershipPlain ({heap_action})"
+
+
 def _successors(parts: list[str]) -> list[int]:
     opcode = parts[3]
     if opcode == "goto" and len(parts) == 5:
@@ -402,9 +438,10 @@ def parse_verified_report(raw: bytes) -> list[Kernel]:
                 current_block.scalar_actions.append(
                     f"ResidencyAccess ({physical_action})"
                 )
-                current_block.heap_actions.append(
+                heap_action = (
                     f"HeapScalarInstruction (ResidencyAccess ({physical_action}))"
                 )
+                current_block.heap_actions.append(heap_action)
             else:
                 scalar_action = _scalar_action(parts)
                 if scalar_action is not None:
@@ -417,6 +454,9 @@ def parse_verified_report(raw: bytes) -> list[Kernel]:
                         f"line {line_number}: instruction is outside the heap projection"
                     )
                 current_block.heap_actions.append(heap_action)
+            current_block.ownership_actions.append(
+                _ownership_action(parts, heap_action)
+            )
         elif row == "terminator":
             if current_kernel is None or current_block is None or len(parts) < 4:
                 raise CertificateError(f"line {line_number}: terminator is outside a block")
@@ -512,14 +552,15 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         "  operand trace is admitted again inside the Rocq kernel.",
         "  Register 0 is physical r12; virtual rN is injected as S N.",
         "  Heap/list effects are retained by a partial successful-execution",
-        "  model. Ownership consumption, fixed-width/host failures, branch",
-        "  selection, and native semantics remain explicit non-claims.",
+        "  model. Exact keep/consume definedness and release invalidation are",
+        "  retained. Fixed-width/host failures, branch selection, and native",
+        "  semantics remain explicit non-claims.",
         "*)",
         "",
         "From Stdlib Require Import List ZArith.",
         "From NauxCore Require Import RegisterResidency DefiniteInitialization",
         "  ProjectedCFGResidency ScalarMachineIRResidency",
-        "  HeapMachineIRResidency.",
+        "  HeapMachineIRResidency OwnershipMachineIRResidency.",
         "Import ListNotations.",
         "",
     ]
@@ -531,6 +572,9 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
             _coq_list(block.scalar_actions) for block in kernel.blocks
         ]
         heap_block_rows = [_coq_list(block.heap_actions) for block in kernel.blocks]
+        ownership_block_rows = [
+            _coq_list(block.ownership_actions) for block in kernel.blocks
+        ]
         successor_rows = [
             _coq_list([_coq_nat(value) for value in block.successors or []])
             for block in kernel.blocks
@@ -671,6 +715,62 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
                 "Proof.",
                 "  intros path initial replacement baseline_out Hpath Hsuccess.",
                 "  eapply admitted_cfg_all_heap_residency_paths_abi_correct",
+                f"    with (proposed := {prefix}_certificate)",
+                f"      (accepted := {prefix}_certificate).",
+                "  - reflexivity.",
+                "  - reflexivity.",
+                "  - reflexivity.",
+                "  - exact Hpath.",
+                "  - exact Hsuccess.",
+                "Qed.",
+                "",
+                f"Definition {prefix}_ownership_graph : ownership_residency_graph :=",
+                "  {| ownership_residency_entry := 0%nat;",
+                "     ownership_residency_blocks := "
+                f"{_coq_list(ownership_block_rows)};",
+                "     ownership_residency_successors := "
+                f"{_coq_list(successor_rows)} |}}.",
+                "",
+                f"Example {prefix}_ownership_graph_projects_exactly :",
+                "  ownership_residency_graph_projection",
+                f"    {prefix}_ownership_graph = {prefix}_heap_graph.",
+                "Proof. reflexivity. Qed.",
+                "",
+                f"Example {prefix}_ownership_graph_is_admissible :",
+                "  ownership_residency_graph_admissibleb",
+                f"    {_coq_nat(kernel.home_slot)} 0%nat",
+                f"    {prefix}_ownership_graph = true.",
+                "Proof. reflexivity. Qed.",
+                "",
+                f"Theorem {prefix}_all_successful_paths_preserve_ownership_projection :",
+                "  forall path initial replacement baseline_out,",
+                f"    initialization_path_from {prefix}_graph 0%nat path ->",
+                "    (exists program,",
+                "      ownership_residency_path_program",
+                f"        {prefix}_ownership_graph path = Some program /\\",
+                f"      ownership_baseline_execute {_coq_nat(kernel.home_slot)}",
+                "        program initial = Some baseline_out) ->",
+                "    exists program path_out candidate_out,",
+                "      ownership_residency_path_program",
+                f"        {prefix}_ownership_graph path = Some program /\\",
+                f"      initialization_path_execute {prefix}_graph path false =",
+                "        Some path_out /\\",
+                f"      ownership_baseline_execute {_coq_nat(kernel.home_slot)}",
+                "        program initial = Some baseline_out /\\",
+                "      ownership_candidate_execute",
+                f"        {_coq_nat(kernel.home_slot)} 0%nat false program",
+                "        (ownership_hide_reserved_register",
+                "          0%nat replacement initial) =",
+                "        Some (path_out, candidate_out) /\\",
+                "      ownership_full_state_equiv baseline_out",
+                f"        (ownership_finalize {_coq_nat(kernel.home_slot)} 0%nat",
+                "          (register_cells",
+                "            (heap_scalar_state (ownership_heap_state initial))",
+                "            0%nat)",
+                "          path_out candidate_out).",
+                "Proof.",
+                "  intros path initial replacement baseline_out Hpath Hsuccess.",
+                "  eapply admitted_cfg_all_ownership_residency_paths_abi_correct",
                 f"    with (proposed := {prefix}_certificate)",
                 f"      (accepted := {prefix}_certificate).",
                 "  - reflexivity.",

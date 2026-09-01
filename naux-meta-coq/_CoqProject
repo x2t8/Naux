@@ -9,4 +9,5 @@ DefiniteInitialization.v
 ProjectedCFGResidency.v
 ScalarMachineIRResidency.v
 HeapMachineIRResidency.v
+OwnershipMachineIRResidency.v
 NauxCore.v

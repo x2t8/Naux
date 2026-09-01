@@ -111,6 +111,64 @@ class S4ResidencyCoqCertificateTests(unittest.TestCase):
                 ]
             )
 
+    def test_ownership_actions_retain_keep_and_consume_exactly(self) -> None:
+        cases = (
+            (
+                ["instruction", "01", "0", "0", "store-physical", "r12",
+                 "r8:i64", "consume"],
+                "unused",
+                "OwnershipStoreHome 9%nat false",
+            ),
+            (
+                ["instruction", "01", "0", "0", "store-slot", "s6",
+                 "r15:i64", "keep"],
+                "unused",
+                "OwnershipStoreSlot 6%nat 16%nat true",
+            ),
+            (
+                ["instruction", "01", "0", "0", "store-slot", "s2",
+                 "r2:owned-list-i64", "consume"],
+                "unused",
+                "OwnershipStoreSlot 2%nat 3%nat false",
+            ),
+            (
+                ["instruction", "01", "0", "0", "store-slot", "s8",
+                 "r24:unit", "consume"],
+                "unused",
+                "OwnershipStoreSlot 8%nat 25%nat false",
+            ),
+        )
+        for row, heap_action, expected in cases:
+            with self.subTest(opcode=row[4], source=row[6]):
+                self.assertEqual(
+                    bridge._ownership_action(row, heap_action), expected
+                )
+
+    def test_ownership_plain_retains_exact_heap_instruction(self) -> None:
+        row = ["instruction", "01", "0", "0", "const-i64", "r3:i64", "7"]
+        heap_action = (
+            "HeapScalarInstruction (ScalarPassThrough "
+            "(ScalarConst 4%nat (7%Z)))"
+        )
+        self.assertEqual(
+            bridge._ownership_action(row, heap_action),
+            f"OwnershipPlain ({heap_action})",
+        )
+
+    def test_ownership_store_rejects_unknown_type_and_mode(self) -> None:
+        with self.assertRaises(bridge.CertificateError):
+            bridge._ownership_action(
+                ["instruction", "01", "0", "0", "store-slot", "s2",
+                 "r2:bool", "consume"],
+                "unused",
+            )
+        with self.assertRaises(bridge.CertificateError):
+            bridge._ownership_action(
+                ["instruction", "01", "0", "0", "store-slot", "s2",
+                 "r2:i64", "borrow"],
+                "unused",
+            )
+
     def test_scalar_actions_preserve_exact_operands_and_constants(self) -> None:
         cases = (
             (
@@ -245,7 +303,7 @@ class S4ResidencyCoqCertificateTests(unittest.TestCase):
                 None,
             )
 
-    def test_kernel_home_slot_scalar_and_heap_graphs_are_emitted(self) -> None:
+    def test_kernel_home_slot_scalar_heap_and_ownership_graphs_are_emitted(self) -> None:
         report = "\n".join(
             (
                 "NAUX-S4-REGISTER-RESIDENCY-PLAN\t1",
@@ -260,9 +318,18 @@ class S4ResidencyCoqCertificateTests(unittest.TestCase):
         output = bridge.emit_rocq(kernels, "0" * 64)
         self.assertIn("Definition wp8c_kernel_01_scalar_graph", output)
         self.assertIn("Definition wp8c_kernel_01_heap_graph", output)
+        self.assertIn("Definition wp8c_kernel_01_ownership_graph", output)
         self.assertIn("ScalarPassThrough (ScalarConst 4%nat (-7%Z))", output)
+        self.assertIn(
+            "OwnershipPlain (HeapScalarInstruction (ScalarPassThrough "
+            "(ScalarConst 4%nat (-7%Z))))",
+            output,
+        )
         self.assertIn("scalar_residency_baseline_execute 5%nat", output)
         self.assertIn("all_successful_paths_preserve_heap_projection", output)
+        self.assertIn(
+            "all_successful_paths_preserve_ownership_projection", output
+        )
 
 
 if __name__ == "__main__":
