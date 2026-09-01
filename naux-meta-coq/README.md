@@ -49,25 +49,37 @@ pre-initialization phase and final ABI restoration. Heap/list effects,
 ownership, fixed-width overflow and traps, and branch selection remain outside
 this theorem rather than being modeled as no-ops.
 
+`HeapMachineIRResidency.v` extends that trace with the owned-list operations
+present in the sealed WP8C programs. It models range initialization, live
+handles, static-length validation, checked loads, checked stores, release,
+allocation/release counts, and failure through a partial semantics. For every
+successful baseline path, the transformed path succeeds with the same heap,
+liveness state, counters, scalar observations, and restored ABI state. The
+theorem does not model consuming moves or a released source slot as undefined
+cells, host allocation or handle exhaustion, fixed-width overflow accounting,
+control-flow selection, or native x86-64 execution.
+
 The formal-residency bridge rebuilds the reviewed WP8C emitter, authenticates
 its complete 276-line report through the sealed authority, translates the four
 physical-access CFGs into untrusted Rocq certificates, and admits them again
 with the checked initialization and operand boundaries. For every finite path
-through each generated graph, Rocq derives full-state equivalence both for the
-physical-access projection and for the retained scalar projection after spill
-and ABI restoration. The generated certificate preserves every admitted
-virtual-register operand, stack slot, and i64 constant. Its register encoding
+through each generated graph, Rocq derives full-state equivalence for the
+physical-access and retained scalar projections after spill and ABI
+restoration. For every successfully executed bounded heap path, it additionally
+derives equality of heap contents, live handles, and allocation/release counts.
+The generated certificate preserves every admitted virtual-register operand,
+stack slot, length, and i64 constant. Its register encoding
 keeps namespaces disjoint: Rocq register `0` denotes physical `r12`, while
 virtual `rN` maps to `S N`. The proof source is ephemeral and is not a new
-sealed project artifact; omitted heap/list operations and control decisions
-remain explicit non-claims.
+sealed project artifact; ownership consumption, control decisions,
+fixed-width/host failures, and native semantics remain explicit non-claims.
 
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.NauxCore NauxCore.Soundness NauxCore.RegisterResidency \
   NauxCore.DefiniteInitialization NauxCore.ProjectedCFGResidency \
-  NauxCore.ScalarMachineIRResidency
+  NauxCore.ScalarMachineIRResidency NauxCore.HeapMachineIRResidency
 make -C naux-meta-coq clean
 ```
 

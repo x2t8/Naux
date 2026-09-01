@@ -27,6 +27,7 @@ class Block:
     declared_instructions: int
     actions: list[str] = field(default_factory=list)
     scalar_actions: list[str] = field(default_factory=list)
+    heap_actions: list[str] = field(default_factory=list)
     raw_instruction_count: int = 0
     successors: list[int] | None = None
 
@@ -75,6 +76,19 @@ def _virtual_bool_register(raw: str, label: str) -> int:
     register, separator, machine_type = raw.partition(":")
     if separator != ":" or machine_type != "bool" or not register.startswith("r"):
         raise CertificateError(f"{label} is not a canonical bool virtual register")
+    return _unsigned(register[1:], label) + 1
+
+
+def _virtual_typed_register(raw: str, expected_type: str, label: str) -> int:
+    register, separator, machine_type = raw.partition(":")
+    if (
+        separator != ":"
+        or machine_type != expected_type
+        or not register.startswith("r")
+    ):
+        raise CertificateError(
+            f"{label} is not a canonical {expected_type} virtual register"
+        )
     return _unsigned(register[1:], label) + 1
 
 
@@ -211,6 +225,107 @@ def _scalar_action(parts: list[str]) -> str | None:
     return None
 
 
+def _heap_action(parts: list[str], scalar_action: str | None) -> str | None:
+    """Translate every operation in the bounded heap/list projection.
+
+    Ordinary scalar and physical operations reuse their already-closed
+    constructors.  Owned-list handles and unit values are cell values in this
+    projection; consuming moves do not model undefined source cells.
+    """
+
+    physical_action = _physical_action(parts)
+    if physical_action is not None:
+        return f"HeapScalarInstruction (ResidencyAccess ({physical_action}))"
+    if scalar_action is not None:
+        return f"HeapScalarInstruction (ScalarPassThrough ({scalar_action}))"
+
+    opcode = parts[4]
+    if opcode == "load-slot":
+        if len(parts) != 7:
+            raise CertificateError("load-slot is malformed")
+        _, separator, machine_type = parts[5].partition(":")
+        if separator != ":" or machine_type not in {"owned-list-i64", "unit"}:
+            raise CertificateError("load-slot type is outside the heap projection")
+        destination = _virtual_typed_register(
+            parts[5], machine_type, "load-slot destination"
+        )
+        slot = _slot(parts[6], "load-slot source")
+        return (
+            "HeapScalarInstruction (ScalarPassThrough "
+            f"(ScalarLoadSlot {_coq_nat(destination)} {_coq_nat(slot)}))"
+        )
+    if opcode == "store-slot":
+        if len(parts) != 8 or parts[7] not in {"keep", "consume"}:
+            raise CertificateError("store-slot is malformed")
+        _, separator, machine_type = parts[6].partition(":")
+        if separator != ":" or machine_type not in {"owned-list-i64", "unit"}:
+            raise CertificateError("store-slot type is outside the heap projection")
+        slot = _slot(parts[5], "store-slot destination")
+        source = _virtual_typed_register(parts[6], machine_type, "store-slot source")
+        return (
+            "HeapScalarInstruction (ScalarPassThrough "
+            f"(ScalarStoreSlot {_coq_nat(slot)} {_coq_nat(source)}))"
+        )
+    if opcode == "range-allocate-init":
+        if len(parts) != 7:
+            raise CertificateError("range-allocate-init is malformed")
+        destination = _virtual_typed_register(
+            parts[5], "owned-list-i64", "range allocation destination"
+        )
+        length = _unsigned(parts[6], "range allocation length")
+        return (
+            "HeapPassThrough "
+            f"(HeapRangeAllocateInit {_coq_nat(destination)} {_coq_nat(length)})"
+        )
+    if opcode == "list-length-static":
+        if len(parts) != 8:
+            raise CertificateError("list-length-static is malformed")
+        destination = _virtual_i64_register(parts[5], "list length destination")
+        slot = _slot(parts[6], "list length source")
+        length = _unsigned(parts[7], "static list length")
+        return (
+            "HeapPassThrough "
+            f"(HeapListLengthStatic {_coq_nat(destination)} "
+            f"{_coq_nat(slot)} {_coq_nat(length)})"
+        )
+    if opcode == "list-load-checked":
+        if len(parts) != 8:
+            raise CertificateError("list-load-checked is malformed")
+        destination = _virtual_i64_register(parts[5], "list load destination")
+        list_register = _virtual_typed_register(
+            parts[6], "owned-list-i64", "list load owner"
+        )
+        index_register = _virtual_i64_register(parts[7], "list load index")
+        return (
+            "HeapPassThrough "
+            f"(HeapListLoadChecked {_coq_nat(destination)} "
+            f"{_coq_nat(list_register)} {_coq_nat(index_register)})"
+        )
+    if opcode == "list-store-checked":
+        if len(parts) != 9:
+            raise CertificateError("list-store-checked is malformed")
+        destination = _virtual_typed_register(
+            parts[5], "unit", "list store destination"
+        )
+        list_register = _virtual_typed_register(
+            parts[6], "owned-list-i64", "list store owner"
+        )
+        index_register = _virtual_i64_register(parts[7], "list store index")
+        value_register = _virtual_i64_register(parts[8], "list store value")
+        return (
+            "HeapPassThrough "
+            f"(HeapListStoreChecked {_coq_nat(destination)} "
+            f"{_coq_nat(list_register)} {_coq_nat(index_register)} "
+            f"{_coq_nat(value_register)})"
+        )
+    if opcode == "release-owned-list":
+        if len(parts) != 6:
+            raise CertificateError("release-owned-list is malformed")
+        slot = _slot(parts[5], "release source")
+        return f"HeapPassThrough (HeapReleaseOwnedList {_coq_nat(slot)})"
+    return None
+
+
 def _successors(parts: list[str]) -> list[int]:
     opcode = parts[3]
     if opcode == "goto" and len(parts) == 5:
@@ -287,12 +402,21 @@ def parse_verified_report(raw: bytes) -> list[Kernel]:
                 current_block.scalar_actions.append(
                     f"ResidencyAccess ({physical_action})"
                 )
+                current_block.heap_actions.append(
+                    f"HeapScalarInstruction (ResidencyAccess ({physical_action}))"
+                )
             else:
                 scalar_action = _scalar_action(parts)
                 if scalar_action is not None:
                     current_block.scalar_actions.append(
                         f"ScalarPassThrough ({scalar_action})"
                     )
+                heap_action = _heap_action(parts, scalar_action)
+                if heap_action is None:
+                    raise CertificateError(
+                        f"line {line_number}: instruction is outside the heap projection"
+                    )
+                current_block.heap_actions.append(heap_action)
         elif row == "terminator":
             if current_kernel is None or current_block is None or len(parts) < 4:
                 raise CertificateError(f"line {line_number}: terminator is outside a block")
@@ -387,13 +511,15 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         "  The translation is untrusted; every certificate and projected",
         "  operand trace is admitted again inside the Rocq kernel.",
         "  Register 0 is physical r12; virtual rN is injected as S N.",
-        "  Heap/list effects and branch selection are outside the scalar",
-        "  projection and remain explicit non-claims.",
+        "  Heap/list effects are retained by a partial successful-execution",
+        "  model. Ownership consumption, fixed-width/host failures, branch",
+        "  selection, and native semantics remain explicit non-claims.",
         "*)",
         "",
         "From Stdlib Require Import List ZArith.",
         "From NauxCore Require Import RegisterResidency DefiniteInitialization",
-        "  ProjectedCFGResidency ScalarMachineIRResidency.",
+        "  ProjectedCFGResidency ScalarMachineIRResidency",
+        "  HeapMachineIRResidency.",
         "Import ListNotations.",
         "",
     ]
@@ -404,6 +530,7 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
         scalar_block_rows = [
             _coq_list(block.scalar_actions) for block in kernel.blocks
         ]
+        heap_block_rows = [_coq_list(block.heap_actions) for block in kernel.blocks]
         successor_rows = [
             _coq_list([_coq_nat(value) for value in block.successors or []])
             for block in kernel.blocks
@@ -506,6 +633,51 @@ def emit_rocq(kernels: list[Kernel], report_root: str) -> str:
                 "  - reflexivity.",
                 "  - reflexivity.",
                 "  - exact Hpath.",
+                "Qed.",
+                "",
+                f"Definition {prefix}_heap_graph : heap_residency_graph :=",
+                "  {| heap_residency_entry := 0%nat;",
+                "     heap_residency_blocks := "
+                f"{_coq_list(heap_block_rows)};",
+                f"     heap_residency_successors := {_coq_list(successor_rows)} |}}.",
+                "",
+                f"Example {prefix}_heap_graph_projects_exactly :",
+                f"  heap_residency_graph_projection {prefix}_heap_graph =",
+                f"    {prefix}_graph.",
+                "Proof. reflexivity. Qed.",
+                "",
+                f"Theorem {prefix}_all_successful_paths_preserve_heap_projection :",
+                "  forall path initial replacement baseline_out,",
+                f"    initialization_path_from {prefix}_graph 0%nat path ->",
+                "    (exists program,",
+                f"      heap_residency_path_program {prefix}_heap_graph path =",
+                "        Some program /\\",
+                f"      heap_residency_baseline_execute {_coq_nat(kernel.home_slot)}",
+                "        program initial = Some baseline_out) ->",
+                "    exists program path_out candidate_out,",
+                f"      heap_residency_path_program {prefix}_heap_graph path =",
+                "        Some program /\\",
+                f"      initialization_path_execute {prefix}_graph path false =",
+                "        Some path_out /\\",
+                f"      heap_residency_baseline_execute {_coq_nat(kernel.home_slot)}",
+                "        program initial = Some baseline_out /\\",
+                "      heap_residency_candidate_execute 0%nat false program",
+                "        (heap_hide_reserved_register 0%nat replacement initial) =",
+                "        Some (path_out, candidate_out) /\\",
+                "      heap_full_state_equiv baseline_out",
+                f"        (heap_finalize {_coq_nat(kernel.home_slot)} 0%nat",
+                "          (register_cells (heap_scalar_state initial) 0%nat)",
+                "          path_out candidate_out).",
+                "Proof.",
+                "  intros path initial replacement baseline_out Hpath Hsuccess.",
+                "  eapply admitted_cfg_all_heap_residency_paths_abi_correct",
+                f"    with (proposed := {prefix}_certificate)",
+                f"      (accepted := {prefix}_certificate).",
+                "  - reflexivity.",
+                "  - reflexivity.",
+                "  - reflexivity.",
+                "  - exact Hpath.",
+                "  - exact Hsuccess.",
                 "Qed.",
                 "",
             ]

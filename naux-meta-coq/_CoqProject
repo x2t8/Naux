@@ -8,4 +8,5 @@ RegisterResidency.v
 DefiniteInitialization.v
 ProjectedCFGResidency.v
 ScalarMachineIRResidency.v
+HeapMachineIRResidency.v
 NauxCore.v

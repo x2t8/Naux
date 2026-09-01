@@ -198,7 +198,54 @@ class S4ResidencyCoqCertificateTests(unittest.TestCase):
                 ]
             )
 
-    def test_kernel_home_slot_and_scalar_graph_are_emitted(self) -> None:
+    def test_heap_actions_preserve_exact_operands_and_lengths(self) -> None:
+        cases = (
+            (
+                ["instruction", "01", "0", "0", "range-allocate-init",
+                 "r2:owned-list-i64", "16384"],
+                "HeapPassThrough (HeapRangeAllocateInit 3%nat 16384%nat)",
+            ),
+            (
+                ["instruction", "01", "0", "0", "list-length-static",
+                 "r11:i64", "s2", "16384"],
+                "HeapPassThrough (HeapListLengthStatic 12%nat 2%nat 16384%nat)",
+            ),
+            (
+                ["instruction", "01", "0", "0", "list-load-checked",
+                 "r20:i64", "r18:owned-list-i64", "r19:i64"],
+                "HeapPassThrough (HeapListLoadChecked 21%nat 19%nat 20%nat)",
+            ),
+            (
+                ["instruction", "01", "0", "0", "list-store-checked",
+                 "r24:unit", "r19:owned-list-i64", "r20:i64", "r23:i64"],
+                "HeapPassThrough (HeapListStoreChecked 25%nat 20%nat 21%nat 24%nat)",
+            ),
+            (
+                ["instruction", "01", "0", "0", "release-owned-list", "s2"],
+                "HeapPassThrough (HeapReleaseOwnedList 2%nat)",
+            ),
+        )
+        for row, expected in cases:
+            with self.subTest(opcode=row[4]):
+                self.assertEqual(bridge._heap_action(row, None), expected)
+
+    def test_owned_handle_moves_are_retained_by_heap_projection(self) -> None:
+        load = ["instruction", "01", "0", "0", "load-slot",
+                "r18:owned-list-i64", "s2"]
+        store = ["instruction", "01", "0", "0", "store-slot",
+                 "s2", "r2:owned-list-i64", "consume"]
+        self.assertIn("ScalarLoadSlot 19%nat 2%nat", bridge._heap_action(load, None))
+        self.assertIn("ScalarStoreSlot 2%nat 3%nat", bridge._heap_action(store, None))
+
+    def test_heap_projection_rejects_noncanonical_types(self) -> None:
+        with self.assertRaises(bridge.CertificateError):
+            bridge._heap_action(
+                ["instruction", "01", "0", "0", "range-allocate-init",
+                 "r2:i64", "8"],
+                None,
+            )
+
+    def test_kernel_home_slot_scalar_and_heap_graphs_are_emitted(self) -> None:
         report = "\n".join(
             (
                 "NAUX-S4-REGISTER-RESIDENCY-PLAN\t1",
@@ -212,8 +259,10 @@ class S4ResidencyCoqCertificateTests(unittest.TestCase):
         self.assertEqual(kernels[0].home_slot, 5)
         output = bridge.emit_rocq(kernels, "0" * 64)
         self.assertIn("Definition wp8c_kernel_01_scalar_graph", output)
+        self.assertIn("Definition wp8c_kernel_01_heap_graph", output)
         self.assertIn("ScalarPassThrough (ScalarConst 4%nat (-7%Z))", output)
         self.assertIn("scalar_residency_baseline_execute 5%nat", output)
+        self.assertIn("all_successful_paths_preserve_heap_projection", output)
 
 
 if __name__ == "__main__":
