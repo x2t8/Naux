@@ -5,14 +5,15 @@
   contrast to [ProjectedCFGResidency], this model retains ordinary integer
   register and stack instructions that pass through the transform unchanged.
 
-  Lists, heap effects, ownership, traps, fixed-width overflow, and branch
-  selection are deliberately outside this projection.  The report bridge may
+  Lists, heap effects, ownership, overflow-event accounting, and branch
+  selection are deliberately outside this projection. Fixed-width wrapping
+  values are retained. The report bridge may
   omit those instructions, but it must preserve every admitted scalar operand
   and constant exactly.
 *)
 
 From Stdlib Require Import List Bool Arith Lia ZArith.
-From NauxCore Require Import RegisterResidency DefiniteInitialization
+From NauxCore Require Import I64Arithmetic RegisterResidency DefiniteInitialization
   ProjectedCFGResidency.
 Import ListNotations.
 Open Scope Z_scope.
@@ -25,9 +26,17 @@ Inductive scalar_binary : Type :=
 Definition apply_scalar_binary
     (operation : scalar_binary) (left right : Z) : Z :=
   match operation with
-  | ScalarAdd => left + right
-  | ScalarSub => left - right
-  | ScalarMul => left * right
+  | ScalarAdd => i64_wrapping_add left right
+  | ScalarSub => i64_wrapping_sub left right
+  | ScalarMul => i64_wrapping_mul left right
+  end.
+
+Definition scalar_binary_overflowb
+    (operation : scalar_binary) (left right : Z) : bool :=
+  match operation with
+  | ScalarAdd => i64_overflowb (i64_add_raw left right)
+  | ScalarSub => i64_overflowb (i64_sub_raw left right)
+  | ScalarMul => i64_overflowb (i64_mul_raw left right)
   end.
 
 Inductive scalar_compare : Type :=
@@ -43,6 +52,8 @@ Definition bool_as_z (value : bool) : Z :=
 
 Definition apply_scalar_compare
     (operation : scalar_compare) (left right : Z) : Z :=
+  let left := i64_wrap left in
+  let right := i64_wrap right in
   bool_as_z
     (match operation with
      | ScalarEq => Z.eqb left right
@@ -69,7 +80,7 @@ Definition scalar_machine_step
   match instruction with
   | ScalarConst destination value =>
       with_registers st
-        (map_update (register_cells st) destination value)
+        (map_update (register_cells st) destination (i64_wrap value))
   | ScalarLoadSlot destination slot =>
       with_registers st
         (map_update (register_cells st) destination (stack_cells st slot))
@@ -78,7 +89,8 @@ Definition scalar_machine_step
         (map_update (stack_cells st) slot (register_cells st source))
   | ScalarAddSlotConst slot value =>
       with_stack st
-        (map_update (stack_cells st) slot (stack_cells st slot + value))
+        (map_update (stack_cells st) slot
+          (i64_wrapping_add (stack_cells st slot) value))
   | ScalarBinary destination operation left_register right_register =>
       with_registers st
         (map_update (register_cells st) destination

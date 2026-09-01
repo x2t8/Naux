@@ -9,8 +9,9 @@
   is part of the ownership/undefined-cell boundary below, not represented as
   an ordinary numeric write.
 
-  The model intentionally uses mathematical integers and naturals.  Host
-  allocation failure, u32 handle exhaustion, i64 overflow events, step
+  Scalar arithmetic uses the shared signed-i64 wrapping model, while heap
+  handles and counters use naturals. Host allocation failure, u32 handle
+  exhaustion, i64 overflow-event accounting, step
   counters, and undefined register/slot ownership after a consuming move are
   not claimed here.  Branch selection and native x86-64 semantics also remain
   outside this theorem.

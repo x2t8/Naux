@@ -10,6 +10,7 @@
 *)
 
 From Stdlib Require Import List ZArith Lia.
+From NauxCore Require Import I64Arithmetic.
 Import ListNotations.
 Open Scope Z_scope.
 
@@ -136,10 +137,19 @@ Inductive scalar_update : Type :=
 
 Definition apply_scalar (op : scalar_update) (value : Z) : Z :=
   match op with
-  | SetConst next => next
-  | AddConst delta => value + delta
-  | SubConst delta => value - delta
-  | MulConst factor => value * factor
+  | SetConst next => i64_wrap next
+  | AddConst delta => i64_wrapping_add value delta
+  | SubConst delta => i64_wrapping_sub value delta
+  | MulConst factor => i64_wrapping_mul value factor
+  end.
+
+Definition scalar_update_overflowb
+    (op : scalar_update) (value : Z) : bool :=
+  match op with
+  | SetConst _ => false
+  | AddConst delta => i64_overflowb (i64_add_raw value delta)
+  | SubConst delta => i64_overflowb (i64_sub_raw value delta)
+  | MulConst factor => i64_overflowb (i64_mul_raw value factor)
   end.
 
 Definition baseline_step

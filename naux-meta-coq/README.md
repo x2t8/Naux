@@ -10,6 +10,12 @@ claims. The tracked authority is deliberately small:
 Compiled Coq products (`*.vo`, `*.glob`, auxiliary caches, and related files)
 are generated locally and must not be committed.
 
+`I64Arithmetic.v` defines the signed 64-bit interval, normalization modulo
+`2^64`, wrapping add/subtract/multiply, and the executable signed-overflow
+predicate used by the S4 replay. Kernel-checked examples cover both the
+addition/subtraction/multiplication wrap boundaries and a non-overflowing
+addition; range lemmas show every wrapping result remains a signed i64.
+
 `RegisterResidency.v` proves a bounded compiler theorem: starting from one
 ordinary machine state, a selected stack slot may become resident through an
 entry load or an initializing first store, be updated by an admitted
@@ -45,9 +51,10 @@ stack-constant updates, add/subtract/multiply, and integer comparisons. A
 reflected frame checker excludes the selected home slot and physical register
 where required. The mixed-trace theorem covers every finite structural CFG
 path admitted by the same initialization certificate, including the
-pre-initialization phase and final ABI restoration. Heap/list effects,
-ownership, fixed-width overflow and traps, and branch selection remain outside
-this theorem rather than being modeled as no-ops.
+pre-initialization phase and final ABI restoration. Scalar results use the
+shared signed-i64 wrapping semantics. Heap/list effects, ownership,
+overflow-event accounting, and branch selection remain outside this layer
+rather than being modeled as no-ops.
 
 `HeapMachineIRResidency.v` extends that trace with the owned-list operations
 present in the sealed WP8C programs. It models range initialization, live
@@ -56,7 +63,7 @@ allocation/release counts, and failure through a partial semantics. For every
 successful baseline path, the transformed path succeeds with the same heap,
 liveness state, counters, scalar observations, and restored ABI state. The
 theorem does not model consuming moves or a released source slot as undefined
-cells, host allocation or handle exhaustion, fixed-width overflow accounting,
+cells, host allocation or handle exhaustion, overflow-event accounting,
 control-flow selection, or native x86-64 execution.
 
 `OwnershipMachineIRResidency.v` adds an exact defined-cell projection around
@@ -67,9 +74,12 @@ it is read. The reflected frame checker prevents an erased store from being
 smuggled through the plain-instruction constructor. For every successful
 admitted CFG path, final stack/register definedness agrees exactly alongside
 the heap, scalar, initialization, and ABI observations proved by the lower
-layers. Machine types are validated by the closed report bridge but are not a
-Rocq state component; fixed-width/host failures, branch selection, and native
-x86-64 execution remain outside this theorem.
+layers. It also increments an explicit event counter from the signed-i64
+overflow predicate and proves the transformed trace observes the same event at
+each arithmetic instruction. Machine types are validated by the closed report
+bridge but are not a Rocq state component; host failures, bounded counter
+exhaustion, branch selection, and native x86-64 execution remain outside this
+theorem.
 
 The formal-residency bridge rebuilds the reviewed WP8C emitter, authenticates
 its complete 276-line report through the sealed authority, translates the four
@@ -83,15 +93,16 @@ The generated certificate preserves every admitted virtual-register operand,
 stack slot, length, and i64 constant. Its register encoding
 keeps namespaces disjoint: Rocq register `0` denotes physical `r12`, while
 virtual `rN` maps to `S N`. The generated ownership graph additionally retains
-every `keep`/`consume` bit and proves exact defined/undefined state agreement
-for successful paths. The proof source is ephemeral and is not a new sealed
-project artifact; control decisions, fixed-width/host failures, and native
-semantics remain explicit non-claims.
+every `keep`/`consume` bit and proves exact defined/undefined and overflow-event
+count agreement for successful paths. The proof source is ephemeral and is not
+a new sealed project artifact; control decisions, host/counter failures, and
+native semantics remain explicit non-claims.
 
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
-  NauxCore.NauxCore NauxCore.Soundness NauxCore.RegisterResidency \
+  NauxCore.NauxCore NauxCore.Soundness NauxCore.I64Arithmetic \
+  NauxCore.RegisterResidency \
   NauxCore.DefiniteInitialization NauxCore.ProjectedCFGResidency \
   NauxCore.ScalarMachineIRResidency NauxCore.HeapMachineIRResidency \
   NauxCore.OwnershipMachineIRResidency

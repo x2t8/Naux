@@ -8,12 +8,13 @@
 
   The data projection is exactly [HeapMachineIRResidency].  Types are checked
   by the closed report bridge but are not represented in this Rocq state.
-  Fixed-width overflow, host allocation failure, branch selection, and native
-  x86-64 execution remain outside the theorem.
+  Signed-i64 wrapping and exact overflow-event counts are retained. Host
+  allocation failure, branch selection, and native x86-64 execution remain
+  outside the theorem.
 *)
 
 From Stdlib Require Import List Bool Arith Lia ZArith.
-From NauxCore Require Import RegisterResidency DefiniteInitialization
+From NauxCore Require Import I64Arithmetic RegisterResidency DefiniteInitialization
   ProjectedCFGResidency ScalarMachineIRResidency HeapMachineIRResidency.
 Import ListNotations.
 
@@ -40,7 +41,8 @@ Qed.
 Record ownership_machine_state : Type := {
   ownership_heap_state : heap_machine_state;
   ownership_slot_defined : defined_map;
-  ownership_register_defined : defined_map
+  ownership_register_defined : defined_map;
+  ownership_overflow_count : nat
 }.
 
 (** Store instructions carry the report's ownership bit explicitly.  Plain
@@ -280,6 +282,92 @@ Definition ownership_definedness_step
       else None
   end.
 
+Definition ownership_baseline_overflowb
+    (home_slot : nat) (instruction : ownership_machine_instruction)
+    (st : heap_machine_state) : bool :=
+  let scalar := heap_scalar_state st in
+  match instruction with
+  | OwnershipPlain
+      (HeapScalarInstruction (ResidencyAccess (UpdateHome operation))) =>
+      scalar_update_overflowb operation (stack_cells scalar home_slot)
+  | OwnershipPlain
+      (HeapScalarInstruction
+        (ScalarPassThrough (ScalarAddSlotConst slot value))) =>
+      scalar_update_overflowb (AddConst value) (stack_cells scalar slot)
+  | OwnershipPlain
+      (HeapScalarInstruction
+        (ScalarPassThrough
+          (ScalarBinary _ operation left_register right_register))) =>
+      scalar_binary_overflowb operation
+        (register_cells scalar left_register)
+        (register_cells scalar right_register)
+  | _ => false
+  end.
+
+Definition ownership_candidate_overflowb
+    (resident_register : nat) (instruction : ownership_machine_instruction)
+    (st : heap_machine_state) : bool :=
+  let scalar := heap_scalar_state st in
+  match instruction with
+  | OwnershipPlain
+      (HeapScalarInstruction (ResidencyAccess (UpdateHome operation))) =>
+      scalar_update_overflowb operation
+        (register_cells scalar resident_register)
+  | OwnershipPlain
+      (HeapScalarInstruction
+        (ScalarPassThrough (ScalarAddSlotConst slot value))) =>
+      scalar_update_overflowb (AddConst value) (stack_cells scalar slot)
+  | OwnershipPlain
+      (HeapScalarInstruction
+        (ScalarPassThrough
+          (ScalarBinary _ operation left_register right_register))) =>
+      scalar_binary_overflowb operation
+        (register_cells scalar left_register)
+        (register_cells scalar right_register)
+  | _ => false
+  end.
+
+Lemma ownership_overflow_observation_agrees :
+  forall home_slot resident_register initialized next instruction baseline
+      candidate,
+    ownership_machine_instruction_admissible
+      home_slot resident_register instruction ->
+    initialization_block initialized
+      (ownership_residency_projection instruction) = Some next ->
+    heap_projected_phase_equiv home_slot resident_register initialized
+      baseline candidate ->
+    ownership_candidate_overflowb resident_register instruction candidate =
+      ownership_baseline_overflowb home_slot instruction baseline.
+Proof.
+  intros home_slot resident_register initialized next instruction baseline
+    candidate Hadmissible Hinitialization Hphase.
+  destruct instruction as [plain | slot source keep | source keep];
+    simpl; try reflexivity.
+  destruct plain as [scalar | heap]; simpl; try reflexivity.
+  destruct scalar as [resident | ordinary]; simpl.
+  - destruct resident as [operation | destination | source];
+      simpl; try reflexivity.
+    destruct initialized; simpl in Hinitialization; try discriminate.
+    unfold heap_projected_phase_equiv in Hphase.
+    simpl in Hphase. exact (f_equal (scalar_update_overflowb operation)
+      (proj1 (proj1 Hphase))).
+  - destruct ordinary as
+      [destination value | destination slot | slot source |
+       slot value | destination operation left right |
+       destination operation left right]; simpl; try reflexivity.
+    + destruct Hadmissible as [_ Hadmissible]. simpl in Hadmissible.
+      rewrite (heap_phase_stack_agree home_slot resident_register initialized
+        baseline candidate slot Hadmissible Hphase).
+      reflexivity.
+    + destruct Hadmissible as [_ Hadmissible]. simpl in Hadmissible.
+      destruct Hadmissible as [_ [Hleft Hright]].
+      rewrite (heap_phase_register_agree home_slot resident_register
+        initialized baseline candidate left Hleft Hphase).
+      rewrite (heap_phase_register_agree home_slot resident_register
+        initialized baseline candidate right Hright Hphase).
+      reflexivity.
+Qed.
+
 Definition ownership_projected_phase_equiv
     (home_slot resident_register : nat) (initialized : bool)
     (baseline candidate : ownership_machine_state) : Prop :=
@@ -287,7 +375,8 @@ Definition ownership_projected_phase_equiv
     (ownership_heap_state baseline) (ownership_heap_state candidate) /\
   ownership_slot_defined candidate = ownership_slot_defined baseline /\
   ownership_register_defined candidate =
-    ownership_register_defined baseline.
+    ownership_register_defined baseline /\
+  ownership_overflow_count candidate = ownership_overflow_count baseline.
 
 Definition ownership_full_state_equiv
     (baseline candidate : ownership_machine_state) : Prop :=
@@ -295,7 +384,8 @@ Definition ownership_full_state_equiv
     (ownership_heap_state baseline) (ownership_heap_state candidate) /\
   ownership_slot_defined candidate = ownership_slot_defined baseline /\
   ownership_register_defined candidate =
-    ownership_register_defined baseline.
+    ownership_register_defined baseline /\
+  ownership_overflow_count candidate = ownership_overflow_count baseline.
 
 Definition ownership_hide_reserved_register
     (resident_register : nat) (replacement : Z)
@@ -304,7 +394,8 @@ Definition ownership_hide_reserved_register
        heap_hide_reserved_register resident_register replacement
          (ownership_heap_state st);
      ownership_slot_defined := ownership_slot_defined st;
-     ownership_register_defined := ownership_register_defined st |}.
+     ownership_register_defined := ownership_register_defined st;
+     ownership_overflow_count := ownership_overflow_count st |}.
 
 Lemma ownership_hide_reserved_register_preserves_phase :
   forall home_slot resident_register replacement st,
@@ -315,7 +406,7 @@ Proof.
     ownership_hide_reserved_register. simpl.
   split.
   - apply heap_hide_reserved_register_preserves_phase.
-  - now split.
+  - repeat split; reflexivity.
 Qed.
 
 Definition ownership_finalize
@@ -326,7 +417,8 @@ Definition ownership_finalize
        heap_finalize home_slot resident_register saved_value initialized
          (ownership_heap_state candidate);
      ownership_slot_defined := ownership_slot_defined candidate;
-     ownership_register_defined := ownership_register_defined candidate |}.
+     ownership_register_defined := ownership_register_defined candidate;
+     ownership_overflow_count := ownership_overflow_count candidate |}.
 
 Theorem ownership_finalize_closes_phase :
   forall home_slot resident_register initialized baseline candidate
@@ -341,11 +433,11 @@ Theorem ownership_finalize_closes_phase :
         candidate).
 Proof.
   intros home_slot resident_register initialized baseline candidate
-    saved_value [Hphase [Hslots Hregisters]] Hsaved.
+    saved_value [Hphase [Hslots [Hregisters Hoverflow]]] Hsaved.
   unfold ownership_full_state_equiv, ownership_finalize. simpl.
   split.
   - now apply heap_finalize_closes_phase.
-  - now split.
+  - split; [exact Hslots|]. now split.
 Qed.
 
 Definition ownership_baseline_step
@@ -360,7 +452,12 @@ Definition ownership_baseline_step
       Some
         {| ownership_heap_state := heap;
            ownership_slot_defined := slots;
-           ownership_register_defined := registers |}
+           ownership_register_defined := registers;
+           ownership_overflow_count :=
+             (ownership_overflow_count st +
+              overflow_increment
+                (ownership_baseline_overflowb home_slot instruction
+                  (ownership_heap_state st)))%nat |}
   | _, _ => None
   end.
 
@@ -379,7 +476,12 @@ Definition ownership_candidate_step
       Some (next,
         {| ownership_heap_state := heap;
            ownership_slot_defined := slots;
-           ownership_register_defined := registers |})
+           ownership_register_defined := registers;
+           ownership_overflow_count :=
+             (ownership_overflow_count candidate +
+              overflow_increment
+                (ownership_candidate_overflowb resident_register instruction
+                  (ownership_heap_state candidate)))%nat |})
   | _, _ => None
   end.
 
@@ -416,7 +518,11 @@ Theorem ownership_instruction_preserves_phase :
 Proof.
   intros home_slot resident_register initialized next instruction baseline
     candidate baseline_out Hadmissible Hinitialization
-    [Hheap [Hslots Hregisters]] Hbaseline.
+    [Hheap [Hslots [Hregisters Hoverflow_count]]] Hbaseline.
+  pose proof (ownership_overflow_observation_agrees home_slot
+    resident_register initialized next instruction
+    (ownership_heap_state baseline) (ownership_heap_state candidate)
+    Hadmissible Hinitialization Hheap) as Hoverflow_event.
   unfold ownership_baseline_step in Hbaseline.
   destruct (ownership_definedness_step home_slot instruction
     (ownership_slot_defined baseline)
@@ -443,12 +549,20 @@ Proof.
   exists
     {| ownership_heap_state := candidate_heap;
        ownership_slot_defined := slots_out;
-       ownership_register_defined := registers_out |}.
+       ownership_register_defined := registers_out;
+       ownership_overflow_count :=
+         (ownership_overflow_count candidate +
+          overflow_increment
+            (ownership_candidate_overflowb resident_register instruction
+              (ownership_heap_state candidate)))%nat |}.
   split.
   - unfold ownership_candidate_step.
     now rewrite Hcandidate_defined, Hcandidate_heap.
   - unfold ownership_projected_phase_equiv. simpl.
-    split; [exact Hheap_out|]. now split.
+    split; [exact Hheap_out|].
+    split; [reflexivity|].
+    split; [reflexivity|].
+    now rewrite Hoverflow_count, Hoverflow_event.
 Qed.
 
 Fixpoint ownership_baseline_execute
@@ -678,6 +792,45 @@ Proof.
   exists (defined_update slots slot false), registers.
   split; [reflexivity|apply defined_update_eq].
 Qed.
+
+Definition overflow_example_heap_state : heap_machine_state :=
+  {| heap_scalar_state :=
+       {| stack_cells := fun _ => i64_max;
+          register_cells := fun _ => i64_max |};
+     heap_objects := fun _ => None;
+     heap_next_handle := 0%nat;
+     heap_allocation_count := 0%nat;
+     heap_release_count := 0%nat |}.
+
+Definition overflow_example_ownership_state : ownership_machine_state :=
+  {| ownership_heap_state := overflow_example_heap_state;
+     ownership_slot_defined := fun _ => true;
+     ownership_register_defined := fun _ => true;
+     ownership_overflow_count := 0%nat |}.
+
+Example ownership_baseline_records_wrapping_overflow :
+  exists final,
+    ownership_baseline_step 5%nat
+      (OwnershipPlain
+        (HeapScalarInstruction
+          (ResidencyAccess (UpdateHome (AddConst 1)))))
+      overflow_example_ownership_state = Some final /\
+    stack_cells (heap_scalar_state (ownership_heap_state final)) 5%nat =
+      i64_min /\
+    ownership_overflow_count final = 1%nat.
+Proof. vm_compute. eexists. repeat split; reflexivity. Qed.
+
+Example ownership_candidate_records_wrapping_overflow :
+  exists final,
+    ownership_candidate_step 5%nat 0%nat true
+      (OwnershipPlain
+        (HeapScalarInstruction
+          (ResidencyAccess (UpdateHome (AddConst 1)))))
+      overflow_example_ownership_state = Some (true, final) /\
+    register_cells (heap_scalar_state (ownership_heap_state final)) 0%nat =
+      i64_min /\
+    ownership_overflow_count final = 1%nat.
+Proof. vm_compute. eexists. repeat split; reflexivity. Qed.
 
 Record ownership_residency_graph : Type := {
   ownership_residency_entry : nat;

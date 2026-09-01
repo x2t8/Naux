@@ -4,6 +4,7 @@ Typing.v
 Smallstep.v
 Soundness.v
 DataAlgo.v
+I64Arithmetic.v
 RegisterResidency.v
 DefiniteInitialization.v
 ProjectedCFGResidency.v
