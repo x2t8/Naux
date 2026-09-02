@@ -146,6 +146,15 @@ The CI bridge emits one WP8F module per kernel. Each module is compiled and
 replayed in a fresh Rocq process so proof memory remains bounded without
 weakening or omitting any kernel certificate.
 
+`ResidencyProcessTarget.v` starts the next WP8G boundary at the exact byte
+rewrite that makes the candidate executable under the fresh-process parity
+protocol. It decodes the displaced WP8E restore/return range, checks the
+same-width jump and its destination, decodes all fields in the appended
+80-byte completion verifier, and checks that its three failure branches target
+the admitted error exit. Generic theorems retain the candidate extent, recover
+the appended verifier exactly, and preserve byte bounds. Native instruction
+semantics and Linux execution remain outside this structural layer.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -156,7 +165,7 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.OwnershipMachineIRResidency \
   NauxCore.ControlFlowMachineIRResidency \
   NauxCore.X86ResidencyEncoding \
-  NauxCore.ELF64ResidencyEnvelope
+  NauxCore.ELF64ResidencyEnvelope NauxCore.ResidencyProcessTarget
 make -C naux-meta-coq clean
 ```
 
