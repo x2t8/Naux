@@ -185,18 +185,24 @@ Lemma residency_process_forall_firstn :
   forall (property : nat -> Prop) count bytes,
     Forall property bytes -> Forall property (firstn count bytes).
 Proof.
-  intros property count. induction count as [|count IH]; intros bytes Hbytes;
-    destruct bytes as [|byte rest]; simpl; try constructor.
-  inversion Hbytes; subst. constructor; auto.
+  intros property count bytes Hbytes. revert count.
+  induction Hbytes as [|byte rest Hbyte Hrest IH]; intros count.
+  - destruct count; constructor.
+  - destruct count as [|count]; simpl.
+    + constructor.
+    + constructor; [exact Hbyte | apply IH].
 Qed.
 
 Lemma residency_process_forall_skipn :
   forall (property : nat -> Prop) count bytes,
     Forall property bytes -> Forall property (skipn count bytes).
 Proof.
-  intros property count. induction count as [|count IH]; intros bytes Hbytes;
-    destruct bytes as [|byte rest]; simpl; auto.
-  inversion Hbytes; subst. now apply IH.
+  intros property count bytes Hbytes. revert count.
+  induction Hbytes as [|byte rest Hbyte Hrest IH]; intros count.
+  - destruct count; constructor.
+  - destruct count as [|count]; simpl.
+    + constructor; assumption.
+    + apply IH.
 Qed.
 
 Lemma residency_process_patch_candidate_extent :
