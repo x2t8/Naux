@@ -146,7 +146,7 @@ The CI bridge emits one WP8F module per kernel. Each module is compiled and
 replayed in a fresh Rocq process so proof memory remains bounded without
 weakening or omitting any kernel certificate.
 
-`ResidencyProcessTarget.v` starts the next WP8G boundary at the exact byte
+`ResidencyProcessTarget.v` establishes the WP8G boundary at the exact byte
 rewrite that makes the candidate executable under the fresh-process parity
 protocol. It decodes the displaced WP8E restore/return range, checks the
 same-width jump and its destination, decodes all fields in the appended
@@ -154,6 +154,13 @@ same-width jump and its destination, decodes all fields in the appended
 the admitted error exit. Generic theorems retain the candidate extent, recover
 the appended verifier exactly, and preserve byte bounds. Native instruction
 semantics and Linux execution remain outside this structural layer.
+
+`scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
+the sealed WP8G candidate report. It authenticates the WP8C, WP8E, and WP8G
+parents, requires each process candidate to equal its admitted WP8E target,
+and emits only the 16-byte patch, 80-byte verifier, and closed receipt. CI
+generates one module per kernel, compiles each with Rocq 9.1, and asks the
+kernel to replay every theorem with an empty axiom set.
 
 ```bash
 make -C naux-meta-coq
