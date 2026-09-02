@@ -27,7 +27,7 @@ Definition x86_byte_validb (byte : nat) : bool := Nat.ltb byte 256.
 Lemma x86_bytes_check_sound :
   forall bytes,
     forallb x86_byte_validb bytes = true ->
-    Forall (fun byte => byte < 256) bytes.
+    Forall (fun byte => byte < 256%nat) bytes.
 Proof.
   intros bytes Hbytes.
   rewrite forallb_forall in Hbytes.
