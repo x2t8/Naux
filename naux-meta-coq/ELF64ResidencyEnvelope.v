@@ -16,64 +16,34 @@ Import ListNotations.
 Definition elf64_residency_byte_validb (byte : nat) : bool :=
   Nat.ltb byte 256.
 
-Definition elf64_residency_le16 (value : nat) : list nat :=
-  [value mod 256;
-   (value / 256) mod 256].
-
-Definition elf64_residency_le32 (value : nat) : list nat :=
-  [value mod 256;
-   (value / 256) mod 256;
-   (value / 65536) mod 256;
-   (value / 16777216) mod 256].
-
-Definition elf64_residency_le64 (value : nat) : list nat :=
+(** WP8F deliberately admits only images smaller than 64 KiB.  Encoding the
+    two live extent bytes directly avoids normalizing divisions by enormous
+    powers of two while retaining the exact ELF64 little-endian field. *)
+Definition elf64_residency_small_le64 (value : nat) : list nat :=
   [value mod 256;
    (value / 256) mod 256;
-   (value / 65536) mod 256;
-   (value / 16777216) mod 256;
-   (value / 4294967296) mod 256;
-   (value / 1099511627776) mod 256;
-   (value / 281474976710656) mod 256;
-   (value / 72057594037927936) mod 256].
-
-Definition elf64_residency_ident : list nat :=
-  [127; 69; 76; 70; 2; 1; 1] ++ repeat 0 9.
+   0; 0; 0; 0; 0; 0].
 
 Definition elf64_residency_header : list nat :=
-  elf64_residency_ident ++
-  elf64_residency_le16 2 ++
-  elf64_residency_le16 62 ++
-  elf64_residency_le32 1 ++
-  elf64_residency_le64 4194560 ++
-  elf64_residency_le64 64 ++
-  elf64_residency_le64 0 ++
-  elf64_residency_le32 0 ++
-  elf64_residency_le16 64 ++
-  elf64_residency_le16 56 ++
-  elf64_residency_le16 2 ++
-  elf64_residency_le16 0 ++
-  elf64_residency_le16 0 ++
-  elf64_residency_le16 0.
+  [127; 69; 76; 70; 2; 1; 1; 0; 0; 0; 0; 0; 0; 0; 0; 0;
+   2; 0; 62; 0; 1; 0; 0; 0; 0; 1; 64; 0; 0; 0; 0; 0;
+   64; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;
+   0; 0; 0; 0; 64; 0; 56; 0; 2; 0; 0; 0; 0; 0; 0; 0].
 
 Definition elf64_residency_load_header (image_bytes : nat) : list nat :=
-  elf64_residency_le32 1 ++
-  elf64_residency_le32 5 ++
-  elf64_residency_le64 0 ++
-  elf64_residency_le64 4194304 ++
-  elf64_residency_le64 4194304 ++
-  elf64_residency_le64 image_bytes ++
-  elf64_residency_le64 image_bytes ++
-  elf64_residency_le64 4096.
+  [1; 0; 0; 0; 5; 0; 0; 0;
+   0; 0; 0; 0; 0; 0; 0; 0;
+   0; 0; 64; 0; 0; 0; 0; 0;
+   0; 0; 64; 0; 0; 0; 0; 0] ++
+  elf64_residency_small_le64 image_bytes ++
+  elf64_residency_small_le64 image_bytes ++
+  [0; 16; 0; 0; 0; 0; 0; 0].
 
 Definition elf64_residency_stack_header : list nat :=
-  elf64_residency_le32 1685382481 ++
-  elf64_residency_le32 6 ++
-  elf64_residency_le64 0 ++
-  elf64_residency_le64 0 ++
-  elf64_residency_le64 0 ++
-  elf64_residency_le64 0 ++
-  elf64_residency_le64 0 ++
-  elf64_residency_le64 16.
+  [81; 229; 116; 100; 6; 0; 0; 0;
+   0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;
+   0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0;
+   0; 0; 0; 0; 0; 0; 0; 0; 16; 0; 0; 0; 0; 0; 0; 0].
 
 Definition elf64_residency_startup : list nat :=
   [232; 11; 0; 0; 0;
@@ -102,11 +72,13 @@ Fixpoint elf64_residency_list_eqb
 Definition elf64_residency_image_check
     (target image : list nat) : bool :=
   forallb elf64_residency_byte_validb image &&
-  elf64_residency_list_eqb image (elf64_residency_envelope target).
+  (Nat.ltb (272 + length target) 65536 &&
+   elf64_residency_list_eqb image (elf64_residency_envelope target)).
 
 Definition elf64_residency_image_well_formed
     (target image : list nat) : Prop :=
   Forall (fun byte => byte < 256) image /\
+  272 + length target < 65536 /\
   image = elf64_residency_envelope target.
 
 Lemma elf64_residency_list_eqb_sound :
@@ -142,9 +114,13 @@ Proof.
   intros target image Hcheck.
   unfold elf64_residency_image_check in Hcheck.
   apply Bool.andb_true_iff in Hcheck.
-  destruct Hcheck as [Hbytes Henvelope]. split.
+  destruct Hcheck as [Hbytes Hstructure].
+  apply Bool.andb_true_iff in Hstructure.
+  destruct Hstructure as [Hextent Henvelope]. split.
   - now apply elf64_residency_bytes_check_sound.
-  - now apply elf64_residency_list_eqb_sound.
+  - split.
+    + now apply Nat.ltb_lt.
+    + now apply elf64_residency_list_eqb_sound.
 Qed.
 
 Lemma elf64_residency_prefix_length :
@@ -153,10 +129,9 @@ Lemma elf64_residency_prefix_length :
 Proof.
   intros image_bytes.
   unfold elf64_residency_prefix, elf64_residency_header,
-    elf64_residency_ident, elf64_residency_load_header,
+    elf64_residency_load_header,
     elf64_residency_stack_header, elf64_residency_startup,
-    elf64_residency_le16, elf64_residency_le32,
-    elf64_residency_le64.
+    elf64_residency_small_le64.
   repeat rewrite length_app.
   repeat rewrite repeat_length.
   simpl. lia.
@@ -194,12 +169,15 @@ Theorem elf64_residency_image_from_prefix :
   forall target prefix,
     Forall (fun byte => byte < 256) prefix ->
     Forall (fun byte => byte < 256) target ->
+    272 + length target < 65536 ->
     prefix = elf64_residency_prefix (272 + length target) ->
     elf64_residency_image_well_formed target (prefix ++ target).
 Proof.
-  intros target prefix Hprefix_bytes Htarget_bytes Hprefix. split.
+  intros target prefix Hprefix_bytes Htarget_bytes Hextent Hprefix. split.
   - apply Forall_app. now split.
-  - unfold elf64_residency_envelope. now rewrite Hprefix.
+  - split.
+    + exact Hextent.
+    + unfold elf64_residency_envelope. now rewrite Hprefix.
 Qed.
 
 Theorem elf64_residency_well_formed_contains_target :
@@ -207,6 +185,6 @@ Theorem elf64_residency_well_formed_contains_target :
     elf64_residency_image_well_formed target image ->
     skipn 272 image = target.
 Proof.
-  intros target image [_ Henvelope]. subst image.
+  intros target image [_ [_ Henvelope]]. subst image.
   apply elf64_residency_envelope_contains_target.
 Qed.

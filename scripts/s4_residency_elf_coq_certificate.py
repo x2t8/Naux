@@ -164,6 +164,7 @@ def parse_joined_elf_report(
             or image_bytes != len(image)
             or target_offset != 272
             or image_bytes != target_offset + target_bytes
+            or image_bytes >= 65_536
             or entry != 4_194_560
             or load_flags != 5
             or stack_flags != 6
@@ -262,6 +263,13 @@ def emit_rocq(
                 "  reflexivity.",
                 "Qed.",
                 "",
+                f"Example {prefix}_image_extent_is_small :",
+                f"  272 + length {wp8e_target} < 65536.",
+                "Proof.",
+                f"  rewrite wp8e_kernel_{kernel.ordinal}_target_extent.",
+                "  vm_compute. reflexivity.",
+                "Qed.",
+                "",
                 f"Definition {prefix}_target_offset : nat :=",
                 f"  {_coq_nat(kernel.target_offset)}.",
                 f"Definition {prefix}_entry : nat := {_coq_nat(kernel.entry)}.",
@@ -288,6 +296,7 @@ def emit_rocq(
                 "  apply elf64_residency_image_from_prefix.",
                 f"  - exact {prefix}_reported_prefix_bytes_are_bounded.",
                 f"  - exact wp8e_kernel_{kernel.ordinal}_target_bytes_are_bounded.",
+                f"  - exact {prefix}_image_extent_is_small.",
                 f"  - rewrite wp8e_kernel_{kernel.ordinal}_target_extent.",
                 f"    exact {prefix}_reported_prefix_is_canonical.",
                 "Qed.",
@@ -295,7 +304,7 @@ def emit_rocq(
                 f"Corollary {prefix}_image_equals_canonical_envelope :",
                 f"  {prefix}_image = elf64_residency_envelope {wp8e_target}.",
                 "Proof.",
-                f"  exact (proj2 {prefix}_image_is_canonical_envelope).",
+                f"  exact (proj2 (proj2 {prefix}_image_is_canonical_envelope)).",
                 "Qed.",
                 "",
                 f"Corollary {prefix}_contains_wp8e_target :",

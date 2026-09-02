@@ -112,6 +112,17 @@ class S4ResidencyElfCoqCertificateTests(unittest.TestCase):
                 self.report(image, target_bytes=3), [native], "root"
             )
 
+    def test_image_at_64k_boundary_fails_closed(self) -> None:
+        target = bytes(65_536 - 272)
+        native = self.native_kernel(target)
+        image = bridge.canonical_elf64_envelope(target)
+        with self.assertRaisesRegex(
+            bridge.ElfCertificateError, "structural receipt drifted"
+        ):
+            bridge.parse_joined_elf_report(
+                self.report(image, target_bytes=len(target)), [native], "root"
+            )
+
     def test_emitter_binds_image_to_generated_wp8e_target(self) -> None:
         image = bridge.canonical_elf64_envelope(b"\x90\xc3")
         kernel = bridge.ElfKernel(
