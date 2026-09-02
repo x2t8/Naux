@@ -142,6 +142,7 @@ class S4ResidencyElfCoqCertificateTests(unittest.TestCase):
         self.assertIn("reported_prefix_is_canonical", output)
         self.assertIn("reported_prefix_bytes_are_bounded", output)
         self.assertIn("target_bytes_are_bounded", output)
+        self.assertIn("image_extent_is_small", output)
         self.assertNotIn("reported_target : list nat", output)
         self.assertIn("image_is_canonical_envelope", output)
         self.assertIn("elf64_residency_image_from_prefix", output)
