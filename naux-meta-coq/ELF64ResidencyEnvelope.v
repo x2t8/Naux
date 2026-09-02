@@ -124,6 +124,7 @@ Proof.
   - split.
     + exact Hextent.
     + now apply elf64_residency_list_eqb_sound.
+Qed.
 
 Theorem elf64_residency_well_formed_extent_is_small :
   forall target image,
@@ -133,7 +134,6 @@ Proof.
   intros target image [_ [Hextent _]].
   unfold elf64_residency_extent_fitsb in Hextent.
   now apply Nat.ltb_lt.
-Qed.
 Qed.
 
 Lemma elf64_residency_prefix_length :
