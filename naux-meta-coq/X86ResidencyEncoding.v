@@ -24,6 +24,17 @@ Inductive x86_residency_template : Type :=
 
 Definition x86_byte_validb (byte : nat) : bool := Nat.ltb byte 256.
 
+Lemma x86_bytes_check_sound :
+  forall bytes,
+    forallb x86_byte_validb bytes = true ->
+    Forall (fun byte => byte < 256) bytes.
+Proof.
+  intros bytes Hbytes.
+  rewrite forallb_forall in Hbytes.
+  apply Forall_forall. intros byte Hin.
+  apply Nat.ltb_lt. now apply Hbytes.
+Qed.
+
 Definition x86_decode_disp32
     (byte0 byte1 byte2 byte3 : nat) : option Z :=
   if forallb x86_byte_validb [byte0; byte1; byte2; byte3] then

@@ -130,6 +130,8 @@ class S4ResidencyElfCoqCertificateTests(unittest.TestCase):
         self.assertIn("wp8e_kernel_01_target", output)
         self.assertIn("reported_target_matches_wp8e", output)
         self.assertIn("reported_prefix_is_canonical", output)
+        self.assertIn("reported_bytes_are_bounded", output)
+        self.assertIn("target_bytes_are_bounded", output)
         self.assertIn("image_is_canonical_envelope", output)
         self.assertIn("contains_wp8e_target", output)
 

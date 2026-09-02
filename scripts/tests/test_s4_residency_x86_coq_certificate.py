@@ -91,6 +91,7 @@ class S4ResidencyX86CoqCertificateTests(unittest.TestCase):
         self.assertIn("Definition wp8e_kernel_01_target : list nat", output)
         self.assertIn("X86SemanticStorePhysical 9%nat false", output)
         self.assertIn("wp8c_kernel_01_control_graph", output)
+        self.assertIn("target_bytes_are_bounded", output)
         self.assertIn("function_bytes_cover_residency_graph", output)
 
 
