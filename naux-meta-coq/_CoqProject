@@ -13,4 +13,5 @@ HeapMachineIRResidency.v
 OwnershipMachineIRResidency.v
 ControlFlowMachineIRResidency.v
 X86ResidencyEncoding.v
+ELF64ResidencyEnvelope.v
 NauxCore.v

@@ -128,6 +128,16 @@ direction, save caller `r12` to the WP8D shadow displacement, and restore it at
 every return. Passthrough instructions, relative fixups, general x86 semantics,
 ELF loading, and native execution remain outside this theorem.
 
+`ELF64ResidencyEnvelope.v` closes the quarantined WP8F packaging boundary at
+the byte level. It independently constructs the fixed little-endian ELF64
+header, `R-X` load segment, non-executable `R-W` GNU stack declaration,
+padding, and startup call, with the image-size fields derived from the target
+extent. Each generated theorem equates the complete WP8F image with that
+canonical envelope around the corresponding proved WP8E target, then derives
+that dropping the first 272 bytes recovers the target exactly. Linux loader,
+system-call, x86 execution, timing, and native-correctness claims remain out of
+scope.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -137,7 +147,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ScalarMachineIRResidency NauxCore.HeapMachineIRResidency \
   NauxCore.OwnershipMachineIRResidency \
   NauxCore.ControlFlowMachineIRResidency \
-  NauxCore.X86ResidencyEncoding
+  NauxCore.X86ResidencyEncoding \
+  NauxCore.ELF64ResidencyEnvelope
 make -C naux-meta-coq clean
 ```
 

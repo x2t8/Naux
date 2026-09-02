@@ -8,18 +8,24 @@ on:
       - "naux-lang/examples/support/s4_register_residency_plan.rs"
       - "naux-lang/examples/naux_s4_register_residency_encoding.rs"
       - "naux-lang/examples/support/s4_register_residency_encoding.rs"
+      - "naux-lang/examples/naux_s4_register_residency_elf.rs"
+      - "naux-lang/examples/support/s4_register_residency_elf.rs"
       - "distribution/s4-performance/WP8B-*.tsv"
       - "distribution/s4-performance/WP8C-*.tsv"
       - "distribution/s4-performance/WP8D-*.tsv"
       - "distribution/s4-performance/WP8E-*.tsv"
+      - "distribution/s4-performance/WP8F-*.tsv"
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_register_residency_encoding_contract.py"
       - "scripts/s4_register_residency_candidate_authority.py"
+      - "scripts/s4_register_residency_elf_authority.py"
       - "scripts/s4_residency_coq_certificate.py"
       - "scripts/s4_residency_x86_coq_certificate.py"
+      - "scripts/s4_residency_elf_coq_certificate.py"
       - "scripts/tests/test_s4_residency_coq_certificate.py"
       - "scripts/tests/test_s4_residency_x86_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_elf_coq_certificate.py"
       - ".github/workflows/formal-residency-bridge.yml"
   pull_request:
     paths:
@@ -28,18 +34,24 @@ on:
       - "naux-lang/examples/support/s4_register_residency_plan.rs"
       - "naux-lang/examples/naux_s4_register_residency_encoding.rs"
       - "naux-lang/examples/support/s4_register_residency_encoding.rs"
+      - "naux-lang/examples/naux_s4_register_residency_elf.rs"
+      - "naux-lang/examples/support/s4_register_residency_elf.rs"
       - "distribution/s4-performance/WP8B-*.tsv"
       - "distribution/s4-performance/WP8C-*.tsv"
       - "distribution/s4-performance/WP8D-*.tsv"
       - "distribution/s4-performance/WP8E-*.tsv"
+      - "distribution/s4-performance/WP8F-*.tsv"
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_register_residency_encoding_contract.py"
       - "scripts/s4_register_residency_candidate_authority.py"
+      - "scripts/s4_register_residency_elf_authority.py"
       - "scripts/s4_residency_coq_certificate.py"
       - "scripts/s4_residency_x86_coq_certificate.py"
+      - "scripts/s4_residency_elf_coq_certificate.py"
       - "scripts/tests/test_s4_residency_coq_certificate.py"
       - "scripts/tests/test_s4_residency_x86_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_elf_coq_certificate.py"
       - ".github/workflows/formal-residency-bridge.yml"
   workflow_dispatch:
 
@@ -56,24 +68,30 @@ jobs:
         run: |
           rustup toolchain install 1.96.0 --profile minimal
           rustup default 1.96.0
-      - name: Emit and authenticate the WP8C and WP8E reports
+      - name: Emit and authenticate the WP8C, WP8E, and WP8F reports
         run: |
           cargo build --locked -p naux \
             --example naux_s4_register_residency_plan \
-            --example naux_s4_register_residency_encoding
+            --example naux_s4_register_residency_encoding \
+            --example naux_s4_register_residency_elf
           target/debug/examples/naux_s4_register_residency_plan > "$RUNNER_TEMP/wp8c-plan.tsv"
           target/debug/examples/naux_s4_register_residency_encoding > "$RUNNER_TEMP/wp8e-encoding.tsv"
+          target/debug/examples/naux_s4_register_residency_elf > "$RUNNER_TEMP/wp8f-elf.tsv"
           python3 scripts/s4_register_residency_plan_authority.py \
             --report "$RUNNER_TEMP/wp8c-plan.tsv"
           python3 scripts/s4_register_residency_candidate_authority.py \
             --report "$RUNNER_TEMP/wp8e-encoding.tsv"
-      - name: Generate the untrusted Rocq certificate
+          python3 scripts/s4_register_residency_elf_authority.py \
+            --report "$RUNNER_TEMP/wp8f-elf.tsv"
+      - name: Generate the untrusted Rocq certificates
         run: |
           python3 -m py_compile scripts/s4_residency_coq_certificate.py
           python3 -m py_compile scripts/s4_residency_x86_coq_certificate.py
+          python3 -m py_compile scripts/s4_residency_elf_coq_certificate.py
           python3 -m unittest -v \
             scripts.tests.test_s4_residency_coq_certificate \
-            scripts.tests.test_s4_residency_x86_coq_certificate
+            scripts.tests.test_s4_residency_x86_coq_certificate \
+            scripts.tests.test_s4_residency_elf_coq_certificate
           python3 scripts/s4_residency_coq_certificate.py \
             --report "$RUNNER_TEMP/wp8c-plan.tsv" \
             --output "$RUNNER_TEMP/wp8c-certificates-a.v"
@@ -96,6 +114,20 @@ jobs:
             "$RUNNER_TEMP/wp8e-x86-certificates-b.v"
           cp "$RUNNER_TEMP/wp8e-x86-certificates-a.v" \
             naux-meta-coq/GeneratedWP8EX86Certificates.v
+          python3 scripts/s4_residency_elf_coq_certificate.py \
+            --plan-report "$RUNNER_TEMP/wp8c-plan.tsv" \
+            --encoding-report "$RUNNER_TEMP/wp8e-encoding.tsv" \
+            --elf-report "$RUNNER_TEMP/wp8f-elf.tsv" \
+            --output "$RUNNER_TEMP/wp8f-elf-certificates-a.v"
+          python3 scripts/s4_residency_elf_coq_certificate.py \
+            --plan-report "$RUNNER_TEMP/wp8c-plan.tsv" \
+            --encoding-report "$RUNNER_TEMP/wp8e-encoding.tsv" \
+            --elf-report "$RUNNER_TEMP/wp8f-elf.tsv" \
+            --output "$RUNNER_TEMP/wp8f-elf-certificates-b.v"
+          cmp "$RUNNER_TEMP/wp8f-elf-certificates-a.v" \
+            "$RUNNER_TEMP/wp8f-elf-certificates-b.v"
+          cp "$RUNNER_TEMP/wp8f-elf-certificates-a.v" \
+            naux-meta-coq/GeneratedWP8FELFCertificates.v
       - name: Admit the report inside Rocq 9.1
         uses: rocq-prover/docker-opam-action@126d4ac196f8133729a1cb0d2aa1ee7106efec58 # v1.5.2
         with:
@@ -110,20 +142,25 @@ jobs:
               naux-meta-coq/GeneratedWP8CCertificates.v
             rocq c -Q naux-meta-coq NauxCore \
               naux-meta-coq/GeneratedWP8EX86Certificates.v
+            rocq c -Q naux-meta-coq NauxCore \
+              naux-meta-coq/GeneratedWP8FELFCertificates.v
             rocq check -silent -o -Q naux-meta-coq NauxCore \
                 NauxCore.GeneratedWP8CCertificates \
-                NauxCore.GeneratedWP8EX86Certificates 2>&1 \
+                NauxCore.GeneratedWP8EX86Certificates \
+                NauxCore.GeneratedWP8FELFCertificates 2>&1 \
               | tee /tmp/naux-wp8c-coqchk-context.txt
             grep -Fq '* Axioms: <none>' /tmp/naux-wp8c-coqchk-context.txt
             if grep -n -E '\b(Admitted|admit|Axiom|Parameter)\b' \
               naux-meta-coq/GeneratedWP8CCertificates.v \
-              naux-meta-coq/GeneratedWP8EX86Certificates.v; then
+              naux-meta-coq/GeneratedWP8EX86Certificates.v \
+              naux-meta-coq/GeneratedWP8FELFCertificates.v; then
               echo "Unchecked generated declaration found" >&2
               exit 1
             fi
             make -C naux-meta-coq clean
             rm -f naux-meta-coq/GeneratedWP8CCertificates.v \
-              naux-meta-coq/GeneratedWP8EX86Certificates.v
+              naux-meta-coq/GeneratedWP8EX86Certificates.v \
+              naux-meta-coq/GeneratedWP8FELFCertificates.v
       - name: Restore workspace ownership
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
