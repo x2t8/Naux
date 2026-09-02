@@ -158,7 +158,7 @@ def emit_rocq(
         "  remain explicit non-claims.",
         "*)",
         "",
-        "From Stdlib Require Import List.",
+        "From Stdlib Require Import List ZArith.",
         "From NauxCore Require Import ResidencyProcessTarget",
         "  GeneratedWP8EX86Certificates.",
         "Import ListNotations.",
