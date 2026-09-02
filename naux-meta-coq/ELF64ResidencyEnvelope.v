@@ -148,7 +148,7 @@ Proof.
     elf64_residency_stack_header, elf64_residency_startup,
     elf64_residency_le16, elf64_residency_le32,
     elf64_residency_le64.
-  repeat rewrite app_length.
+  repeat rewrite length_app.
   repeat rewrite repeat_length.
   simpl. lia.
 Qed.
@@ -165,7 +165,7 @@ Theorem elf64_residency_envelope_extent :
     length (elf64_residency_envelope target) = 272 + length target.
 Proof.
   intros target. unfold elf64_residency_envelope.
-  rewrite app_length, elf64_residency_prefix_length. reflexivity.
+  rewrite length_app, elf64_residency_prefix_length. reflexivity.
 Qed.
 
 Theorem elf64_residency_envelope_contains_target :
@@ -174,7 +174,7 @@ Theorem elf64_residency_envelope_contains_target :
 Proof.
   intros target. unfold elf64_residency_envelope.
   set (prefix := elf64_residency_prefix (272 + length target)).
-  change skipn 272 (prefix ++ target) = target.
+  change (skipn 272 (prefix ++ target) = target).
   replace 272 with (length prefix).
   - apply elf64_residency_skipn_length_app.
   - subst prefix. symmetry. apply elf64_residency_prefix_length.
