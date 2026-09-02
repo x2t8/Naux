@@ -312,7 +312,6 @@ def emit_rocq(
                 f"  skipn {_coq_nat(kernel.target_offset)} {prefix}_image =",
                 f"    {wp8e_target}.",
                 "Proof.",
-                f"  change skipn 272%nat {prefix}_image = {wp8e_target}.",
                 "  apply elf64_residency_well_formed_contains_target.",
                 f"  exact {prefix}_image_is_canonical_envelope.",
                 "Qed.",
