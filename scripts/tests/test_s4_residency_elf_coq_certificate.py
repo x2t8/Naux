@@ -128,6 +128,8 @@ class S4ResidencyElfCoqCertificateTests(unittest.TestCase):
         output = bridge.emit_rocq([kernel], "a" * 64, "b" * 64, "c" * 64)
         self.assertIn("GeneratedWP8EX86Certificates", output)
         self.assertIn("wp8e_kernel_01_target", output)
+        self.assertIn("reported_target_matches_wp8e", output)
+        self.assertIn("reported_prefix_is_canonical", output)
         self.assertIn("image_is_canonical_envelope", output)
         self.assertIn("contains_wp8e_target", output)
 

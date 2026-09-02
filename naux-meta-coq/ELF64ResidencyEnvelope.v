@@ -123,6 +123,17 @@ Proof.
   f_equal. now apply IH.
 Qed.
 
+Lemma elf64_residency_bytes_check_sound :
+  forall image,
+    forallb elf64_residency_byte_validb image = true ->
+    Forall (fun byte => byte < 256) image.
+Proof.
+  intros image Hbytes.
+  rewrite forallb_forall in Hbytes.
+  apply Forall_forall. intros byte Hin.
+  apply Nat.ltb_lt. now apply Hbytes.
+Qed.
+
 Theorem elf64_residency_image_check_sound :
   forall target image,
     elf64_residency_image_check target image = true ->
@@ -132,9 +143,7 @@ Proof.
   unfold elf64_residency_image_check in Hcheck.
   apply Bool.andb_true_iff in Hcheck.
   destruct Hcheck as [Hbytes Henvelope]. split.
-  - rewrite forallb_forall in Hbytes.
-    apply Forall_forall. intros byte Hin.
-    apply Nat.ltb_lt. now apply Hbytes.
+  - now apply elf64_residency_bytes_check_sound.
   - now apply elf64_residency_list_eqb_sound.
 Qed.
 
