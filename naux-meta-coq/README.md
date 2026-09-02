@@ -91,10 +91,12 @@ block or return the same i64 value while preserving the ownership phase
 relation. Its fuel-bounded runners then construct the dynamic path from those
 observations and prove every successful baseline execution is matched by a
 candidate execution with the same return value, final initialization phase,
-and state relation. A final theorem restores the saved physical register and
-closes this relation to full state/heap/ownership/overflow equivalence at
-return. Fuel exhaustion and malformed/undefined observations fail closed;
-unbounded termination is not claimed.
+and state relation. An inductive terminating-execution semantics removes the
+arbitrary fuel number from the main partial-correctness statement: every
+terminating baseline derivation has a matching transformed derivation. A final
+theorem restores the saved physical register and closes this relation to full
+state/heap/ownership/overflow equivalence at return. Fuel exhaustion and
+malformed/undefined observations fail closed; total termination is not claimed.
 
 The formal-residency bridge rebuilds the reviewed WP8C emitter, authenticates
 its complete 276-line report through the sealed authority, translates the four
@@ -111,10 +113,10 @@ virtual `rN` maps to `S N`. The generated ownership graph additionally retains
 every `keep`/`consume` bit and proves exact defined/undefined and overflow-event
 count agreement for successful paths. The generated control graph retains each
 condition/result register and true/false/goto target, and instantiates the
-per-block and bounded whole-CFG selection/ABI theorems for all four WP8C
-programs. The proof source is ephemeral and is not a new sealed project
-artifact; unbounded termination, host/counter failures, and native semantics
-remain explicit non-claims.
+per-block, bounded whole-CFG, and fuel-independent terminating-execution ABI
+theorems for all four WP8C programs. The proof source is ephemeral and is not a
+new sealed project artifact; total termination, host/counter failures, and
+native semantics remain explicit non-claims.
 
 ```bash
 make -C naux-meta-coq

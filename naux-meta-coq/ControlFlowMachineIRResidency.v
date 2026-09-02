@@ -488,6 +488,317 @@ Proof.
         (final_initialized := final_initialized) (value := value).
 Qed.
 
+(** A terminating derivation records the same dynamic control-flow walk as the
+    executable runners without exposing a particular fuel budget in the
+    theorem statement.  It remains a partial-correctness semantics: the
+    existence of a derivation says that the program terminates, but does not
+    claim that every initial state has such a derivation. *)
+Inductive ownership_control_baseline_terminates
+    (home_slot : nat) (graph : ownership_control_graph) :
+    nat -> bool -> ownership_machine_state ->
+    bool -> ownership_machine_state -> Z -> Prop :=
+| OwnershipControlBaselineReturns :
+    forall block_id initialized block next initial final value,
+      nth_error (ownership_control_blocks graph) block_id = Some block ->
+      initialization_block initialized
+        (ownership_residency_program_projection
+          (ownership_control_instructions block)) = Some next ->
+      ownership_control_baseline_block home_slot block initial =
+        Some (final, OwnershipControlReturned value) ->
+      ownership_control_baseline_terminates home_slot graph block_id
+        initialized initial next final value
+| OwnershipControlBaselineContinues :
+    forall block_id initialized block next initial stepped target
+        final_initialized final value,
+      nth_error (ownership_control_blocks graph) block_id = Some block ->
+      initialization_block initialized
+        (ownership_residency_program_projection
+          (ownership_control_instructions block)) = Some next ->
+      ownership_control_baseline_block home_slot block initial =
+        Some (stepped, OwnershipControlNext target) ->
+      ownership_control_baseline_terminates home_slot graph target next
+        stepped final_initialized final value ->
+      ownership_control_baseline_terminates home_slot graph block_id
+        initialized initial final_initialized final value.
+
+Inductive ownership_control_candidate_terminates
+    (home_slot resident_register : nat)
+    (graph : ownership_control_graph) :
+    nat -> bool -> ownership_machine_state ->
+    bool -> ownership_machine_state -> Z -> Prop :=
+| OwnershipControlCandidateReturns :
+    forall block_id initialized block next initial final value,
+      nth_error (ownership_control_blocks graph) block_id = Some block ->
+      ownership_control_candidate_block home_slot resident_register
+        initialized block initial =
+        Some (next, (final, OwnershipControlReturned value)) ->
+      ownership_control_candidate_terminates home_slot resident_register
+        graph block_id initialized initial next final value
+| OwnershipControlCandidateContinues :
+    forall block_id initialized block next initial stepped target
+        final_initialized final value,
+      nth_error (ownership_control_blocks graph) block_id = Some block ->
+      ownership_control_candidate_block home_slot resident_register
+        initialized block initial =
+        Some (next, (stepped, OwnershipControlNext target)) ->
+      ownership_control_candidate_terminates home_slot resident_register
+        graph target next stepped final_initialized final value ->
+      ownership_control_candidate_terminates home_slot resident_register
+        graph block_id initialized initial final_initialized final value.
+
+Theorem ownership_control_baseline_execute_sound :
+  forall fuel home_slot graph block_id initialized initial
+      final_initialized final value,
+    ownership_control_baseline_execute fuel home_slot graph block_id
+      initialized initial = Some (final_initialized, (final, value)) ->
+    ownership_control_baseline_terminates home_slot graph block_id initialized
+      initial final_initialized final value.
+Proof.
+  induction fuel as [|fuel IH];
+    intros home_slot graph block_id initialized initial final_initialized
+      final value Hexecute; simpl in Hexecute; try discriminate.
+  destruct (nth_error (ownership_control_blocks graph) block_id)
+    as [block|] eqn:Hblock; try discriminate.
+  destruct (initialization_block initialized
+    (ownership_residency_program_projection
+      (ownership_control_instructions block)))
+    as [next|] eqn:Hinitialization; try discriminate.
+  destruct (ownership_control_baseline_block home_slot block initial)
+    as [[stepped outcome]|] eqn:Hblock_execute; try discriminate.
+  destruct outcome as [target | returned].
+  - eapply OwnershipControlBaselineContinues
+      with (block := block) (next := next) (stepped := stepped)
+        (target := target).
+    + exact Hblock.
+    + exact Hinitialization.
+    + exact Hblock_execute.
+    + now apply IH.
+  - inversion Hexecute; subst final_initialized final returned.
+    eapply OwnershipControlBaselineReturns
+      with (block := block) (next := next).
+    + exact Hblock.
+    + exact Hinitialization.
+    + exact Hblock_execute.
+Qed.
+
+Theorem ownership_control_candidate_execute_sound :
+  forall fuel home_slot resident_register graph block_id initialized initial
+      final_initialized final value,
+    ownership_control_candidate_execute fuel home_slot resident_register graph
+      block_id initialized initial =
+      Some (final_initialized, (final, value)) ->
+    ownership_control_candidate_terminates home_slot resident_register graph
+      block_id initialized initial final_initialized final value.
+Proof.
+  induction fuel as [|fuel IH];
+    intros home_slot resident_register graph block_id initialized initial
+      final_initialized final value Hexecute;
+    simpl in Hexecute; try discriminate.
+  destruct (nth_error (ownership_control_blocks graph) block_id)
+    as [block|] eqn:Hblock; try discriminate.
+  destruct (ownership_control_candidate_block home_slot resident_register
+    initialized block initial)
+    as [[next [stepped outcome]]|] eqn:Hblock_execute; try discriminate.
+  destruct outcome as [target | returned].
+  - eapply OwnershipControlCandidateContinues
+      with (block := block) (next := next) (stepped := stepped)
+        (target := target).
+    + exact Hblock.
+    + exact Hblock_execute.
+    + now apply IH.
+  - inversion Hexecute; subst final_initialized final returned.
+    eapply OwnershipControlCandidateReturns
+      with (block := block) (next := next).
+    + exact Hblock.
+    + exact Hblock_execute.
+Qed.
+
+Theorem ownership_control_baseline_terminates_has_fuel :
+  forall home_slot graph block_id initialized initial
+      final_initialized final value,
+    ownership_control_baseline_terminates home_slot graph block_id initialized
+      initial final_initialized final value ->
+    exists fuel,
+      ownership_control_baseline_execute fuel home_slot graph block_id
+        initialized initial = Some (final_initialized, (final, value)).
+Proof.
+  intros home_slot graph block_id initialized initial final_initialized final
+    value Hterminates.
+  induction Hterminates as
+    [block_id initialized block next initial final value Hblock
+      Hinitialization Hblock_execute
+    |block_id initialized block next initial stepped target
+      final_initialized final value Hblock Hinitialization Hblock_execute
+      Hterminates [fuel Hexecute]].
+  - exists 1%nat. simpl. now rewrite Hblock, Hinitialization, Hblock_execute.
+  - exists (S fuel). simpl. now rewrite Hblock, Hinitialization, Hblock_execute.
+Qed.
+
+Theorem ownership_control_candidate_terminates_has_fuel :
+  forall home_slot resident_register graph block_id initialized initial
+      final_initialized final value,
+    ownership_control_candidate_terminates home_slot resident_register graph
+      block_id initialized initial final_initialized final value ->
+    exists fuel,
+      ownership_control_candidate_execute fuel home_slot resident_register
+        graph block_id initialized initial =
+        Some (final_initialized, (final, value)).
+Proof.
+  intros home_slot resident_register graph block_id initialized initial
+    final_initialized final value Hterminates.
+  induction Hterminates as
+    [block_id initialized block next initial final value Hblock Hblock_execute
+    |block_id initialized block next initial stepped target
+      final_initialized final value Hblock Hblock_execute Hterminates
+      [fuel Hexecute]].
+  - exists 1%nat. simpl. now rewrite Hblock, Hblock_execute.
+  - exists (S fuel). simpl. now rewrite Hblock, Hblock_execute.
+Qed.
+
+Theorem ownership_control_termination_preserves_selection :
+  forall graph home_slot resident_register block_id initialized baseline
+      candidate final_initialized baseline_out value,
+    ownership_control_graph_admissibleb
+      home_slot resident_register graph = true ->
+    ownership_projected_phase_equiv home_slot resident_register initialized
+      baseline candidate ->
+    ownership_control_baseline_terminates home_slot graph block_id initialized
+      baseline final_initialized baseline_out value ->
+    exists candidate_out,
+      ownership_control_candidate_terminates home_slot resident_register
+        graph block_id initialized candidate final_initialized candidate_out
+        value /\
+      ownership_projected_phase_equiv home_slot resident_register
+        final_initialized baseline_out candidate_out.
+Proof.
+  intros graph home_slot resident_register block_id initialized baseline
+    candidate final_initialized baseline_out value Hgraph Hphase Hterminates.
+  revert candidate Hphase.
+  induction Hterminates as
+    [block_id initialized block next initial final value Hblock
+      Hinitialization Hbaseline
+    |block_id initialized block next initial stepped target
+      final_initialized final value Hblock Hinitialization Hbaseline
+      Hterminates IH];
+    intros candidate Hphase.
+  - destruct (ownership_control_graph_block_preserves_selection graph
+      block_id block home_slot resident_register initialized next initial
+      candidate final (OwnershipControlReturned value) Hgraph Hblock
+      Hinitialization Hphase Hbaseline)
+      as [candidate_out [Hcandidate Hout]].
+    exists candidate_out. split; [|exact Hout].
+    eapply OwnershipControlCandidateReturns
+      with (block := block) (next := next).
+    + exact Hblock.
+    + exact Hcandidate.
+  - destruct (ownership_control_graph_block_preserves_selection graph
+      block_id block home_slot resident_register initialized next initial
+      candidate stepped (OwnershipControlNext target) Hgraph Hblock
+      Hinitialization Hphase Hbaseline)
+      as [stepped_candidate [Hcandidate Hstepped]].
+    destruct (IH stepped_candidate Hstepped)
+      as [candidate_out [Hcandidate_terminates Hout]].
+    exists candidate_out. split; [|exact Hout].
+    eapply OwnershipControlCandidateContinues
+      with (block := block) (next := next)
+        (stepped := stepped_candidate) (target := target).
+    + exact Hblock.
+    + exact Hcandidate.
+    + exact Hcandidate_terminates.
+Qed.
+
+Theorem ownership_control_baseline_termination_preserves_reserved_register :
+  forall graph home_slot resident_register block_id initialized initial
+      final_initialized final value,
+    ownership_control_graph_admissibleb
+      home_slot resident_register graph = true ->
+    ownership_control_baseline_terminates home_slot graph block_id initialized
+      initial final_initialized final value ->
+    register_cells (heap_scalar_state (ownership_heap_state final))
+      resident_register =
+    register_cells (heap_scalar_state (ownership_heap_state initial))
+      resident_register.
+Proof.
+  intros graph home_slot resident_register block_id initialized initial
+    final_initialized final value Hgraph Hterminates.
+  induction Hterminates as
+    [block_id initialized block next initial final value Hblock
+      Hinitialization Hbaseline
+    |block_id initialized block next initial stepped target
+      final_initialized final value Hblock Hinitialization Hbaseline
+      Hterminates IH].
+  - pose proof (ownership_control_graph_block_is_admissible graph block_id
+      block home_slot resident_register Hgraph Hblock) as Hadmissible.
+    destruct (ownership_control_block_admissibleb_elim home_slot
+      resident_register block Hadmissible) as [Hprogram _].
+    unfold ownership_control_baseline_block in Hbaseline.
+    destruct (ownership_baseline_execute home_slot
+      (ownership_control_instructions block) initial)
+      as [stepped|] eqn:Hexecute; try discriminate.
+    destruct (ownership_control_observe
+      (ownership_control_block_terminator block) stepped)
+      as [outcome|] eqn:Hobserve; try discriminate.
+    inversion Hbaseline; subst stepped outcome.
+    now apply ownership_baseline_execute_preserves_reserved_register
+      with (program := ownership_control_instructions block)
+        (home_slot := home_slot).
+  - pose proof (ownership_control_graph_block_is_admissible graph block_id
+      block home_slot resident_register Hgraph Hblock) as Hadmissible.
+    destruct (ownership_control_block_admissibleb_elim home_slot
+      resident_register block Hadmissible) as [Hprogram _].
+    unfold ownership_control_baseline_block in Hbaseline.
+    destruct (ownership_baseline_execute home_slot
+      (ownership_control_instructions block) initial)
+      as [program_out|] eqn:Hexecute; try discriminate.
+    destruct (ownership_control_observe
+      (ownership_control_block_terminator block) program_out)
+      as [outcome|] eqn:Hobserve; try discriminate.
+    inversion Hbaseline; subst program_out outcome.
+    rewrite IH.
+    now apply ownership_baseline_execute_preserves_reserved_register
+      with (program := ownership_control_instructions block)
+        (home_slot := home_slot).
+Qed.
+
+Theorem ownership_control_terminating_abi_correct :
+  forall graph home_slot resident_register initial replacement
+      final_initialized baseline_out value,
+    ownership_control_graph_admissibleb
+      home_slot resident_register graph = true ->
+    ownership_control_baseline_terminates home_slot graph
+      (ownership_control_entry graph) false initial final_initialized
+      baseline_out value ->
+    exists candidate_out,
+      ownership_control_candidate_terminates home_slot resident_register
+        graph (ownership_control_entry graph) false
+        (ownership_hide_reserved_register
+          resident_register replacement initial)
+        final_initialized candidate_out value /\
+      ownership_full_state_equiv baseline_out
+        (ownership_finalize home_slot resident_register
+          (register_cells
+            (heap_scalar_state (ownership_heap_state initial))
+            resident_register)
+          final_initialized candidate_out).
+Proof.
+  intros graph home_slot resident_register initial replacement
+    final_initialized baseline_out value Hgraph Hbaseline.
+  destruct (ownership_control_termination_preserves_selection graph
+    home_slot resident_register (ownership_control_entry graph) false initial
+    (ownership_hide_reserved_register resident_register replacement initial)
+    final_initialized baseline_out value Hgraph
+    (ownership_hide_reserved_register_preserves_phase
+      home_slot resident_register replacement initial) Hbaseline)
+    as [candidate_out [Hcandidate Hphase]].
+  exists candidate_out. split; [exact Hcandidate|].
+  apply ownership_finalize_closes_phase; [exact Hphase|].
+  symmetry. now apply
+    ownership_control_baseline_termination_preserves_reserved_register
+      with (graph := graph) (block_id := ownership_control_entry graph)
+        (home_slot := home_slot) (initialized := false)
+        (final_initialized := final_initialized) (value := value).
+Qed.
+
 Example control_branch_rejects_non_boolean_value :
   let scalar :=
     {| stack_cells := fun _ => 0;

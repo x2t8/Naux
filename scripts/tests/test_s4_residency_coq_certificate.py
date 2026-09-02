@@ -343,6 +343,10 @@ class S4ResidencyCoqCertificateTests(unittest.TestCase):
             "all_successful_bounded_control_executions_are_abi_correct",
             output,
         )
+        self.assertIn(
+            "all_terminating_control_executions_are_abi_correct",
+            output,
+        )
 
     def test_control_terminators_preserve_exact_operands_and_targets(self) -> None:
         self.assertEqual(
