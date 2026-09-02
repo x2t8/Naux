@@ -12,4 +12,5 @@ ScalarMachineIRResidency.v
 HeapMachineIRResidency.v
 OwnershipMachineIRResidency.v
 ControlFlowMachineIRResidency.v
+X86ResidencyEncoding.v
 NauxCore.v

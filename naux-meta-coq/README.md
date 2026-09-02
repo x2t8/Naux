@@ -118,6 +118,16 @@ theorems for all four WP8C programs. The proof source is ephemeral and is not a
 new sealed project artifact; total termination, host/counter failures, and
 native semantics remain explicit non-claims.
 
+`X86ResidencyEncoding.v` closes the next structural boundary without claiming
+a full x86 proof. It defines a seven-byte decoder for `mov [rbp+disp32], r12`
+and `mov r12, [rbp+disp32]`, extracts every physical residency site directly
+from the proved ownership control graph, and checks exact offsets into the
+complete WP8E candidate function bytes. The generated certificate must cover
+every WP8C residency site exactly once, decode each load/store in the required
+direction, save caller `r12` to the WP8D shadow displacement, and restore it at
+every return. Passthrough instructions, relative fixups, general x86 semantics,
+ELF loading, and native execution remain outside this theorem.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -126,7 +136,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.DefiniteInitialization NauxCore.ProjectedCFGResidency \
   NauxCore.ScalarMachineIRResidency NauxCore.HeapMachineIRResidency \
   NauxCore.OwnershipMachineIRResidency \
-  NauxCore.ControlFlowMachineIRResidency
+  NauxCore.ControlFlowMachineIRResidency \
+  NauxCore.X86ResidencyEncoding
 make -C naux-meta-coq clean
 ```
 

@@ -4,4 +4,4 @@ From NauxCore Require Export
   Syntax Typing Smallstep Soundness DataAlgo I64Arithmetic RegisterResidency
   DefiniteInitialization ProjectedCFGResidency ScalarMachineIRResidency
   HeapMachineIRResidency OwnershipMachineIRResidency
-  ControlFlowMachineIRResidency.
+  ControlFlowMachineIRResidency X86ResidencyEncoding.
