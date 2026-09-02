@@ -271,6 +271,8 @@ def emit_rocq(
                 f"Theorem {prefix}_process_extent :",
                 f"  length {prefix}_process = {_coq_nat(kernel.process_bytes)}.",
                 "Proof.",
+                f"  change (length {prefix}_process =",
+                f"    (length {wp8e_target} + 80)%nat).",
                 "  apply residency_process_target_extent with",
                 f"    (receipt := {prefix}_receipt)",
                 f"    (completion := {prefix}_completion).",
