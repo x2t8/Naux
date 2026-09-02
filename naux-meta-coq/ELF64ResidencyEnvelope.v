@@ -59,6 +59,9 @@ Definition elf64_residency_prefix (image_bytes : nat) : list nat :=
 Definition elf64_residency_envelope (target : list nat) : list nat :=
   elf64_residency_prefix (272 + length target) ++ target.
 
+Definition elf64_residency_extent_fitsb (target : list nat) : bool :=
+  Nat.ltb (272 + length target) (256 * 256).
+
 Fixpoint elf64_residency_list_eqb
     (left right : list nat) : bool :=
   match left, right with
@@ -72,13 +75,13 @@ Fixpoint elf64_residency_list_eqb
 Definition elf64_residency_image_check
     (target image : list nat) : bool :=
   forallb elf64_residency_byte_validb image &&
-  (Nat.ltb (272 + length target) 65536 &&
+  (elf64_residency_extent_fitsb target &&
    elf64_residency_list_eqb image (elf64_residency_envelope target)).
 
 Definition elf64_residency_image_well_formed
     (target image : list nat) : Prop :=
   Forall (fun byte => byte < 256) image /\
-  272 + length target < 65536 /\
+  elf64_residency_extent_fitsb target = true /\
   image = elf64_residency_envelope target.
 
 Lemma elf64_residency_list_eqb_sound :
@@ -119,8 +122,18 @@ Proof.
   destruct Hstructure as [Hextent Henvelope]. split.
   - now apply elf64_residency_bytes_check_sound.
   - split.
-    + now apply Nat.ltb_lt.
+    + exact Hextent.
     + now apply elf64_residency_list_eqb_sound.
+
+Theorem elf64_residency_well_formed_extent_is_small :
+  forall target image,
+    elf64_residency_image_well_formed target image ->
+    272 + length target < 256 * 256.
+Proof.
+  intros target image [_ [Hextent _]].
+  unfold elf64_residency_extent_fitsb in Hextent.
+  now apply Nat.ltb_lt.
+Qed.
 Qed.
 
 Lemma elf64_residency_prefix_length :
@@ -169,7 +182,7 @@ Theorem elf64_residency_image_from_prefix :
   forall target prefix,
     Forall (fun byte => byte < 256) prefix ->
     Forall (fun byte => byte < 256) target ->
-    272 + length target < 65536 ->
+    elf64_residency_extent_fitsb target = true ->
     prefix = elf64_residency_prefix (272 + length target) ->
     elf64_residency_image_well_formed target (prefix ++ target).
 Proof.
