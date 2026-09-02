@@ -215,7 +215,7 @@ Proof.
   intros candidate patch return_start Hinside Hpatch.
   unfold residency_process_patch_candidate.
   repeat rewrite length_app.
-  rewrite firstn_length, skipn_length, Hpatch.
+  rewrite length_firstn, length_skipn, Hpatch.
   rewrite Nat.min_l by lia. lia.
 Qed.
 
@@ -223,7 +223,7 @@ Theorem residency_process_target_extent :
   forall candidate patch verifier process receipt completion,
     residency_process_target_well_formed
       candidate patch verifier process receipt completion ->
-    length process = length candidate + 80%nat.
+    length process = (length candidate + 80)%nat.
 Proof.
   intros candidate patch verifier process receipt completion Hvalid.
   destruct Hvalid as
