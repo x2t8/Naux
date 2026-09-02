@@ -332,7 +332,7 @@ def emit_rocq(
                 "Proof. vm_compute. reflexivity. Qed.",
                 "",
                 f"Theorem {prefix}_target_bytes_are_bounded :",
-                f"  Forall (fun byte => byte < 256%nat) {prefix}_target.",
+                f"  Forall (fun byte => (byte < 256)%nat) {prefix}_target.",
                 "Proof.",
                 "  apply x86_bytes_check_sound.",
                 f"  exact {prefix}_target_bytes_check.",
