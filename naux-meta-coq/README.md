@@ -132,9 +132,11 @@ ELF loading, and native execution remain outside this theorem.
 the byte level. It independently constructs the fixed little-endian ELF64
 header, `R-X` load segment, non-executable `R-W` GNU stack declaration,
 padding, and startup call, with the image-size fields derived from the target
-extent. Each generated theorem equates the complete WP8F image with that
-canonical envelope around the corresponding proved WP8E target, then derives
-that dropping the first 272 bytes recovers the target exactly. Linux loader,
+extent. The generator admits every WP8F-owned prefix byte and reuses the
+corresponding complete, proved WP8E target as the payload instead of duplicating
+it. Each generated theorem equates that complete image with the canonical
+envelope, then derives that dropping the first 272 bytes recovers the target
+exactly. Linux loader,
 system-call, x86 execution, timing, and native-correctness claims remain out of
 scope.
 

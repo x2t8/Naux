@@ -3,8 +3,9 @@
 
 The translator is intentionally untrusted.  It authenticates the sealed
 WP8C, WP8E, and WP8F reports, independently reconstructs each canonical ELF
-envelope, and emits the complete image bytes.  Rocq then checks byte equality
-against its own envelope constructor around the already checked WP8E target.
+envelope, and emits its WP8F-owned prefix bytes.  Rocq reuses the complete,
+already checked WP8E target as the payload and checks the resulting image
+against its own envelope constructor.
 """
 
 from __future__ import annotations
@@ -216,9 +217,9 @@ def emit_rocq(
         f"  WP8C report root: {plan_root}",
         f"  WP8E report root: {encoding_root}",
         f"  WP8F report root: {elf_root}",
-        "  The generator is untrusted. Rocq receives every complete ELF image",
-        "  and proves byte equality to its own canonical envelope around the",
-        "  already checked WP8E target bytes.",
+        "  The generator is untrusted. Rocq receives every WP8F-owned prefix",
+        "  byte, reuses the complete already checked WP8E target as payload,",
+        "  and proves equality to its own canonical ELF envelope.",
         "  Linux loading, system calls, x86 execution, native correctness,",
         "  timing, and performance remain explicit non-claims.",
         "*)",
@@ -233,27 +234,19 @@ def emit_rocq(
         prefix = f"wp8f_kernel_{kernel.ordinal}"
         wp8e_target = f"wp8e_kernel_{kernel.ordinal}_target"
         reported_prefix = kernel.image[: kernel.target_offset]
-        reported_target = kernel.image[kernel.target_offset :]
         rows.extend(
             [
-                f"(** {kernel.name}; complete quarantined ELF64 image bytes. *)",
+                f"(** {kernel.name}; complete quarantined ELF64 image. *)",
                 f"Definition {prefix}_reported_prefix : list nat :=",
                 f"  {_coq_list(reported_prefix)}.",
                 "",
-                f"Definition {prefix}_reported_target : list nat :=",
-                f"  {_coq_list(reported_target)}.",
-                "",
                 f"Definition {prefix}_image : list nat :=",
-                f"  {prefix}_reported_prefix ++ {prefix}_reported_target.",
+                f"  {prefix}_reported_prefix ++ {wp8e_target}.",
                 "",
                 f"Example {prefix}_reported_prefix_extent :",
                 f"  length {prefix}_reported_prefix =",
                 f"    {_coq_nat(kernel.target_offset)}.",
                 "Proof. vm_compute. reflexivity. Qed.",
-                "",
-                f"Example {prefix}_reported_target_matches_wp8e :",
-                f"  {prefix}_reported_target = {wp8e_target}.",
-                "Proof. reflexivity. Qed.",
                 "",
                 f"Example {prefix}_reported_prefix_is_canonical :",
                 f"  {prefix}_reported_prefix =",
@@ -265,7 +258,6 @@ def emit_rocq(
                 "Proof.",
                 f"  unfold {prefix}_image. rewrite length_app.",
                 f"  rewrite {prefix}_reported_prefix_extent.",
-                f"  rewrite {prefix}_reported_target_matches_wp8e.",
                 f"  rewrite wp8e_kernel_{kernel.ordinal}_target_extent.",
                 "  reflexivity.",
                 "Qed.",
@@ -288,15 +280,13 @@ def emit_rocq(
                 "  apply Forall_app. split.",
                 "  - apply elf64_residency_bytes_check_sound.",
                 f"    exact {prefix}_reported_prefix_bytes_check.",
-                f"  - rewrite {prefix}_reported_target_matches_wp8e.",
-                f"    exact wp8e_kernel_{kernel.ordinal}_target_bytes_are_bounded.",
+                f"  - exact wp8e_kernel_{kernel.ordinal}_target_bytes_are_bounded.",
                 "Qed.",
                 "",
                 f"Theorem {prefix}_image_equals_canonical_envelope :",
                 f"  {prefix}_image = elf64_residency_envelope {wp8e_target}.",
                 "Proof.",
                 f"  unfold {prefix}_image, elf64_residency_envelope.",
-                f"  rewrite {prefix}_reported_target_matches_wp8e.",
                 f"  rewrite wp8e_kernel_{kernel.ordinal}_target_extent.",
                 f"  rewrite {prefix}_reported_prefix_is_canonical.",
                 "  reflexivity.",
