@@ -114,20 +114,24 @@ jobs:
             "$RUNNER_TEMP/wp8e-x86-certificates-b.v"
           cp "$RUNNER_TEMP/wp8e-x86-certificates-a.v" \
             naux-meta-coq/GeneratedWP8EX86Certificates.v
-          python3 scripts/s4_residency_elf_coq_certificate.py \
-            --plan-report "$RUNNER_TEMP/wp8c-plan.tsv" \
-            --encoding-report "$RUNNER_TEMP/wp8e-encoding.tsv" \
-            --elf-report "$RUNNER_TEMP/wp8f-elf.tsv" \
-            --output "$RUNNER_TEMP/wp8f-elf-certificates-a.v"
-          python3 scripts/s4_residency_elf_coq_certificate.py \
-            --plan-report "$RUNNER_TEMP/wp8c-plan.tsv" \
-            --encoding-report "$RUNNER_TEMP/wp8e-encoding.tsv" \
-            --elf-report "$RUNNER_TEMP/wp8f-elf.tsv" \
-            --output "$RUNNER_TEMP/wp8f-elf-certificates-b.v"
-          cmp "$RUNNER_TEMP/wp8f-elf-certificates-a.v" \
-            "$RUNNER_TEMP/wp8f-elf-certificates-b.v"
-          cp "$RUNNER_TEMP/wp8f-elf-certificates-a.v" \
-            naux-meta-coq/GeneratedWP8FELFCertificates.v
+          for kernel in 01 02 03 04; do
+            module="GeneratedWP8FELFKernel${kernel}"
+            python3 scripts/s4_residency_elf_coq_certificate.py \
+              --plan-report "$RUNNER_TEMP/wp8c-plan.tsv" \
+              --encoding-report "$RUNNER_TEMP/wp8e-encoding.tsv" \
+              --elf-report "$RUNNER_TEMP/wp8f-elf.tsv" \
+              --kernel "$kernel" \
+              --output "$RUNNER_TEMP/${module}-a.v"
+            python3 scripts/s4_residency_elf_coq_certificate.py \
+              --plan-report "$RUNNER_TEMP/wp8c-plan.tsv" \
+              --encoding-report "$RUNNER_TEMP/wp8e-encoding.tsv" \
+              --elf-report "$RUNNER_TEMP/wp8f-elf.tsv" \
+              --kernel "$kernel" \
+              --output "$RUNNER_TEMP/${module}-b.v"
+            cmp "$RUNNER_TEMP/${module}-a.v" \
+              "$RUNNER_TEMP/${module}-b.v"
+            cp "$RUNNER_TEMP/${module}-a.v" "naux-meta-coq/${module}.v"
+          done
       - name: Admit the report inside Rocq 9.1
         uses: rocq-prover/docker-opam-action@126d4ac196f8133729a1cb0d2aa1ee7106efec58 # v1.5.2
         with:
@@ -142,25 +146,33 @@ jobs:
               naux-meta-coq/GeneratedWP8CCertificates.v
             rocq c -Q naux-meta-coq NauxCore \
               naux-meta-coq/GeneratedWP8EX86Certificates.v
-            rocq c -Q naux-meta-coq NauxCore \
-              naux-meta-coq/GeneratedWP8FELFCertificates.v
+            for kernel in 01 02 03 04; do
+              rocq c -Q naux-meta-coq NauxCore \
+                "naux-meta-coq/GeneratedWP8FELFKernel${kernel}.v"
+            done
             rocq check -silent -o -Q naux-meta-coq NauxCore \
                 NauxCore.GeneratedWP8CCertificates \
-                NauxCore.GeneratedWP8EX86Certificates \
-                NauxCore.GeneratedWP8FELFCertificates 2>&1 \
+                NauxCore.GeneratedWP8EX86Certificates 2>&1 \
               | tee /tmp/naux-wp8c-coqchk-context.txt
             grep -Fq '* Axioms: <none>' /tmp/naux-wp8c-coqchk-context.txt
+            for kernel in 01 02 03 04; do
+              rocq check -silent -o -Q naux-meta-coq NauxCore \
+                  "NauxCore.GeneratedWP8FELFKernel${kernel}" 2>&1 \
+                | tee "/tmp/naux-wp8f-kernel-${kernel}-coqchk-context.txt"
+              grep -Fq '* Axioms: <none>' \
+                "/tmp/naux-wp8f-kernel-${kernel}-coqchk-context.txt"
+            done
             if grep -n -E '\b(Admitted|admit|Axiom|Parameter)\b' \
               naux-meta-coq/GeneratedWP8CCertificates.v \
               naux-meta-coq/GeneratedWP8EX86Certificates.v \
-              naux-meta-coq/GeneratedWP8FELFCertificates.v; then
+              naux-meta-coq/GeneratedWP8FELFKernel*.v; then
               echo "Unchecked generated declaration found" >&2
               exit 1
             fi
             make -C naux-meta-coq clean
             rm -f naux-meta-coq/GeneratedWP8CCertificates.v \
               naux-meta-coq/GeneratedWP8EX86Certificates.v \
-              naux-meta-coq/GeneratedWP8FELFCertificates.v
+              naux-meta-coq/GeneratedWP8FELFKernel*.v
       - name: Restore workspace ownership
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"

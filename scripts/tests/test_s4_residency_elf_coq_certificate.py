@@ -129,10 +129,11 @@ class S4ResidencyElfCoqCertificateTests(unittest.TestCase):
         self.assertIn("GeneratedWP8EX86Certificates", output)
         self.assertIn("wp8e_kernel_01_target", output)
         self.assertIn("reported_prefix_is_canonical", output)
-        self.assertIn("reported_bytes_are_bounded", output)
+        self.assertIn("reported_prefix_bytes_are_bounded", output)
         self.assertIn("target_bytes_are_bounded", output)
         self.assertNotIn("reported_target : list nat", output)
         self.assertIn("image_is_canonical_envelope", output)
+        self.assertIn("elf64_residency_image_from_prefix", output)
         self.assertIn("contains_wp8e_target", output)
 
 

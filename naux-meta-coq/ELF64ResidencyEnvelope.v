@@ -190,6 +190,18 @@ Proof.
   apply elf64_residency_skipn_length_app.
 Qed.
 
+Theorem elf64_residency_image_from_prefix :
+  forall target prefix,
+    Forall (fun byte => byte < 256) prefix ->
+    Forall (fun byte => byte < 256) target ->
+    prefix = elf64_residency_prefix (272 + length target) ->
+    elf64_residency_image_well_formed target (prefix ++ target).
+Proof.
+  intros target prefix Hprefix_bytes Htarget_bytes Hprefix. split.
+  - apply Forall_app. now split.
+  - unfold elf64_residency_envelope. now rewrite Hprefix.
+Qed.
+
 Theorem elf64_residency_well_formed_contains_target :
   forall target image,
     elf64_residency_image_well_formed target image ->

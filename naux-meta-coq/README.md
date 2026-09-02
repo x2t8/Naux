@@ -140,6 +140,10 @@ exactly. Linux loader,
 system-call, x86 execution, timing, and native-correctness claims remain out of
 scope.
 
+The CI bridge emits one WP8F module per kernel. Each module is compiled and
+replayed in a fresh Rocq process so proof memory remains bounded without
+weakening or omitting any kernel certificate.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \

@@ -273,31 +273,29 @@ def emit_rocq(
                 f"    {prefix}_reported_prefix = true.",
                 "Proof. vm_compute. reflexivity. Qed.",
                 "",
-                f"Theorem {prefix}_reported_bytes_are_bounded :",
-                f"  Forall (fun byte => byte < 256) {prefix}_image.",
+                f"Theorem {prefix}_reported_prefix_bytes_are_bounded :",
+                f"  Forall (fun byte => byte < 256) {prefix}_reported_prefix.",
                 "Proof.",
-                f"  unfold {prefix}_image.",
-                "  apply Forall_app. split.",
-                "  - apply elf64_residency_bytes_check_sound.",
-                f"    exact {prefix}_reported_prefix_bytes_check.",
-                f"  - exact wp8e_kernel_{kernel.ordinal}_target_bytes_are_bounded.",
-                "Qed.",
-                "",
-                f"Theorem {prefix}_image_equals_canonical_envelope :",
-                f"  {prefix}_image = elf64_residency_envelope {wp8e_target}.",
-                "Proof.",
-                f"  unfold {prefix}_image, elf64_residency_envelope.",
-                f"  rewrite wp8e_kernel_{kernel.ordinal}_target_extent.",
-                f"  rewrite {prefix}_reported_prefix_is_canonical.",
-                "  reflexivity.",
+                "  apply elf64_residency_bytes_check_sound.",
+                f"  exact {prefix}_reported_prefix_bytes_check.",
                 "Qed.",
                 "",
                 f"Theorem {prefix}_image_is_canonical_envelope :",
                 f"  elf64_residency_image_well_formed {wp8e_target}",
                 f"    {prefix}_image.",
-                "Proof. split.",
-                f"  - exact {prefix}_reported_bytes_are_bounded.",
-                f"  - exact {prefix}_image_equals_canonical_envelope.",
+                "Proof.",
+                f"  unfold {prefix}_image.",
+                "  apply elf64_residency_image_from_prefix.",
+                f"  - exact {prefix}_reported_prefix_bytes_are_bounded.",
+                f"  - exact wp8e_kernel_{kernel.ordinal}_target_bytes_are_bounded.",
+                f"  - rewrite wp8e_kernel_{kernel.ordinal}_target_extent.",
+                f"    exact {prefix}_reported_prefix_is_canonical.",
+                "Qed.",
+                "",
+                f"Corollary {prefix}_image_equals_canonical_envelope :",
+                f"  {prefix}_image = elf64_residency_envelope {wp8e_target}.",
+                "Proof.",
+                f"  exact (proj2 {prefix}_image_is_canonical_envelope).",
                 "Qed.",
                 "",
                 f"Corollary {prefix}_contains_wp8e_target :",
@@ -321,6 +319,11 @@ def main() -> int:
     parser.add_argument("--elf-report", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument(
+        "--kernel",
+        action="append",
+        help="emit only this two-digit kernel ordinal (repeatable)",
+    )
+    parser.add_argument(
         "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
     )
     arguments = parser.parse_args()
@@ -343,6 +346,17 @@ def main() -> int:
         kernels = parse_joined_elf_report(
             elf_raw, native_kernels, elf_admission.root
         )
+        if arguments.kernel:
+            requested = set(arguments.kernel)
+            if len(requested) != len(arguments.kernel):
+                raise ElfCertificateError("duplicate --kernel ordinal")
+            available = {kernel.ordinal for kernel in kernels}
+            missing = requested - available
+            if missing:
+                raise ElfCertificateError(
+                    "unknown --kernel ordinal: " + ", ".join(sorted(missing))
+                )
+            kernels = [kernel for kernel in kernels if kernel.ordinal in requested]
         output = emit_rocq(
             kernels,
             plan_admission.plan.root,
