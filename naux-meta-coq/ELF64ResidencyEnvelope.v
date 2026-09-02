@@ -175,9 +175,10 @@ Proof.
   intros target. unfold elf64_residency_envelope.
   set (prefix := elf64_residency_prefix (272 + length target)).
   change (skipn 272 (prefix ++ target) = target).
-  replace 272 with (length prefix).
-  - apply elf64_residency_skipn_length_app.
-  - subst prefix. symmetry. apply elf64_residency_prefix_length.
+  assert (Hprefix : length prefix = 272).
+  { subst prefix. apply elf64_residency_prefix_length. }
+  rewrite <- Hprefix.
+  apply elf64_residency_skipn_length_app.
 Qed.
 
 Theorem elf64_residency_well_formed_contains_target :
