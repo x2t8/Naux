@@ -25,4 +25,5 @@ ResidencyEvidenceReplay.v
 ResidencyPairedRunner.v
 ResidencyPairedEvidenceReplay.v
 ResidencyPairedThreshold.v
+ResidencyClaimAdmission.v
 NauxCore.v

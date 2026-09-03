@@ -242,6 +242,14 @@ reduced representation by integer cross-products. The static state contains
 no candidate and no evaluation permission; even a passing explicit read-only
 candidate remains unable to publish or self-admit a performance claim.
 
+`ResidencyClaimAdmission.v` closes the currently blocked WP8P claim boundary.
+It retains the admitted static WP8O evaluator, the exact eight-gate policy,
+four claim classes, and all four unresolved blockers. The model proves that
+the protocol has no request, no distinct approval, cannot be resolved in its
+static state, and has neither admission nor performance-claim authority. It
+also makes language-wide speedup, compiler-leadership, and unmeasured
+extrapolation claims unconditionally inadmissible.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
 the sealed WP8G candidate, WP8H role report, and WP8I static host report. It
 authenticates the WP8C through WP8I parents, requires each process candidate
@@ -309,6 +317,13 @@ compares it byte-for-byte, compiles it with Rocq 9.1, and requires an empty
 axiom set. A bundle, threshold result, evaluation permission, live host,
 clock, build, execution, mutation, publication, or claim is rejected.
 
+`scripts/s4_residency_claim_admission_coq_certificate.py` is the untrusted
+WP8P bridge. It authenticates the exact sealed refusal report and its WP8O
+parent, then emits a blocked protocol with every gate and blocker retained.
+CI regenerates it twice, compiles it with Rocq 9.1, and requires an empty
+axiom set. A request, approval, resolved blocker, admission action, or claim
+cannot enter through this bridge.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -325,7 +340,7 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ResidencyControlledHost NauxCore.ResidencyTimingCarrier \
   NauxCore.ResidencyMeasurementRunner NauxCore.ResidencyEvidenceReplay \
   NauxCore.ResidencyPairedRunner NauxCore.ResidencyPairedEvidenceReplay \
-  NauxCore.ResidencyPairedThreshold
+  NauxCore.ResidencyPairedThreshold NauxCore.ResidencyClaimAdmission
 make -C naux-meta-coq clean
 ```
 
