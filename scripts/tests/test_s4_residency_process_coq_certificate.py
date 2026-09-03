@@ -105,7 +105,13 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         candidate, native = self.fixture()
         kernel = bridge.join_authenticated_candidate(candidate, [native])[0]
         output = bridge.emit_rocq(
-            [kernel], "a" * 64, "b" * 64, "c" * 64, "d" * 64, "e" * 64
+            [kernel],
+            "a" * 64,
+            "b" * 64,
+            "c" * 64,
+            "d" * 64,
+            "e" * 64,
+            "f" * 64,
         )
         self.assertIn("GeneratedWP8EX86Certificates", output)
         self.assertIn("wp8e_kernel_01_target", output)
@@ -121,6 +127,12 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         self.assertIn("expected_result_protocol_decodes", output)
         self.assertIn("expected_result_protocol_is_well_formed", output)
         self.assertIn("WP8G replay report root: " + "e" * 64, output)
+        self.assertIn("WP8H role replay report root: " + "f" * 64, output)
+        self.assertIn("ResidencyCandidateRole", output)
+        self.assertIn("candidate_role_is_admitted", output)
+        self.assertIn("candidate_role_is_isolated", output)
+        self.assertIn("candidate_role_is_untimed", output)
+        self.assertIn("candidate_role_retains_baseline", output)
         self.assertIn("x86 execution, Linux loading", output)
 
     def test_replay_report_is_exactly_bound_to_two_passes(self) -> None:
@@ -171,6 +183,95 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
             bridge.ProcessCertificateError, "identity or value drifted"
         ):
             bridge.parse_authenticated_replay_report(raw, admission, candidate)
+
+    def test_role_report_is_bound_to_exact_wp8g_replay(self) -> None:
+        candidate, _ = self.fixture()
+        record = candidate.kernels[0].record
+        contract = bridge.wp8g.Contract((record,), "a" * 64)
+        authority = bridge.wp8g.Authority((), "b" * 64)
+        process_admission = bridge.wp8g.Admission(
+            contract, authority, b"", "c" * 64
+        )
+        results = tuple(
+            bridge.wp8g.ProcessResult(
+                pass_number,
+                record.ordinal,
+                record.name,
+                record.oracle,
+                record.expected_outer,
+                record.expected_inner,
+                0,
+            )
+            for pass_number in (1, 2)
+        )
+        process_raw = bridge.wp8g._report(
+            contract, authority, candidate, results
+        )
+        process_evidence = bridge.parse_authenticated_replay_report(
+            process_raw, process_admission, candidate
+        )
+        role_admission = bridge.wp8h.validate(ROOT)
+        role_raw = bridge.wp8h._report(
+            role_admission.contract,
+            role_admission.authority,
+            results,
+            process_raw,
+        )
+        evidence = bridge.parse_authenticated_role_report(
+            role_raw, role_admission, process_raw, process_evidence
+        )
+        self.assertEqual(len(evidence.report_root), 64)
+
+    def test_role_report_rejects_coherently_resealed_role_drift(self) -> None:
+        candidate, _ = self.fixture()
+        record = candidate.kernels[0].record
+        contract = bridge.wp8g.Contract((record,), "a" * 64)
+        authority = bridge.wp8g.Authority((), "b" * 64)
+        process_admission = bridge.wp8g.Admission(
+            contract, authority, b"", "c" * 64
+        )
+        results = tuple(
+            bridge.wp8g.ProcessResult(
+                pass_number,
+                record.ordinal,
+                record.name,
+                record.oracle,
+                record.expected_outer,
+                record.expected_inner,
+                0,
+            )
+            for pass_number in (1, 2)
+        )
+        process_raw = bridge.wp8g._report(
+            contract, authority, candidate, results
+        )
+        process_evidence = bridge.parse_authenticated_replay_report(
+            process_raw, process_admission, candidate
+        )
+        role_admission = bridge.wp8h.validate(ROOT)
+        role_raw = bridge.wp8h._report(
+            role_admission.contract,
+            role_admission.authority,
+            results,
+            process_raw,
+        )
+        lines = role_raw.splitlines(keepends=True)
+        body = b"".join(lines[:-1]).replace(
+            b"timing-status\tforbidden\n",
+            b"timing-status\tpermitted\n",
+            1,
+        )
+        resealed = body + (
+            "report-root\t"
+            + hashlib.sha256(bridge.wp8h.REPORT_DOMAIN + body).hexdigest()
+            + "\n"
+        ).encode()
+        with self.assertRaisesRegex(
+            bridge.ProcessCertificateError, "metadata drifted"
+        ):
+            bridge.parse_authenticated_role_report(
+                resealed, role_admission, process_raw, process_evidence
+            )
 
     def test_join_rejects_noncanonical_process_elf_prefix(self) -> None:
         candidate, native = self.fixture()

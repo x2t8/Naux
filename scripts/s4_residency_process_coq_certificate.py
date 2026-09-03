@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Bind the admitted WP8G process rewrite to WP8E bytes in Rocq.
+"""Bind the admitted WP8G process and WP8H role to WP8E bytes in Rocq.
 
 The translator is intentionally untrusted.  It authenticates the WP8C and
-WP8E reports plus the sealed WP8G authority and candidate report.  It emits
+WP8E reports plus the sealed WP8G process and WP8H role reports.  It emits
 only the WP8G-owned sixteen-byte return patch, eighty-byte verifier, closed
 receipts, exact WP8G ELF prefix, and fixed-le48-v1 expected result record.
 Rocq reuses the complete WP8E target and checks the rewrite, jump destination,
@@ -19,6 +19,7 @@ from pathlib import Path
 import s4_register_residency_candidate_authority as wp8e
 import s4_register_residency_plan_authority as wp8c
 import s4_register_residency_process as wp8g
+import s4_register_residency_role as wp8h
 import s4_residency_coq_certificate as semantic
 import s4_residency_x86_coq_certificate as x86_bridge
 
@@ -59,6 +60,11 @@ class ProcessKernel:
 class ProcessReplayEvidence:
     report_root: str
     results: tuple[wp8g.ProcessResult, ...]
+
+
+@dataclass(frozen=True)
+class RoleReplayEvidence:
+    report_root: str
 
 
 def _signed_le32(raw: bytes, label: str) -> int:
@@ -279,6 +285,75 @@ def parse_authenticated_replay_report(
     return ProcessReplayEvidence(lines[-1][len(marker) :], result_tuple)
 
 
+def parse_authenticated_role_report(
+    raw: bytes,
+    admission: wp8h.Admission,
+    process_report: bytes,
+    process_evidence: ProcessReplayEvidence,
+) -> RoleReplayEvidence:
+    """Authenticate the WP8H role report against the exact WP8G replay."""
+
+    try:
+        lines = wp8h._canonical(raw, "WP8H role report")
+    except wp8h.CandidateRoleError as error:
+        raise ProcessCertificateError(str(error)) from error
+    expected_lines = 19 + len(process_evidence.results)
+    if len(lines) != expected_lines:
+        raise ProcessCertificateError("WP8H role report extent drifted")
+
+    prefix = (
+        wp8h.REPORT_MAGIC,
+        f"contract\t{admission.contract.seal}",
+        f"authority\t{admission.authority.seal}",
+        f"baseline-role-authority\t{wp8h.WP5F_AUTHORITY_SEAL}",
+        f"license-transition-authority\t{wp8h.LT1_AUTHORITY_SEAL}",
+        f"candidate-process-authority\t{wp8h.WP8G_AUTHORITY_SEAL}",
+        "role-status\tuntimed-register-residency-candidate-admitted",
+        "claim-status\tuntimed-candidate-role-only",
+        "timing-status\tforbidden",
+        "role\tnaux-register-residency-candidate",
+        "baseline-role\tnaux-residual",
+        "role-isolation\tdoes-not-replace-wp5f",
+        "mode\tuntimed-candidate-role-replay",
+        "kernels\t4",
+        "replays\t2",
+        "gates\t9",
+        "closed-blockers\t1",
+        f"process-report-root\t{process_evidence.report_root}",
+    )
+    if tuple(lines[: len(prefix)]) != prefix:
+        raise ProcessCertificateError("WP8H role report metadata drifted")
+
+    for index, result in enumerate(process_evidence.results, len(prefix)):
+        expected = (
+            "result",
+            str(result.pass_number),
+            f"{result.ordinal:02}",
+            result.name,
+            str(result.checksum),
+            str(result.outer),
+            str(result.inner),
+            str(result.owner),
+        )
+        if tuple(lines[index].split("\t")) != expected:
+            raise ProcessCertificateError(
+                "WP8H role result identity or value drifted"
+            )
+
+    expected_raw = wp8h._report(
+        admission.contract,
+        admission.authority,
+        process_evidence.results,
+        process_report,
+    )
+    if raw != expected_raw:
+        raise ProcessCertificateError("WP8H role report root drifted")
+    marker = "report-root\t"
+    if not lines[-1].startswith(marker):
+        raise ProcessCertificateError("WP8H role report root is missing")
+    return RoleReplayEvidence(lines[-1][len(marker) :])
+
+
 def join_authenticated_candidate(
     candidate: wp8g.Candidate,
     native_kernels: list[x86_bridge.NativeKernel],
@@ -390,19 +465,22 @@ def emit_rocq(
     process_report_sha256: str,
     process_authority_root: str,
     process_replay_root: str,
+    role_replay_root: str,
 ) -> str:
     rows = [
         "(**",
-        "  Generated from the sealed S4-WP8C, S4-WP8E, and S4-WP8G artifacts.",
+        "  Generated from the sealed S4-WP8C through S4-WP8H artifacts.",
         f"  WP8C report root: {plan_root}",
         f"  WP8E report root: {encoding_root}",
         f"  WP8G candidate SHA-256: {process_report_sha256}",
         f"  WP8G authority report root: {process_authority_root}",
         f"  WP8G replay report root: {process_replay_root}",
+        f"  WP8H role replay report root: {role_replay_root}",
         "  The generator is untrusted. Rocq receives only WP8G-owned patch and",
         "  verifier, ELF-prefix, and result-record bytes, reuses the checked",
         "  WP8E target, and validates the exact rewrite, complete process ELF",
-        "  envelope, and fixed-le48-v1 result decoding.",
+        "  envelope, fixed-le48-v1 result decoding, and isolated untimed",
+        "  candidate-role assignment while retaining the baseline role.",
         "  x86 execution, Linux loading, syscalls, timing, and performance",
         "  remain explicit non-claims.",
         "*)",
@@ -410,7 +488,7 @@ def emit_rocq(
         "From Stdlib Require Import List ZArith Lia.",
         "From NauxCore Require Import X86ResidencyEncoding ResidencyProcessTarget",
         "  ELF64ResidencyEnvelope ELF64ResidencyProcessEnvelope",
-        "  ResidencyResultProtocol",
+        "  ResidencyResultProtocol ResidencyCandidateRole",
         "  GeneratedWP8EX86Certificates.",
         "Import ListNotations.",
         "Open Scope Z_scope.",
@@ -665,6 +743,61 @@ def emit_rocq(
                 "  exact Hshape.",
                 "Qed.",
                 "",
+                f"Definition {prefix}_role_assignment :",
+                "    residency_role_assignment :=",
+                "  {| residency_assignment_role :=",
+                "       ResidencyRegisterCandidateRole;",
+                "     residency_assignment_timing := ResidencyTimingForbidden;",
+                "     residency_assignment_baseline_retained := true;",
+                "     residency_assignment_ordinal := "
+                f"{_coq_nat(kernel.ordinal_value)};",
+                f"     residency_assignment_process := {prefix}_process;",
+                f"     residency_assignment_elf := {prefix}_elf_image;",
+                "     residency_assignment_result_bytes :=",
+                f"       {prefix}_expected_result_bytes;",
+                "     residency_assignment_expected_result :=",
+                f"       {prefix}_expected_result |}}.",
+                "",
+                f"Theorem {prefix}_candidate_role_is_admitted :",
+                "  residency_candidate_role_admitted",
+                f"    {prefix}_role_assignment.",
+                "Proof.",
+                "  unfold residency_candidate_role_admitted,",
+                f"    {prefix}_role_assignment.",
+                "  repeat split.",
+                "  - reflexivity.",
+                "  - reflexivity.",
+                "  - reflexivity.",
+                "  - vm_compute. lia.",
+                "  - reflexivity.",
+                f"  - exact {prefix}_expected_result_protocol_decodes.",
+                f"  - exact {prefix}_elf_contains_process.",
+                "Qed.",
+                "",
+                f"Corollary {prefix}_candidate_role_is_isolated :",
+                f"  residency_assignment_role {prefix}_role_assignment <>",
+                "    ResidencyBaselineRole.",
+                "Proof.",
+                "  exact (residency_candidate_role_is_not_baseline",
+                f"    {prefix}_role_assignment {prefix}_candidate_role_is_admitted).",
+                "Qed.",
+                "",
+                f"Corollary {prefix}_candidate_role_is_untimed :",
+                f"  residency_assignment_timing {prefix}_role_assignment =",
+                "    ResidencyTimingForbidden.",
+                "Proof.",
+                "  exact (residency_candidate_role_has_no_timing_authority",
+                f"    {prefix}_role_assignment {prefix}_candidate_role_is_admitted).",
+                "Qed.",
+                "",
+                f"Corollary {prefix}_candidate_role_retains_baseline :",
+                "  residency_assignment_baseline_retained",
+                f"    {prefix}_role_assignment = true.",
+                "Proof.",
+                "  exact (residency_candidate_role_retains_baseline",
+                f"    {prefix}_role_assignment {prefix}_candidate_role_is_admitted).",
+                "Qed.",
+                "",
             ]
         )
     return "\n".join(rows)
@@ -692,6 +825,7 @@ def main() -> int:
     parser.add_argument("--encoding-report", required=True, type=Path)
     parser.add_argument("--process-report", required=True, type=Path)
     parser.add_argument("--replay-report", required=True, type=Path)
+    parser.add_argument("--role-report", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument(
         "--kernel",
@@ -707,11 +841,13 @@ def main() -> int:
         plan_admission = wp8c.validate(root, arguments.plan_report)
         _, encoding_admission, _, _ = wp8e.validate(root, arguments.encoding_report)
         process_admission = wp8g.validate(root)
+        role_admission = wp8h.validate(root)
 
         plan_raw = arguments.plan_report.read_bytes()
         encoding_raw = arguments.encoding_report.read_bytes()
         process_raw = arguments.process_report.read_bytes()
         replay_raw = arguments.replay_report.read_bytes()
+        role_raw = arguments.role_report.read_bytes()
         plan_kernels = semantic.parse_verified_report(plan_raw)
         wp8d_admission = wp8e.wp8d.validate(root)
         native_kernels = x86_bridge.parse_joined_reports(
@@ -726,6 +862,9 @@ def main() -> int:
         replay_evidence = parse_authenticated_replay_report(
             replay_raw, process_admission, process_candidate
         )
+        role_evidence = parse_authenticated_role_report(
+            role_raw, role_admission, replay_raw, replay_evidence
+        )
         kernels = _filter_kernels(
             join_authenticated_candidate(process_candidate, native_kernels),
             arguments.kernel,
@@ -737,6 +876,7 @@ def main() -> int:
             wp8g.CANDIDATE_REPORT_SHA256,
             process_admission.report_root,
             replay_evidence.report_root,
+            role_evidence.report_root,
         )
         arguments.output.write_text(output, encoding="utf-8", newline="\n")
     except (
@@ -748,6 +888,7 @@ def main() -> int:
         wp8e.wp8d.EncodingContractError,
         wp8g.ProcessReplayError,
         wp8g.wp8f.ElfAuthorityError,
+        wp8h.CandidateRoleError,
         OSError,
         ValueError,
     ) as error:

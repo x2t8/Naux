@@ -1,7 +1,7 @@
 COQC=rocq c
 COQFLAGS=-Q . NauxCore
 
-FILES=Syntax Typing Smallstep Soundness DataAlgo I64Arithmetic RegisterResidency DefiniteInitialization ProjectedCFGResidency ScalarMachineIRResidency HeapMachineIRResidency OwnershipMachineIRResidency ControlFlowMachineIRResidency X86ResidencyEncoding ELF64ResidencyEnvelope ResidencyProcessTarget ELF64ResidencyProcessEnvelope ResidencyResultProtocol NauxCore
+FILES=Syntax Typing Smallstep Soundness DataAlgo I64Arithmetic RegisterResidency DefiniteInitialization ProjectedCFGResidency ScalarMachineIRResidency HeapMachineIRResidency OwnershipMachineIRResidency ControlFlowMachineIRResidency X86ResidencyEncoding ELF64ResidencyEnvelope ResidencyProcessTarget ELF64ResidencyProcessEnvelope ResidencyResultProtocol ResidencyCandidateRole NauxCore
 
 all: $(FILES:%=%.vo)
 

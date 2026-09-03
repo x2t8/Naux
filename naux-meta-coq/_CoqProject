@@ -17,4 +17,5 @@ ELF64ResidencyEnvelope.v
 ResidencyProcessTarget.v
 ELF64ResidencyProcessEnvelope.v
 ResidencyResultProtocol.v
+ResidencyCandidateRole.v
 NauxCore.v

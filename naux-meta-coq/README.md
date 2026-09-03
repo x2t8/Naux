@@ -173,15 +173,27 @@ This closes the serialization schema; the Linux `write` syscall and the claim
 that native execution produced those bytes remain governed by the separate
 fresh-process replay gate rather than the formal model.
 
+`ResidencyCandidateRole.v` closes the WP8H role boundary around those checked
+objects. An admitted assignment must use the isolated register-residency
+candidate role, keep timing authority forbidden, retain the authoritative
+baseline role, carry a non-zero ordinal whose value agrees with the decoded
+result, and contain the exact proved WP8G process at the canonical ELF target
+offset. The model proves that such an assignment cannot be the baseline role
+and derives result-record well-formedness. It deliberately grants neither
+measurement authority nor a performance claim.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
-the sealed WP8G candidate report. It authenticates the WP8C, WP8E, and WP8G
-parents, requires each process candidate to equal its admitted WP8E target,
+the sealed WP8G candidate and WP8H role reports. It authenticates the WP8C,
+WP8E, WP8G, and WP8H parents, requires each process candidate to equal its
+admitted WP8E target,
 and emits only the 16-byte patch, 80-byte verifier, exact 384-byte ELF prefix,
 fixed 48-byte expected result, and closed receipt. The bridge independently
 reconstructs the prefix and result serialization before emission. It also
-requires the authenticated two-pass fresh-process replay report and refuses to
-emit if any observed kernel identity or result field differs from the sealed
-contract. CI generates one module per kernel, compiles each with Rocq 9.1, and
+requires both the authenticated two-pass fresh-process replay report and the
+derived WP8H role report. It refuses to emit if any observed kernel identity,
+result field, role, timing boundary, baseline-retention fact, or report root
+differs from the sealed contracts. CI generates one module per kernel,
+compiles each with Rocq 9.1, and
 asks the kernel to replay every process, full-image, and result-schema theorem
 with an empty axiom set.
 
@@ -197,7 +209,7 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.X86ResidencyEncoding \
   NauxCore.ELF64ResidencyEnvelope NauxCore.ResidencyProcessTarget \
   NauxCore.ELF64ResidencyProcessEnvelope \
-  NauxCore.ResidencyResultProtocol
+  NauxCore.ResidencyResultProtocol NauxCore.ResidencyCandidateRole
 make -C naux-meta-coq clean
 ```
 

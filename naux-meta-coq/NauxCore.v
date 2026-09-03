@@ -6,4 +6,4 @@ From NauxCore Require Export
   HeapMachineIRResidency OwnershipMachineIRResidency
   ControlFlowMachineIRResidency X86ResidencyEncoding ELF64ResidencyEnvelope
   ResidencyProcessTarget ELF64ResidencyProcessEnvelope
-  ResidencyResultProtocol.
+  ResidencyResultProtocol ResidencyCandidateRole.
