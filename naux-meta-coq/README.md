@@ -199,6 +199,14 @@ target. The resulting carrier is explicitly non-runnable and carries no
 performance claim. Syscall semantics, elapsed time, host eligibility, and
 measurement acquisition remain outside this layer.
 
+`ResidencyMeasurementRunner.v` closes the static WP8K runner boundary. An
+admitted runner contains exactly four already-admitted WP8J carriers, the
+complete ordered ten-gate acquisition policy, an explicit-only entrypoint,
+and the fixed 120-sample target. Its checked default state has no retained
+host attestation and forbids clock, build, execution, and publication actions.
+The model proves that the static runner is not acquisition-ready, that all four
+carriers remain non-runnable, and that no performance claim is available.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
 the sealed WP8G candidate, WP8H role report, and WP8I static host report. It
 authenticates the WP8C through WP8I parents, requires each process candidate
@@ -223,6 +231,14 @@ outputs, compiles it with Rocq 9.1, and checks that the kernel reports an empty
 axiom set. The bridge refuses extra clock markers, missing owner markers,
 placement drift, target drift, execution permission, and claim permission.
 
+`scripts/s4_residency_runner_coq_certificate.py` is the untrusted WP8K bridge.
+It authenticates the exact sealed static runner report and its WP8I/WP8J
+parents, then assembles the four generated WP8J carriers into one ephemeral
+runner module. CI regenerates the module twice, compares it byte-for-byte,
+compiles it with Rocq 9.1, and checks the kernel-replayed object for an empty
+axiom set. An acquisition report, retained host, clock observation, generated
+execution, raw bundle, or performance claim is rejected by this bridge.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -236,7 +252,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ELF64ResidencyEnvelope NauxCore.ResidencyProcessTarget \
   NauxCore.ELF64ResidencyProcessEnvelope \
   NauxCore.ResidencyResultProtocol NauxCore.ResidencyCandidateRole \
-  NauxCore.ResidencyControlledHost NauxCore.ResidencyTimingCarrier
+  NauxCore.ResidencyControlledHost NauxCore.ResidencyTimingCarrier \
+  NauxCore.ResidencyMeasurementRunner
 make -C naux-meta-coq clean
 ```
 

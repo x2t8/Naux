@@ -20,4 +20,5 @@ ResidencyResultProtocol.v
 ResidencyCandidateRole.v
 ResidencyControlledHost.v
 ResidencyTimingCarrier.v
+ResidencyMeasurementRunner.v
 NauxCore.v

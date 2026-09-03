@@ -7,4 +7,4 @@ From NauxCore Require Export
   ControlFlowMachineIRResidency X86ResidencyEncoding ELF64ResidencyEnvelope
   ResidencyProcessTarget ELF64ResidencyProcessEnvelope
   ResidencyResultProtocol ResidencyCandidateRole ResidencyControlledHost
-  ResidencyTimingCarrier.
+  ResidencyTimingCarrier ResidencyMeasurementRunner.
