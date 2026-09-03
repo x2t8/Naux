@@ -14,7 +14,8 @@
 *)
 
 From Stdlib Require Import List ZArith.
-From NauxCore Require Import ResidencyControlledHost ResidencyPairedRunner.
+From NauxCore Require Import ResidencyControlledHost
+  ResidencyMeasurementRunner ResidencyPairedRunner.
 Import ListNotations.
 
 Inductive residency_paired_evidence_mode : Type :=
