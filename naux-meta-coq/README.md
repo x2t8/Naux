@@ -216,6 +216,15 @@ and mutation actions. The model proves that this state is not replay-ready and
 that neither a static nor a ready read-only replay can self-admit a performance
 claim.
 
+`ResidencyPairedRunner.v` closes the static WP8M same-session paired-runner
+boundary. It retains the admitted WP8K candidate runner beside the
+authenticated baseline role, fixes the complete eleven-gate protocol, and
+defines the odd-AB/even-BA order for exactly 120 pairs and 240 invocations.
+The checked default state has no retained host and forbids clock, build,
+execution, and publication actions. The model proves that two invocations are
+required per pair, the static state is not acquisition-ready, and even an
+eligible acquisition cannot self-admit a performance claim.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
 the sealed WP8G candidate, WP8H role report, and WP8I static host report. It
 authenticates the WP8C through WP8I parents, requires each process candidate
@@ -257,6 +266,15 @@ replay permission, live host, clock, build, execution, mutation, benchmark
 comparison, measurement result, or performance claim is rejected by this
 bridge.
 
+`scripts/s4_residency_paired_runner_coq_certificate.py` is the untrusted WP8M
+bridge. It authenticates the exact sealed static paired-runner report and all
+candidate/baseline parent authorities through the existing validator, then
+places the generated WP8K runner behind the checked same-session protocol. CI
+regenerates the module twice, compares it byte-for-byte, compiles it with Rocq
+9.1, and requires an empty axiom set. A live host, clock, build, execution,
+publication, measurement result, baseline comparison, or performance claim is
+rejected by this bridge.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -271,7 +289,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ELF64ResidencyProcessEnvelope \
   NauxCore.ResidencyResultProtocol NauxCore.ResidencyCandidateRole \
   NauxCore.ResidencyControlledHost NauxCore.ResidencyTimingCarrier \
-  NauxCore.ResidencyMeasurementRunner NauxCore.ResidencyEvidenceReplay
+  NauxCore.ResidencyMeasurementRunner NauxCore.ResidencyEvidenceReplay \
+  NauxCore.ResidencyPairedRunner
 make -C naux-meta-coq clean
 ```
 

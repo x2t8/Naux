@@ -25,6 +25,7 @@ on:
       - "distribution/s4-performance/WP8J-*"
       - "distribution/s4-performance/WP8K-*"
       - "distribution/s4-performance/WP8L-*"
+      - "distribution/s4-performance/WP8M-*"
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_register_residency_encoding_contract.py"
@@ -36,6 +37,7 @@ on:
       - "scripts/s4_register_residency_timing.py"
       - "scripts/s4_register_residency_measurement_runner.py"
       - "scripts/s4_register_residency_evidence.py"
+      - "scripts/s4_register_residency_paired_runner.py"
       - "scripts/s4_residency_coq_certificate.py"
       - "scripts/s4_residency_x86_coq_certificate.py"
       - "scripts/s4_residency_elf_coq_certificate.py"
@@ -43,6 +45,7 @@ on:
       - "scripts/s4_residency_timing_coq_certificate.py"
       - "scripts/s4_residency_runner_coq_certificate.py"
       - "scripts/s4_residency_evidence_coq_certificate.py"
+      - "scripts/s4_residency_paired_runner_coq_certificate.py"
       - "scripts/tests/test_s4_residency_coq_certificate.py"
       - "scripts/tests/test_s4_residency_x86_coq_certificate.py"
       - "scripts/tests/test_s4_residency_elf_coq_certificate.py"
@@ -50,6 +53,7 @@ on:
       - "scripts/tests/test_s4_residency_timing_coq_certificate.py"
       - "scripts/tests/test_s4_residency_runner_coq_certificate.py"
       - "scripts/tests/test_s4_residency_evidence_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_paired_runner_coq_certificate.py"
       - "scripts/tests/test_s4_register_residency_role.py"
       - "scripts/tests/test_s4_register_residency_role_static.py"
       - "scripts/tests/test_s4_register_residency_host.py"
@@ -59,6 +63,7 @@ on:
       - "scripts/tests/test_s4_register_residency_measurement_runner.py"
       - "scripts/tests/test_s4_register_residency_measurement_runner_static.py"
       - "scripts/tests/test_s4_register_residency_evidence*.py"
+      - "scripts/tests/test_s4_register_residency_paired_runner*.py"
       - ".github/workflows/formal-residency-bridge.yml"
   pull_request:
     paths:
@@ -84,6 +89,7 @@ on:
       - "distribution/s4-performance/WP8J-*"
       - "distribution/s4-performance/WP8K-*"
       - "distribution/s4-performance/WP8L-*"
+      - "distribution/s4-performance/WP8M-*"
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_register_residency_encoding_contract.py"
@@ -95,6 +101,7 @@ on:
       - "scripts/s4_register_residency_timing.py"
       - "scripts/s4_register_residency_measurement_runner.py"
       - "scripts/s4_register_residency_evidence.py"
+      - "scripts/s4_register_residency_paired_runner.py"
       - "scripts/s4_residency_coq_certificate.py"
       - "scripts/s4_residency_x86_coq_certificate.py"
       - "scripts/s4_residency_elf_coq_certificate.py"
@@ -102,6 +109,7 @@ on:
       - "scripts/s4_residency_timing_coq_certificate.py"
       - "scripts/s4_residency_runner_coq_certificate.py"
       - "scripts/s4_residency_evidence_coq_certificate.py"
+      - "scripts/s4_residency_paired_runner_coq_certificate.py"
       - "scripts/tests/test_s4_residency_coq_certificate.py"
       - "scripts/tests/test_s4_residency_x86_coq_certificate.py"
       - "scripts/tests/test_s4_residency_elf_coq_certificate.py"
@@ -109,6 +117,7 @@ on:
       - "scripts/tests/test_s4_residency_timing_coq_certificate.py"
       - "scripts/tests/test_s4_residency_runner_coq_certificate.py"
       - "scripts/tests/test_s4_residency_evidence_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_paired_runner_coq_certificate.py"
       - "scripts/tests/test_s4_register_residency_role.py"
       - "scripts/tests/test_s4_register_residency_role_static.py"
       - "scripts/tests/test_s4_register_residency_host.py"
@@ -118,6 +127,7 @@ on:
       - "scripts/tests/test_s4_register_residency_measurement_runner.py"
       - "scripts/tests/test_s4_register_residency_measurement_runner_static.py"
       - "scripts/tests/test_s4_register_residency_evidence*.py"
+      - "scripts/tests/test_s4_register_residency_paired_runner*.py"
       - ".github/workflows/formal-residency-bridge.yml"
   workflow_dispatch:
 
@@ -134,7 +144,7 @@ jobs:
         run: |
           rustup toolchain install 1.96.0 --profile minimal
           rustup default 1.96.0
-      - name: Emit and authenticate the WP8C through WP8L reports
+      - name: Emit and authenticate the WP8C through WP8M reports
         run: |
           cargo build --locked -p naux \
             --example naux_s4_register_residency_plan \
@@ -170,6 +180,8 @@ jobs:
             > "$RUNNER_TEMP/wp8k-runner.tsv"
           python3 scripts/s4_register_residency_evidence.py \
             > "$RUNNER_TEMP/wp8l-evidence.tsv"
+          python3 scripts/s4_register_residency_paired_runner.py \
+            > "$RUNNER_TEMP/wp8m-paired-runner.tsv"
       - name: Generate the untrusted Rocq certificates
         run: |
           python3 -m py_compile scripts/s4_residency_coq_certificate.py
@@ -179,6 +191,7 @@ jobs:
           python3 -m py_compile scripts/s4_residency_timing_coq_certificate.py
           python3 -m py_compile scripts/s4_residency_runner_coq_certificate.py
           python3 -m py_compile scripts/s4_residency_evidence_coq_certificate.py
+          python3 -m py_compile scripts/s4_residency_paired_runner_coq_certificate.py
           python3 -m unittest -v \
             scripts.tests.test_s4_residency_coq_certificate \
             scripts.tests.test_s4_residency_x86_coq_certificate \
@@ -187,6 +200,7 @@ jobs:
             scripts.tests.test_s4_residency_timing_coq_certificate \
             scripts.tests.test_s4_residency_runner_coq_certificate \
             scripts.tests.test_s4_residency_evidence_coq_certificate \
+            scripts.tests.test_s4_residency_paired_runner_coq_certificate \
             scripts.tests.test_s4_register_residency_role_static \
             scripts.tests.test_s4_register_residency_role \
             scripts.tests.test_s4_register_residency_host_static \
@@ -196,7 +210,9 @@ jobs:
             scripts.tests.test_s4_register_residency_measurement_runner \
             scripts.tests.test_s4_register_residency_measurement_runner_static \
             scripts.tests.test_s4_register_residency_evidence_replay \
-            scripts.tests.test_s4_register_residency_evidence_static
+            scripts.tests.test_s4_register_residency_evidence_static \
+            scripts.tests.test_s4_register_residency_paired_runner \
+            scripts.tests.test_s4_register_residency_paired_runner_static
           python3 scripts/s4_residency_coq_certificate.py \
             --report "$RUNNER_TEMP/wp8c-plan.tsv" \
             --output "$RUNNER_TEMP/wp8c-certificates-a.v"
@@ -301,6 +317,16 @@ jobs:
             "$RUNNER_TEMP/GeneratedWP8LEvidence-b.v"
           cp "$RUNNER_TEMP/GeneratedWP8LEvidence-a.v" \
             naux-meta-coq/GeneratedWP8LEvidence.v
+          python3 scripts/s4_residency_paired_runner_coq_certificate.py \
+            --paired-report "$RUNNER_TEMP/wp8m-paired-runner.tsv" \
+            --output "$RUNNER_TEMP/GeneratedWP8MPairedRunner-a.v"
+          python3 scripts/s4_residency_paired_runner_coq_certificate.py \
+            --paired-report "$RUNNER_TEMP/wp8m-paired-runner.tsv" \
+            --output "$RUNNER_TEMP/GeneratedWP8MPairedRunner-b.v"
+          cmp "$RUNNER_TEMP/GeneratedWP8MPairedRunner-a.v" \
+            "$RUNNER_TEMP/GeneratedWP8MPairedRunner-b.v"
+          cp "$RUNNER_TEMP/GeneratedWP8MPairedRunner-a.v" \
+            naux-meta-coq/GeneratedWP8MPairedRunner.v
       - name: Admit the report inside Rocq 9.1
         uses: rocq-prover/docker-opam-action@126d4ac196f8133729a1cb0d2aa1ee7106efec58 # v1.5.2
         with:
@@ -327,6 +353,8 @@ jobs:
               naux-meta-coq/GeneratedWP8KRunner.v
             rocq c -Q naux-meta-coq NauxCore \
               naux-meta-coq/GeneratedWP8LEvidence.v
+            rocq c -Q naux-meta-coq NauxCore \
+              naux-meta-coq/GeneratedWP8MPairedRunner.v
             rocq check -silent -o -Q naux-meta-coq NauxCore \
                 NauxCore.GeneratedWP8CCertificates \
                 NauxCore.GeneratedWP8EX86Certificates 2>&1 \
@@ -359,6 +387,11 @@ jobs:
               | tee /tmp/naux-wp8l-evidence-coqchk-context.txt
             grep -Fq '* Axioms: <none>' \
               /tmp/naux-wp8l-evidence-coqchk-context.txt
+            rocq check -silent -o -Q naux-meta-coq NauxCore \
+                NauxCore.GeneratedWP8MPairedRunner 2>&1 \
+              | tee /tmp/naux-wp8m-paired-runner-coqchk-context.txt
+            grep -Fq '* Axioms: <none>' \
+              /tmp/naux-wp8m-paired-runner-coqchk-context.txt
             if grep -n -E '\b(Admitted|admit|Axiom|Parameter)\b' \
               naux-meta-coq/GeneratedWP8CCertificates.v \
               naux-meta-coq/GeneratedWP8EX86Certificates.v \
@@ -366,7 +399,8 @@ jobs:
               naux-meta-coq/GeneratedWP8GProcessKernel*.v \
               naux-meta-coq/GeneratedWP8JTimingKernel*.v \
               naux-meta-coq/GeneratedWP8KRunner.v \
-              naux-meta-coq/GeneratedWP8LEvidence.v; then
+              naux-meta-coq/GeneratedWP8LEvidence.v \
+              naux-meta-coq/GeneratedWP8MPairedRunner.v; then
               echo "Unchecked generated declaration found" >&2
               exit 1
             fi
@@ -377,7 +411,8 @@ jobs:
               naux-meta-coq/GeneratedWP8GProcessKernel*.v \
               naux-meta-coq/GeneratedWP8JTimingKernel*.v \
               naux-meta-coq/GeneratedWP8KRunner.v \
-              naux-meta-coq/GeneratedWP8LEvidence.v
+              naux-meta-coq/GeneratedWP8LEvidence.v \
+              naux-meta-coq/GeneratedWP8MPairedRunner.v
       - name: Restore workspace ownership
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
