@@ -12,7 +12,7 @@
 *)
 
 From Stdlib Require Import List Arith.
-From NauxCore Require Import ResidencyControlledHost.
+From NauxCore Require Import ResidencyCandidateRole ResidencyControlledHost.
 Import ListNotations.
 
 Inductive residency_carrier_clock_source : Type :=
