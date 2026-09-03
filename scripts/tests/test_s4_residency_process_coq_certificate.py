@@ -112,6 +112,7 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
             "d" * 64,
             "e" * 64,
             "f" * 64,
+            "g" * 64,
         )
         self.assertIn("GeneratedWP8EX86Certificates", output)
         self.assertIn("wp8e_kernel_01_target", output)
@@ -128,12 +129,43 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         self.assertIn("expected_result_protocol_is_well_formed", output)
         self.assertIn("WP8G replay report root: " + "e" * 64, output)
         self.assertIn("WP8H role replay report root: " + "f" * 64, output)
+        self.assertIn("WP8I static host report root: " + "g" * 64, output)
         self.assertIn("ResidencyCandidateRole", output)
+        self.assertIn("ResidencyControlledHost", output)
         self.assertIn("candidate_role_is_admitted", output)
         self.assertIn("candidate_role_is_isolated", output)
         self.assertIn("candidate_role_is_untimed", output)
         self.assertIn("candidate_role_retains_baseline", output)
+        self.assertIn("static_host_boundary_is_admitted", output)
+        self.assertIn("static_host_has_no_observation", output)
+        self.assertIn("static_host_is_not_measurement_ready", output)
+        self.assertIn("static_host_has_no_performance_claim", output)
         self.assertIn("x86 execution, Linux loading", output)
+
+    def test_host_report_is_bound_to_exact_static_wp8i_boundary(self) -> None:
+        admission = bridge.wp8i.validate(ROOT)
+        evidence = bridge.parse_authenticated_host_report(
+            admission.static_report, admission
+        )
+        self.assertEqual(evidence.report_root, admission.static_root)
+
+    def test_host_report_rejects_resealed_observation_drift(self) -> None:
+        admission = bridge.wp8i.validate(ROOT)
+        lines = admission.static_report.splitlines(keepends=True)
+        body = b"".join(lines[:-1]).replace(
+            b"host-status\tnot-observed\n",
+            b"host-status\teligible-ephemeral-observation\n",
+            1,
+        )
+        resealed = body + (
+            "report-root\t"
+            + hashlib.sha256(bridge.wp8i.REPORT_DOMAIN + body).hexdigest()
+            + "\n"
+        ).encode()
+        with self.assertRaisesRegex(
+            bridge.ProcessCertificateError, "metadata drifted"
+        ):
+            bridge.parse_authenticated_host_report(resealed, admission)
 
     def test_replay_report_is_exactly_bound_to_two_passes(self) -> None:
         candidate, _ = self.fixture()

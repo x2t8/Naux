@@ -56,7 +56,8 @@ jobs:
                   NauxCore.ResidencyProcessTarget \
                   NauxCore.ELF64ResidencyProcessEnvelope \
                   NauxCore.ResidencyResultProtocol \
-                  NauxCore.ResidencyCandidateRole 2>&1 \
+                  NauxCore.ResidencyCandidateRole \
+                  NauxCore.ResidencyControlledHost 2>&1 \
                 | tee /tmp/naux-coqchk-context.txt
               grep -Fq '* Axioms: <none>' /tmp/naux-coqchk-context.txt
             endGroup

@@ -182,20 +182,28 @@ offset. The model proves that such an assignment cannot be the baseline role
 and derives result-record well-formedness. It deliberately grants neither
 measurement authority nor a performance claim.
 
+`ResidencyControlledHost.v` closes the static WP8I boundary. It distinguishes
+an unobserved host from an eligible observation carrying a bounded 32-byte
+fingerprint, and separates protocol linkage from measurement readiness. The
+checked static binding reuses the WP8H candidate, records that no host was
+observed, keeps timing forbidden, and carries no performance-claim authority.
+The model proves that this state is neither host-eligible nor measurement
+ready; a future positive observation must cross a separate evidence gate.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
-the sealed WP8G candidate and WP8H role reports. It authenticates the WP8C,
-WP8E, WP8G, and WP8H parents, requires each process candidate to equal its
-admitted WP8E target,
+the sealed WP8G candidate, WP8H role report, and WP8I static host report. It
+authenticates the WP8C through WP8I parents, requires each process candidate
+to equal its admitted WP8E target,
 and emits only the 16-byte patch, 80-byte verifier, exact 384-byte ELF prefix,
 fixed 48-byte expected result, and closed receipt. The bridge independently
 reconstructs the prefix and result serialization before emission. It also
-requires both the authenticated two-pass fresh-process replay report and the
-derived WP8H role report. It refuses to emit if any observed kernel identity,
-result field, role, timing boundary, baseline-retention fact, or report root
-differs from the sealed contracts. CI generates one module per kernel,
-compiles each with Rocq 9.1, and
-asks the kernel to replay every process, full-image, and result-schema theorem
-with an empty axiom set.
+requires the authenticated two-pass fresh-process replay report, derived WP8H
+role report, and exact clock-free WP8I static report. It refuses to emit if any
+observed kernel identity, result field, role, timing boundary,
+baseline-retention fact, host status, or report root differs from the sealed
+contracts. CI generates one module per kernel, compiles each with Rocq 9.1,
+and asks the kernel to replay every process, full-image, result-schema, role,
+and static-host-boundary theorem with an empty axiom set.
 
 ```bash
 make -C naux-meta-coq
@@ -209,7 +217,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.X86ResidencyEncoding \
   NauxCore.ELF64ResidencyEnvelope NauxCore.ResidencyProcessTarget \
   NauxCore.ELF64ResidencyProcessEnvelope \
-  NauxCore.ResidencyResultProtocol NauxCore.ResidencyCandidateRole
+  NauxCore.ResidencyResultProtocol NauxCore.ResidencyCandidateRole \
+  NauxCore.ResidencyControlledHost
 make -C naux-meta-coq clean
 ```
 

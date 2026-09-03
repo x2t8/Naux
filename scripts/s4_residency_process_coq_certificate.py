@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Bind the admitted WP8G process and WP8H role to WP8E bytes in Rocq.
+"""Bind the admitted WP8G process through the WP8I host boundary in Rocq.
 
 The translator is intentionally untrusted.  It authenticates the WP8C and
-WP8E reports plus the sealed WP8G process and WP8H role reports.  It emits
-only the WP8G-owned sixteen-byte return patch, eighty-byte verifier, closed
+WP8E reports plus the sealed WP8G process, WP8H role, and WP8I static host
+reports.  It emits only the WP8G-owned sixteen-byte return patch,
+eighty-byte verifier, closed
 receipts, exact WP8G ELF prefix, and fixed-le48-v1 expected result record.
 Rocq reuses the complete WP8E target and checks the rewrite, jump destination,
 verifier fields, failure edges, process extent, byte bounds, complete
@@ -20,6 +21,7 @@ import s4_register_residency_candidate_authority as wp8e
 import s4_register_residency_plan_authority as wp8c
 import s4_register_residency_process as wp8g
 import s4_register_residency_role as wp8h
+import s4_register_residency_host as wp8i
 import s4_residency_coq_certificate as semantic
 import s4_residency_x86_coq_certificate as x86_bridge
 
@@ -64,6 +66,11 @@ class ProcessReplayEvidence:
 
 @dataclass(frozen=True)
 class RoleReplayEvidence:
+    report_root: str
+
+
+@dataclass(frozen=True)
+class HostBoundaryEvidence:
     report_root: str
 
 
@@ -354,6 +361,48 @@ def parse_authenticated_role_report(
     return RoleReplayEvidence(lines[-1][len(marker) :])
 
 
+def parse_authenticated_host_report(
+    raw: bytes,
+    admission: wp8i.Admission,
+) -> HostBoundaryEvidence:
+    """Authenticate the exact clock-free WP8I static boundary report."""
+
+    try:
+        lines = wp8i._canonical(raw, "WP8I static host report")
+    except wp8i.CandidateHostError as error:
+        raise ProcessCertificateError(str(error)) from error
+    if len(lines) != 15:
+        raise ProcessCertificateError("WP8I static host report extent drifted")
+
+    prefix = (
+        wp8i.REPORT_MAGIC,
+        f"contract\t{admission.contract.seal}",
+        f"authority\t{admission.authority.seal}",
+        f"candidate-role-authority\t{wp8i.WP8H_AUTHORITY_SEAL}",
+        f"host-protocol-authority\t{wp8i.WP6_AUTHORITY_SEAL}",
+        "protocol-status\tcandidate-controlled-host-protocol-admitted",
+        "host-status\tnot-observed",
+        "role\tnaux-register-residency-candidate",
+        "baseline-role\tnaux-residual",
+        "claim-status\tnot-admitted",
+        "timing-status\tforbidden",
+        "mode\tstatic-authority",
+        "gates\t9",
+        "blockers\t3",
+    )
+    if tuple(lines[: len(prefix)]) != prefix:
+        raise ProcessCertificateError("WP8I static host report metadata drifted")
+    if raw != admission.static_report:
+        raise ProcessCertificateError("WP8I static host report root drifted")
+    marker = "report-root\t"
+    if not lines[-1].startswith(marker):
+        raise ProcessCertificateError("WP8I static host report root is missing")
+    report_root = lines[-1][len(marker) :]
+    if report_root != admission.static_root:
+        raise ProcessCertificateError("WP8I static host report identity drifted")
+    return HostBoundaryEvidence(report_root)
+
+
 def join_authenticated_candidate(
     candidate: wp8g.Candidate,
     native_kernels: list[x86_bridge.NativeKernel],
@@ -466,21 +515,24 @@ def emit_rocq(
     process_authority_root: str,
     process_replay_root: str,
     role_replay_root: str,
+    host_boundary_root: str,
 ) -> str:
     rows = [
         "(**",
-        "  Generated from the sealed S4-WP8C through S4-WP8H artifacts.",
+        "  Generated from the sealed S4-WP8C through S4-WP8I artifacts.",
         f"  WP8C report root: {plan_root}",
         f"  WP8E report root: {encoding_root}",
         f"  WP8G candidate SHA-256: {process_report_sha256}",
         f"  WP8G authority report root: {process_authority_root}",
         f"  WP8G replay report root: {process_replay_root}",
         f"  WP8H role replay report root: {role_replay_root}",
+        f"  WP8I static host report root: {host_boundary_root}",
         "  The generator is untrusted. Rocq receives only WP8G-owned patch and",
         "  verifier, ELF-prefix, and result-record bytes, reuses the checked",
         "  WP8E target, and validates the exact rewrite, complete process ELF",
         "  envelope, fixed-le48-v1 result decoding, and isolated untimed",
-        "  candidate-role assignment while retaining the baseline role.",
+        "  candidate-role assignment while retaining the baseline role, then",
+        "  binds that assignment to the static controlled-host protocol.",
         "  x86 execution, Linux loading, syscalls, timing, and performance",
         "  remain explicit non-claims.",
         "*)",
@@ -489,6 +541,7 @@ def emit_rocq(
         "From NauxCore Require Import X86ResidencyEncoding ResidencyProcessTarget",
         "  ELF64ResidencyEnvelope ELF64ResidencyProcessEnvelope",
         "  ResidencyResultProtocol ResidencyCandidateRole",
+        "  ResidencyControlledHost",
         "  GeneratedWP8EX86Certificates.",
         "Import ListNotations.",
         "Open Scope Z_scope.",
@@ -799,6 +852,58 @@ def emit_rocq(
                 f"    {prefix}_role_assignment {prefix}_candidate_role_is_admitted).",
                 "Qed.",
                 "",
+                f"Definition {prefix}_controlled_host_binding :",
+                "    residency_controlled_host_binding :=",
+                "  {| residency_host_candidate :=",
+                f"       {prefix}_role_assignment;",
+                "     residency_host_protocol_linked := true;",
+                "     residency_host_observation_state :=",
+                "       ResidencyHostNotObserved;",
+                "     residency_host_timing := ResidencyTimingForbidden;",
+                "     residency_host_performance_claim :=",
+                "       ResidencyPerformanceClaimForbidden |}.",
+                "",
+                f"Theorem {prefix}_static_host_boundary_is_admitted :",
+                "  residency_static_host_boundary_admitted",
+                f"    {prefix}_controlled_host_binding.",
+                "Proof.",
+                "  unfold residency_static_host_boundary_admitted,",
+                f"    {prefix}_controlled_host_binding.",
+                "  split.",
+                f"  - exact {prefix}_candidate_role_is_admitted.",
+                "  - split; [reflexivity |].",
+                "    split; [reflexivity |].",
+                "    split; reflexivity.",
+                "Qed.",
+                "",
+                f"Corollary {prefix}_static_host_has_no_observation :",
+                "  residency_host_observation_state",
+                f"    {prefix}_controlled_host_binding = ResidencyHostNotObserved.",
+                "Proof.",
+                "  exact (residency_static_host_boundary_has_no_observation",
+                f"    {prefix}_controlled_host_binding",
+                f"    {prefix}_static_host_boundary_is_admitted).",
+                "Qed.",
+                "",
+                f"Corollary {prefix}_static_host_is_not_measurement_ready :",
+                "  ~ residency_candidate_measurement_ready",
+                f"      {prefix}_controlled_host_binding.",
+                "Proof.",
+                "  exact (residency_static_host_boundary_is_not_measurement_ready",
+                f"    {prefix}_controlled_host_binding",
+                f"    {prefix}_static_host_boundary_is_admitted).",
+                "Qed.",
+                "",
+                f"Corollary {prefix}_static_host_has_no_performance_claim :",
+                "  residency_host_performance_claim",
+                f"    {prefix}_controlled_host_binding =",
+                "      ResidencyPerformanceClaimForbidden.",
+                "Proof.",
+                "  exact (residency_static_host_boundary_has_no_performance_claim",
+                f"    {prefix}_controlled_host_binding",
+                f"    {prefix}_static_host_boundary_is_admitted).",
+                "Qed.",
+                "",
             ]
         )
     return "\n".join(rows)
@@ -827,6 +932,7 @@ def main() -> int:
     parser.add_argument("--process-report", required=True, type=Path)
     parser.add_argument("--replay-report", required=True, type=Path)
     parser.add_argument("--role-report", required=True, type=Path)
+    parser.add_argument("--host-report", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument(
         "--kernel",
@@ -843,12 +949,21 @@ def main() -> int:
         _, encoding_admission, _, _ = wp8e.validate(root, arguments.encoding_report)
         process_admission = wp8g.validate(root)
         role_admission = wp8h.validate(root)
+        host_admission = wp8i.validate(root)
+        if (
+            host_admission.candidate.contract.seal
+            != role_admission.contract.seal
+            or host_admission.candidate.authority.seal
+            != role_admission.authority.seal
+        ):
+            raise ProcessCertificateError("WP8H/WP8I candidate role identity drifted")
 
         plan_raw = arguments.plan_report.read_bytes()
         encoding_raw = arguments.encoding_report.read_bytes()
         process_raw = arguments.process_report.read_bytes()
         replay_raw = arguments.replay_report.read_bytes()
         role_raw = arguments.role_report.read_bytes()
+        host_raw = arguments.host_report.read_bytes()
         plan_kernels = semantic.parse_verified_report(plan_raw)
         wp8d_admission = wp8e.wp8d.validate(root)
         native_kernels = x86_bridge.parse_joined_reports(
@@ -866,6 +981,9 @@ def main() -> int:
         role_evidence = parse_authenticated_role_report(
             role_raw, role_admission, replay_raw, replay_evidence
         )
+        host_evidence = parse_authenticated_host_report(
+            host_raw, host_admission
+        )
         kernels = _filter_kernels(
             join_authenticated_candidate(process_candidate, native_kernels),
             arguments.kernel,
@@ -878,6 +996,7 @@ def main() -> int:
             process_admission.report_root,
             replay_evidence.report_root,
             role_evidence.report_root,
+            host_evidence.report_root,
         )
         arguments.output.write_text(output, encoding="utf-8", newline="\n")
     except (
@@ -890,6 +1009,8 @@ def main() -> int:
         wp8g.ProcessReplayError,
         wp8g.wp8f.ElfAuthorityError,
         wp8h.CandidateRoleError,
+        wp8i.CandidateHostError,
+        wp8i.wp6.HostControlError,
         OSError,
         ValueError,
     ) as error:
