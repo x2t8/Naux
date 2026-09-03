@@ -155,12 +155,23 @@ the admitted error exit. Generic theorems retain the candidate extent, recover
 the appended verifier exactly, and preserve byte bounds. Native instruction
 semantics and Linux execution remain outside this structural layer.
 
+`ELF64ResidencyProcessEnvelope.v` closes the remaining WP8G packaging gap.
+It constructs the sectionless executable header, exact 117-byte result-record
+startup, sixteen-byte-aligned target placement at offset 384, and the complete
+process payload. The artifact ordinal is checked as a non-zero bounded value
+and encoded into the startup record. Generic theorems derive the full image
+extent and recover the process target exactly after the prefix. As at WP8F,
+Linux loading, syscall semantics, native execution, timing, and performance
+remain outside the byte-structure theorem.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
 the sealed WP8G candidate report. It authenticates the WP8C, WP8E, and WP8G
 parents, requires each process candidate to equal its admitted WP8E target,
-and emits only the 16-byte patch, 80-byte verifier, and closed receipt. CI
-generates one module per kernel, compiles each with Rocq 9.1, and asks the
-kernel to replay every theorem with an empty axiom set.
+and emits only the 16-byte patch, 80-byte verifier, exact 384-byte ELF prefix,
+and closed receipt. The bridge independently reconstructs that prefix before
+emission. CI generates one module per kernel, compiles each with Rocq 9.1, and
+asks the kernel to replay every process and full-image theorem with an empty
+axiom set.
 
 ```bash
 make -C naux-meta-coq
@@ -172,7 +183,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.OwnershipMachineIRResidency \
   NauxCore.ControlFlowMachineIRResidency \
   NauxCore.X86ResidencyEncoding \
-  NauxCore.ELF64ResidencyEnvelope NauxCore.ResidencyProcessTarget
+  NauxCore.ELF64ResidencyEnvelope NauxCore.ResidencyProcessTarget \
+  NauxCore.ELF64ResidencyProcessEnvelope
 make -C naux-meta-coq clean
 ```
 

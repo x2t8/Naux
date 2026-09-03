@@ -15,4 +15,5 @@ ControlFlowMachineIRResidency.v
 X86ResidencyEncoding.v
 ELF64ResidencyEnvelope.v
 ResidencyProcessTarget.v
+ELF64ResidencyProcessEnvelope.v
 NauxCore.v

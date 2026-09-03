@@ -4,8 +4,9 @@
 The translator is intentionally untrusted.  It authenticates the WP8C and
 WP8E reports plus the sealed WP8G authority and candidate report.  It emits
 only the WP8G-owned sixteen-byte return patch, eighty-byte verifier, and
-closed receipts.  Rocq reuses the complete WP8E target and checks the rewrite,
-jump destination, verifier fields, failure edges, extent, and byte bounds.
+closed receipts plus the exact WP8G ELF prefix.  Rocq reuses the complete
+WP8E target and checks the rewrite, jump destination, verifier fields, failure
+edges, process extent, byte bounds, and complete fresh-process ELF envelope.
 """
 
 from __future__ import annotations
@@ -28,10 +29,14 @@ class ProcessCertificateError(RuntimeError):
 @dataclass(frozen=True)
 class ProcessKernel:
     ordinal: str
+    ordinal_value: int
     name: str
     patch: tuple[int, ...]
     verifier: tuple[int, ...]
+    elf_prefix: tuple[int, ...]
     process_bytes: int
+    elf_bytes: int
+    target_offset: int
     return_start: int
     verifier_offset: int
     error_offset: int
@@ -53,6 +58,121 @@ def _signed_le32(raw: bytes, label: str) -> int:
     return int.from_bytes(raw, "little", signed=True)
 
 
+def _le16(value: int) -> bytes:
+    return value.to_bytes(2, "little", signed=False)
+
+
+def _le32(value: int) -> bytes:
+    return value.to_bytes(4, "little", signed=False)
+
+
+def _le64(value: int) -> bytes:
+    return value.to_bytes(8, "little", signed=False)
+
+
+def _rel32(target: int, displacement: int) -> bytes:
+    delta = target - (displacement + 4)
+    if not -(1 << 31) <= delta < (1 << 31):
+        raise ProcessCertificateError("WP8G process ELF rel32 escapes its bound")
+    return delta.to_bytes(4, "little", signed=True)
+
+
+def canonical_process_startup(ordinal: int, target_offset: int = 384) -> bytes:
+    """Independently reconstruct the exact WP8G result-record startup."""
+
+    if not 0 < ordinal < 65_536:
+        raise ProcessCertificateError("WP8G process ELF ordinal escapes its bound")
+    startup = bytearray(b"\xe8" + _rel32(target_offset, 257))
+    startup += bytes.fromhex("4883ec3049b8") + b"NAUX5E01"
+    startup += bytes.fromhex("4c89042449b8") + _le64(ordinal)
+    startup += bytes.fromhex(
+        "4c89442408"
+        "4889442410"
+        "48894c2418"
+        "4889542420"
+        "4889742428"
+        "b801000000"
+        "bf01000000"
+        "4889e6"
+        "ba30000000"
+        "0f05"
+        "4883f830"
+    )
+    failure_fixup = len(startup) + 2
+    startup += bytes.fromhex("0f8500000000")
+    startup += bytes.fromhex(
+        "4883c430"
+        "31ff"
+        "b83c000000"
+        "0f050f0b"
+    )
+    failure = len(startup)
+    startup += bytes.fromhex("bf46000000b83c0000000f050f0b")
+    startup[failure_fixup : failure_fixup + 4] = _rel32(
+        failure, failure_fixup
+    )
+    if len(startup) != 117:
+        raise ProcessCertificateError("WP8G process ELF startup extent drifted")
+    return bytes(startup)
+
+
+def canonical_process_elf_prefix(
+    process: bytes, ordinal: int, target_offset: int = 384
+) -> bytes:
+    """Independently reconstruct the WP8G bytes preceding the process target."""
+
+    if target_offset != 384:
+        raise ProcessCertificateError("WP8G process ELF target offset drifted")
+    image_bytes = target_offset + len(process)
+    if image_bytes >= 65_536:
+        raise ProcessCertificateError("WP8G process ELF exceeds the Rocq extent bound")
+    header = b"".join(
+        (
+            b"\x7fELF\x02\x01\x01" + bytes(9),
+            _le16(2),
+            _le16(62),
+            _le32(1),
+            _le64(4_194_560),
+            _le64(64),
+            _le64(0),
+            _le32(0),
+            _le16(64),
+            _le16(56),
+            _le16(2),
+            _le16(0),
+            _le16(0),
+            _le16(0),
+        )
+    )
+    load = b"".join(
+        (
+            _le32(1),
+            _le32(5),
+            _le64(0),
+            _le64(4_194_304),
+            _le64(4_194_304),
+            _le64(image_bytes),
+            _le64(image_bytes),
+            _le64(4_096),
+        )
+    )
+    stack = b"".join(
+        (
+            _le32(0x6474_E551),
+            _le32(6),
+            bytes(40),
+            _le64(16),
+        )
+    )
+    prefix = bytearray(header + load + stack)
+    prefix.extend(bytes(256 - len(prefix)))
+    prefix.extend(canonical_process_startup(ordinal, target_offset))
+    prefix.extend(bytes(target_offset - len(prefix)))
+    if len(prefix) != target_offset:
+        raise ProcessCertificateError("WP8G process ELF prefix extent drifted")
+    return bytes(prefix)
+
+
 def join_authenticated_candidate(
     candidate: wp8g.Candidate,
     native_kernels: list[x86_bridge.NativeKernel],
@@ -72,6 +192,7 @@ def join_authenticated_candidate(
             raise ProcessCertificateError("WP8E/WP8G kernel identity drifted")
         candidate_bytes = bytes(kernel.candidate)
         process = bytes(kernel.process)
+        elf = bytes(kernel.elf)
         if candidate_bytes != bytes(native.target):
             raise ProcessCertificateError("WP8G candidate is not the admitted WP8E target")
         if record.verifier_offset != len(candidate_bytes):
@@ -82,6 +203,19 @@ def join_authenticated_candidate(
         verifier = process[record.verifier_offset:]
         if len(patch) != 16 or len(verifier) != 80:
             raise ProcessCertificateError("WP8G patch or verifier extent drifted")
+        if (
+            record.startup_bytes != 117
+            or record.target_offset != 384
+            or record.elf_bytes != len(elf)
+            or len(elf) != record.target_offset + len(process)
+            or elf[record.target_offset :] != process
+        ):
+            raise ProcessCertificateError("WP8G process ELF receipt drifted")
+        elf_prefix = elf[: record.target_offset]
+        if elf_prefix != canonical_process_elf_prefix(
+            process, record.ordinal, record.target_offset
+        ):
+            raise ProcessCertificateError("WP8G process ELF prefix drifted")
         if (
             patch[:1] != b"\xe9"
             or patch[5:] != b"\x90" * 11
@@ -100,10 +234,14 @@ def join_authenticated_candidate(
         joined.append(
             ProcessKernel(
                 ordinal=ordinal,
+                ordinal_value=record.ordinal,
                 name=record.name,
                 patch=tuple(patch),
                 verifier=tuple(verifier),
+                elf_prefix=tuple(elf_prefix),
                 process_bytes=record.process_bytes,
+                elf_bytes=record.elf_bytes,
+                target_offset=record.target_offset,
                 return_start=record.return_start,
                 verifier_offset=record.verifier_offset,
                 error_offset=record.error_offset,
@@ -152,14 +290,15 @@ def emit_rocq(
         f"  WP8G candidate SHA-256: {process_report_sha256}",
         f"  WP8G authority report root: {process_authority_root}",
         "  The generator is untrusted. Rocq receives only WP8G-owned patch and",
-        "  verifier bytes, reuses the checked WP8E target, and validates the",
-        "  exact rewrite structure and all closed receipt equations.",
+        "  verifier and ELF-prefix bytes, reuses the checked WP8E target, and",
+        "  validates the exact rewrite plus complete process ELF envelope.",
         "  x86 execution, Linux loading, syscalls, timing, and performance",
         "  remain explicit non-claims.",
         "*)",
         "",
         "From Stdlib Require Import List ZArith Lia.",
         "From NauxCore Require Import X86ResidencyEncoding ResidencyProcessTarget",
+        "  ELF64ResidencyProcessEnvelope",
         "  GeneratedWP8EX86Certificates.",
         "Import ListNotations.",
         "Open Scope Z_scope.",
@@ -297,6 +436,88 @@ def emit_rocq(
                 f"    {prefix}_process {prefix}_receipt {prefix}_completion",
                 f"    wp8e_kernel_{kernel.ordinal}_target_bytes_are_bounded",
                 f"    {prefix}_process_is_well_formed).",
+                "Qed.",
+                "",
+                f"Definition {prefix}_reported_elf_prefix : list nat :=",
+                f"  {_coq_list(kernel.elf_prefix)}.",
+                "",
+                f"Definition {prefix}_elf_image : list nat :=",
+                f"  {prefix}_reported_elf_prefix ++ {prefix}_process.",
+                "",
+                f"Example {prefix}_reported_elf_prefix_extent :",
+                f"  length {prefix}_reported_elf_prefix =",
+                f"    {_coq_nat(kernel.target_offset)}.",
+                "Proof. vm_compute. reflexivity. Qed.",
+                "",
+                f"Example {prefix}_reported_elf_prefix_is_canonical :",
+                f"  {prefix}_reported_elf_prefix =",
+                "    elf64_residency_process_prefix",
+                f"      {prefix}_process {_coq_nat(kernel.ordinal_value)}.",
+                "Proof.",
+                "  unfold elf64_residency_process_prefix,",
+                "    elf64_residency_process_image_bytes.",
+                f"  rewrite {prefix}_process_extent.",
+                "  vm_compute. reflexivity.",
+                "Qed.",
+                "",
+                f"Example {prefix}_elf_extent_fits :",
+                "  elf64_residency_process_extent_fitsb",
+                f"    {prefix}_process = true.",
+                "Proof.",
+                "  unfold elf64_residency_process_extent_fitsb,",
+                "    elf64_residency_process_image_bytes.",
+                f"  rewrite {prefix}_process_extent.",
+                "  vm_compute. reflexivity.",
+                "Qed.",
+                "",
+                f"Example {prefix}_elf_ordinal_is_valid :",
+                "  elf64_residency_process_ordinal_validb",
+                f"    {_coq_nat(kernel.ordinal_value)} = true.",
+                "Proof. vm_compute. reflexivity. Qed.",
+                "",
+                f"Example {prefix}_reported_elf_prefix_bytes_check :",
+                "  forallb elf64_residency_byte_validb",
+                f"    {prefix}_reported_elf_prefix = true.",
+                "Proof. vm_compute. reflexivity. Qed.",
+                "",
+                f"Theorem {prefix}_reported_elf_prefix_bytes_are_bounded :",
+                "  Forall (fun byte => (byte < 256)%nat)",
+                f"    {prefix}_reported_elf_prefix.",
+                "Proof.",
+                "  apply elf64_residency_bytes_check_sound.",
+                f"  exact {prefix}_reported_elf_prefix_bytes_check.",
+                "Qed.",
+                "",
+                f"Theorem {prefix}_elf_image_is_well_formed :",
+                "  elf64_residency_process_image_well_formed",
+                f"    {prefix}_process {_coq_nat(kernel.ordinal_value)}",
+                f"    {prefix}_elf_image.",
+                "Proof.",
+                f"  unfold {prefix}_elf_image.",
+                "  apply elf64_residency_process_image_from_prefix.",
+                f"  - exact {prefix}_reported_elf_prefix_bytes_are_bounded.",
+                f"  - exact {prefix}_process_bytes_are_bounded.",
+                f"  - exact {prefix}_elf_extent_fits.",
+                f"  - exact {prefix}_elf_ordinal_is_valid.",
+                f"  - exact {prefix}_reported_elf_prefix_is_canonical.",
+                "Qed.",
+                "",
+                f"Corollary {prefix}_elf_image_extent :",
+                f"  length {prefix}_elf_image = {_coq_nat(kernel.elf_bytes)}.",
+                "Proof.",
+                f"  unfold {prefix}_elf_image. rewrite length_app.",
+                f"  rewrite {prefix}_reported_elf_prefix_extent,",
+                f"    {prefix}_process_extent.",
+                "  reflexivity.",
+                "Qed.",
+                "",
+                f"Corollary {prefix}_elf_contains_process :",
+                f"  skipn {_coq_nat(kernel.target_offset)} {prefix}_elf_image =",
+                f"    {prefix}_process.",
+                "Proof.",
+                "  exact (elf64_residency_process_well_formed_contains_target",
+                f"    {prefix}_process {_coq_nat(kernel.ordinal_value)}",
+                f"    {prefix}_elf_image {prefix}_elf_image_is_well_formed).",
                 "Qed.",
                 "",
             ]

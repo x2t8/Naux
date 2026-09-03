@@ -52,7 +52,8 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
             target_offset=384,
         )
         process = bridge.wp8g._reconstruct_process(bytes(candidate), record)
-        kernel = bridge.wp8g.Kernel(record, bytes(candidate), process, b"")
+        elf = bridge.canonical_process_elf_prefix(process, record.ordinal) + process
+        kernel = bridge.wp8g.Kernel(record, bytes(candidate), process, elf)
         report = bridge.wp8g.Candidate((kernel,), b"fixture\n")
         native = bridge.x86_bridge.NativeKernel(
             ordinal="01",
@@ -73,6 +74,8 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         self.assertEqual(kernel.patch[:1], (0xE9,))
         self.assertEqual(kernel.patch[5:], (0x90,) * 11)
         self.assertEqual(len(kernel.verifier), 80)
+        self.assertEqual(len(kernel.elf_prefix), 384)
+        self.assertEqual(kernel.elf_bytes, 504)
         self.assertEqual(40 + 33 + kernel.outer_error_delta, 40)
         self.assertEqual(40 + 55 + kernel.inner_error_delta, 40)
         self.assertEqual(40 + 71 + kernel.owner_error_delta, 40)
@@ -107,7 +110,32 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         self.assertIn("process_is_well_formed", output)
         self.assertIn("contains_verifier", output)
         self.assertIn("process_bytes_are_bounded", output)
+        self.assertIn("reported_elf_prefix_is_canonical", output)
+        self.assertIn("elf_image_is_well_formed", output)
+        self.assertIn("elf_contains_process", output)
+        self.assertIn("ELF64ResidencyProcessEnvelope", output)
         self.assertIn("x86 execution, Linux loading", output)
+
+    def test_join_rejects_noncanonical_process_elf_prefix(self) -> None:
+        candidate, native = self.fixture()
+        kernel = candidate.kernels[0]
+        drifted_elf = bytearray(kernel.elf)
+        drifted_elf[200] ^= 1
+        drifted = bridge.wp8g.Candidate(
+            (
+                bridge.wp8g.Kernel(
+                    kernel.record,
+                    kernel.candidate,
+                    kernel.process,
+                    bytes(drifted_elf),
+                ),
+            ),
+            candidate.raw,
+        )
+        with self.assertRaisesRegex(
+            bridge.ProcessCertificateError, "process ELF prefix drifted"
+        ):
+            bridge.join_authenticated_candidate(drifted, [native])
 
     def test_kernel_filter_is_fail_closed(self) -> None:
         candidate, native = self.fixture()

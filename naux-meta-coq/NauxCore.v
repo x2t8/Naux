@@ -5,4 +5,4 @@ From NauxCore Require Export
   DefiniteInitialization ProjectedCFGResidency ScalarMachineIRResidency
   HeapMachineIRResidency OwnershipMachineIRResidency
   ControlFlowMachineIRResidency X86ResidencyEncoding ELF64ResidencyEnvelope
-  ResidencyProcessTarget.
+  ResidencyProcessTarget ELF64ResidencyProcessEnvelope.
