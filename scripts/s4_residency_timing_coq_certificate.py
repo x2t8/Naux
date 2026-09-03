@@ -209,7 +209,7 @@ def emit_rocq(
         "",
         "From Stdlib Require Import List Lia.",
         "From NauxCore Require Import ELF64ResidencyEnvelope",
-        f"  ResidencyTimingCarrier {modules}.",
+        f"  ResidencyControlledHost ResidencyTimingCarrier {modules}.",
         "Import ListNotations.",
         "",
     ]
