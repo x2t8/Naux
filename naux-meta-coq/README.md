@@ -234,6 +234,14 @@ authority. Its static state has no bundle or replay permission; an eligible
 explicit replay remains unable to observe a live host, read a clock, build,
 execute, mutate, publish, or self-admit a performance claim.
 
+`ResidencyPairedThreshold.v` closes the WP8O paired-threshold decision law. It
+binds the admitted WP8N replay boundary to the exact 30-pair, 24-effective-pair,
+one-sided `1/100` sign-tail, `21/20` total-ratio, and all-four-kernel policy.
+The sign tail is defined from exact binomial coefficients and compared to its
+reduced representation by integer cross-products. The static state contains
+no candidate and no evaluation permission; even a passing explicit read-only
+candidate remains unable to publish or self-admit a performance claim.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
 the sealed WP8G candidate, WP8H role report, and WP8I static host report. It
 authenticates the WP8C through WP8I parents, requires each process candidate
@@ -293,6 +301,14 @@ axiom set. A retained bundle, replay permission, live host, clock, build,
 execution, mutation, publication, comparison result, or performance claim is
 rejected by the static bridge.
 
+`scripts/s4_residency_paired_threshold_coq_certificate.py` is the untrusted
+WP8O bridge. It authenticates the exact sealed static threshold report and its
+WP8N parent, then emits only the frozen decision constants and a missing
+candidate behind the checked WP8O policy. CI regenerates the module twice,
+compares it byte-for-byte, compiles it with Rocq 9.1, and requires an empty
+axiom set. A bundle, threshold result, evaluation permission, live host,
+clock, build, execution, mutation, publication, or claim is rejected.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -308,7 +324,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ResidencyResultProtocol NauxCore.ResidencyCandidateRole \
   NauxCore.ResidencyControlledHost NauxCore.ResidencyTimingCarrier \
   NauxCore.ResidencyMeasurementRunner NauxCore.ResidencyEvidenceReplay \
-  NauxCore.ResidencyPairedRunner NauxCore.ResidencyPairedEvidenceReplay
+  NauxCore.ResidencyPairedRunner NauxCore.ResidencyPairedEvidenceReplay \
+  NauxCore.ResidencyPairedThreshold
 make -C naux-meta-coq clean
 ```
 

@@ -8,4 +8,5 @@ From NauxCore Require Export
   ResidencyProcessTarget ELF64ResidencyProcessEnvelope
   ResidencyResultProtocol ResidencyCandidateRole ResidencyControlledHost
   ResidencyTimingCarrier ResidencyMeasurementRunner ResidencyEvidenceReplay
-  ResidencyPairedRunner ResidencyPairedEvidenceReplay.
+  ResidencyPairedRunner ResidencyPairedEvidenceReplay
+  ResidencyPairedThreshold.

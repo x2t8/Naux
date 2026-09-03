@@ -24,4 +24,5 @@ ResidencyMeasurementRunner.v
 ResidencyEvidenceReplay.v
 ResidencyPairedRunner.v
 ResidencyPairedEvidenceReplay.v
+ResidencyPairedThreshold.v
 NauxCore.v

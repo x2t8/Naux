@@ -27,6 +27,7 @@ on:
       - "distribution/s4-performance/WP8L-*"
       - "distribution/s4-performance/WP8M-*"
       - "distribution/s4-performance/WP8N-*"
+      - "distribution/s4-performance/WP8O-*"
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_register_residency_encoding_contract.py"
@@ -40,6 +41,7 @@ on:
       - "scripts/s4_register_residency_evidence.py"
       - "scripts/s4_register_residency_paired_runner.py"
       - "scripts/s4_register_residency_paired_evidence.py"
+      - "scripts/s4_register_residency_paired_threshold.py"
       - "scripts/s4_residency_coq_certificate.py"
       - "scripts/s4_residency_x86_coq_certificate.py"
       - "scripts/s4_residency_elf_coq_certificate.py"
@@ -49,6 +51,7 @@ on:
       - "scripts/s4_residency_evidence_coq_certificate.py"
       - "scripts/s4_residency_paired_runner_coq_certificate.py"
       - "scripts/s4_residency_paired_evidence_coq_certificate.py"
+      - "scripts/s4_residency_paired_threshold_coq_certificate.py"
       - "scripts/tests/test_s4_residency_coq_certificate.py"
       - "scripts/tests/test_s4_residency_x86_coq_certificate.py"
       - "scripts/tests/test_s4_residency_elf_coq_certificate.py"
@@ -58,6 +61,7 @@ on:
       - "scripts/tests/test_s4_residency_evidence_coq_certificate.py"
       - "scripts/tests/test_s4_residency_paired_runner_coq_certificate.py"
       - "scripts/tests/test_s4_residency_paired_evidence_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_paired_threshold_coq_certificate.py"
       - "scripts/tests/test_s4_register_residency_role.py"
       - "scripts/tests/test_s4_register_residency_role_static.py"
       - "scripts/tests/test_s4_register_residency_host.py"
@@ -69,6 +73,7 @@ on:
       - "scripts/tests/test_s4_register_residency_evidence*.py"
       - "scripts/tests/test_s4_register_residency_paired_runner*.py"
       - "scripts/tests/test_s4_register_residency_paired_evidence*.py"
+      - "scripts/tests/test_s4_register_residency_paired_threshold*.py"
       - ".github/workflows/formal-residency-bridge.yml"
   pull_request:
     paths:
@@ -96,6 +101,7 @@ on:
       - "distribution/s4-performance/WP8L-*"
       - "distribution/s4-performance/WP8M-*"
       - "distribution/s4-performance/WP8N-*"
+      - "distribution/s4-performance/WP8O-*"
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_register_residency_encoding_contract.py"
@@ -109,6 +115,7 @@ on:
       - "scripts/s4_register_residency_evidence.py"
       - "scripts/s4_register_residency_paired_runner.py"
       - "scripts/s4_register_residency_paired_evidence.py"
+      - "scripts/s4_register_residency_paired_threshold.py"
       - "scripts/s4_residency_coq_certificate.py"
       - "scripts/s4_residency_x86_coq_certificate.py"
       - "scripts/s4_residency_elf_coq_certificate.py"
@@ -118,6 +125,7 @@ on:
       - "scripts/s4_residency_evidence_coq_certificate.py"
       - "scripts/s4_residency_paired_runner_coq_certificate.py"
       - "scripts/s4_residency_paired_evidence_coq_certificate.py"
+      - "scripts/s4_residency_paired_threshold_coq_certificate.py"
       - "scripts/tests/test_s4_residency_coq_certificate.py"
       - "scripts/tests/test_s4_residency_x86_coq_certificate.py"
       - "scripts/tests/test_s4_residency_elf_coq_certificate.py"
@@ -127,6 +135,7 @@ on:
       - "scripts/tests/test_s4_residency_evidence_coq_certificate.py"
       - "scripts/tests/test_s4_residency_paired_runner_coq_certificate.py"
       - "scripts/tests/test_s4_residency_paired_evidence_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_paired_threshold_coq_certificate.py"
       - "scripts/tests/test_s4_register_residency_role.py"
       - "scripts/tests/test_s4_register_residency_role_static.py"
       - "scripts/tests/test_s4_register_residency_host.py"
@@ -138,6 +147,7 @@ on:
       - "scripts/tests/test_s4_register_residency_evidence*.py"
       - "scripts/tests/test_s4_register_residency_paired_runner*.py"
       - "scripts/tests/test_s4_register_residency_paired_evidence*.py"
+      - "scripts/tests/test_s4_register_residency_paired_threshold*.py"
       - ".github/workflows/formal-residency-bridge.yml"
   workflow_dispatch:
 
@@ -154,7 +164,7 @@ jobs:
         run: |
           rustup toolchain install 1.96.0 --profile minimal
           rustup default 1.96.0
-      - name: Emit and authenticate the WP8C through WP8N reports
+      - name: Emit and authenticate the WP8C through WP8O reports
         run: |
           cargo build --locked -p naux \
             --example naux_s4_register_residency_plan \
@@ -194,6 +204,8 @@ jobs:
             > "$RUNNER_TEMP/wp8m-paired-runner.tsv"
           python3 scripts/s4_register_residency_paired_evidence.py \
             > "$RUNNER_TEMP/wp8n-paired-evidence.tsv"
+          python3 scripts/s4_register_residency_paired_threshold.py \
+            > "$RUNNER_TEMP/wp8o-paired-threshold.tsv"
       - name: Generate the untrusted Rocq certificates
         run: |
           python3 -m py_compile scripts/s4_residency_coq_certificate.py
@@ -205,6 +217,7 @@ jobs:
           python3 -m py_compile scripts/s4_residency_evidence_coq_certificate.py
           python3 -m py_compile scripts/s4_residency_paired_runner_coq_certificate.py
           python3 -m py_compile scripts/s4_residency_paired_evidence_coq_certificate.py
+          python3 -m py_compile scripts/s4_residency_paired_threshold_coq_certificate.py
           python3 -m unittest -v \
             scripts.tests.test_s4_residency_coq_certificate \
             scripts.tests.test_s4_residency_x86_coq_certificate \
@@ -215,6 +228,7 @@ jobs:
             scripts.tests.test_s4_residency_evidence_coq_certificate \
             scripts.tests.test_s4_residency_paired_runner_coq_certificate \
             scripts.tests.test_s4_residency_paired_evidence_coq_certificate \
+            scripts.tests.test_s4_residency_paired_threshold_coq_certificate \
             scripts.tests.test_s4_register_residency_role_static \
             scripts.tests.test_s4_register_residency_role \
             scripts.tests.test_s4_register_residency_host_static \
@@ -228,7 +242,9 @@ jobs:
             scripts.tests.test_s4_register_residency_paired_runner \
             scripts.tests.test_s4_register_residency_paired_runner_static \
             scripts.tests.test_s4_register_residency_paired_evidence_replay \
-            scripts.tests.test_s4_register_residency_paired_evidence_static
+            scripts.tests.test_s4_register_residency_paired_evidence_static \
+            scripts.tests.test_s4_register_residency_paired_threshold_replay \
+            scripts.tests.test_s4_register_residency_paired_threshold_static
           python3 scripts/s4_residency_coq_certificate.py \
             --report "$RUNNER_TEMP/wp8c-plan.tsv" \
             --output "$RUNNER_TEMP/wp8c-certificates-a.v"
@@ -353,6 +369,16 @@ jobs:
             "$RUNNER_TEMP/GeneratedWP8NPairedEvidence-b.v"
           cp "$RUNNER_TEMP/GeneratedWP8NPairedEvidence-a.v" \
             naux-meta-coq/GeneratedWP8NPairedEvidence.v
+          python3 scripts/s4_residency_paired_threshold_coq_certificate.py \
+            --paired-threshold-report "$RUNNER_TEMP/wp8o-paired-threshold.tsv" \
+            --output "$RUNNER_TEMP/GeneratedWP8OThreshold-a.v"
+          python3 scripts/s4_residency_paired_threshold_coq_certificate.py \
+            --paired-threshold-report "$RUNNER_TEMP/wp8o-paired-threshold.tsv" \
+            --output "$RUNNER_TEMP/GeneratedWP8OThreshold-b.v"
+          cmp "$RUNNER_TEMP/GeneratedWP8OThreshold-a.v" \
+            "$RUNNER_TEMP/GeneratedWP8OThreshold-b.v"
+          cp "$RUNNER_TEMP/GeneratedWP8OThreshold-a.v" \
+            naux-meta-coq/GeneratedWP8OThreshold.v
       - name: Admit the report inside Rocq 9.1
         uses: rocq-prover/docker-opam-action@126d4ac196f8133729a1cb0d2aa1ee7106efec58 # v1.5.2
         with:
@@ -383,6 +409,8 @@ jobs:
               naux-meta-coq/GeneratedWP8MPairedRunner.v
             rocq c -Q naux-meta-coq NauxCore \
               naux-meta-coq/GeneratedWP8NPairedEvidence.v
+            rocq c -Q naux-meta-coq NauxCore \
+              naux-meta-coq/GeneratedWP8OThreshold.v
             rocq check -silent -o -Q naux-meta-coq NauxCore \
                 NauxCore.GeneratedWP8CCertificates \
                 NauxCore.GeneratedWP8EX86Certificates 2>&1 \
@@ -425,6 +453,11 @@ jobs:
               | tee /tmp/naux-wp8n-paired-evidence-coqchk-context.txt
             grep -Fq '* Axioms: <none>' \
               /tmp/naux-wp8n-paired-evidence-coqchk-context.txt
+            rocq check -silent -o -Q naux-meta-coq NauxCore \
+                NauxCore.GeneratedWP8OThreshold 2>&1 \
+              | tee /tmp/naux-wp8o-threshold-coqchk-context.txt
+            grep -Fq '* Axioms: <none>' \
+              /tmp/naux-wp8o-threshold-coqchk-context.txt
             if grep -n -E '\b(Admitted|admit|Axiom|Parameter)\b' \
               naux-meta-coq/GeneratedWP8CCertificates.v \
               naux-meta-coq/GeneratedWP8EX86Certificates.v \
@@ -434,7 +467,8 @@ jobs:
               naux-meta-coq/GeneratedWP8KRunner.v \
               naux-meta-coq/GeneratedWP8LEvidence.v \
               naux-meta-coq/GeneratedWP8MPairedRunner.v \
-              naux-meta-coq/GeneratedWP8NPairedEvidence.v; then
+              naux-meta-coq/GeneratedWP8NPairedEvidence.v \
+              naux-meta-coq/GeneratedWP8OThreshold.v; then
               echo "Unchecked generated declaration found" >&2
               exit 1
             fi
@@ -447,7 +481,8 @@ jobs:
               naux-meta-coq/GeneratedWP8KRunner.v \
               naux-meta-coq/GeneratedWP8LEvidence.v \
               naux-meta-coq/GeneratedWP8MPairedRunner.v \
-              naux-meta-coq/GeneratedWP8NPairedEvidence.v
+              naux-meta-coq/GeneratedWP8NPairedEvidence.v \
+              naux-meta-coq/GeneratedWP8OThreshold.v
       - name: Restore workspace ownership
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
