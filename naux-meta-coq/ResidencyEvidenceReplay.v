@@ -215,9 +215,19 @@ Theorem residency_ready_evidence_replay_is_read_only :
     residency_evidence_execution replay = ResidencyRunnerActionForbidden /\
     residency_evidence_mutation replay = ResidencyRunnerActionForbidden.
 Proof.
-  intros replay
-    [_ [_ [_ [_ [_ [_ [_ [_ [_ [_ [Hhost [Hclock [Hbuild
-      [Hexecution [Hmutation _]]]]]]]]]]]]]]]].
+  intros replay Hready.
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as
+    [Hhost [Hclock [Hbuild [Hexecution [Hmutation _]]]]].
   repeat split; assumption.
 Qed.
 
@@ -226,7 +236,21 @@ Theorem residency_ready_evidence_replay_cannot_self_admit_claim :
     residency_evidence_replay_ready replay ->
     residency_evidence_claim replay = ResidencyPerformanceClaimForbidden.
 Proof.
-  intros replay
-    [_ [_ [_ [_ [_ [_ [_ [_ [_ [_ [_ [_ [_ [_ [_ Hclaim]]]]]]]]]]]]]]].
+  intros replay Hready.
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hready].
+  destruct Hready as [_ Hclaim].
   exact Hclaim.
 Qed.
