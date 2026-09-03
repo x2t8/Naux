@@ -190,6 +190,15 @@ observed, keeps timing forbidden, and carries no performance-claim authority.
 The model proves that this state is neither host-eligible nor measurement
 ready; a future positive observation must cross a separate evidence gate.
 
+`ResidencyTimingCarrier.v` closes the structural WP8J boundary without
+granting execution authority. It retains the exact proved WP8G process behind
+the reported timing prefix, checks byte bounds, requires exactly two reviewed
+`CLOCK_MONOTONIC_RAW` instruction markers, checks their start/end offsets and
+the role-four result-owner store, and proves their required order before the
+target. The resulting carrier is explicitly non-runnable and carries no
+performance claim. Syscall semantics, elapsed time, host eligibility, and
+measurement acquisition remain outside this layer.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
 the sealed WP8G candidate, WP8H role report, and WP8I static host report. It
 authenticates the WP8C through WP8I parents, requires each process candidate
@@ -205,6 +214,15 @@ contracts. CI generates one module per kernel, compiles each with Rocq 9.1,
 and asks the kernel to replay every process, full-image, result-schema, role,
 and static-host-boundary theorem with an empty axiom set.
 
+`scripts/s4_residency_timing_coq_certificate.py` is the untrusted WP8J bridge.
+It authenticates the exact WP8G candidate, WP8I static report, WP8J timing
+candidate, and independent no-execution replay report. It then joins every
+timing payload byte-for-byte to the corresponding WP8G process and emits one
+ephemeral module per kernel. CI regenerates each module twice, compares the
+outputs, compiles it with Rocq 9.1, and checks that the kernel reports an empty
+axiom set. The bridge refuses extra clock markers, missing owner markers,
+placement drift, target drift, execution permission, and claim permission.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -218,7 +236,7 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ELF64ResidencyEnvelope NauxCore.ResidencyProcessTarget \
   NauxCore.ELF64ResidencyProcessEnvelope \
   NauxCore.ResidencyResultProtocol NauxCore.ResidencyCandidateRole \
-  NauxCore.ResidencyControlledHost
+  NauxCore.ResidencyControlledHost NauxCore.ResidencyTimingCarrier
 make -C naux-meta-coq clean
 ```
 
