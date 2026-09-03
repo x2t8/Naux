@@ -23,4 +23,5 @@ ResidencyTimingCarrier.v
 ResidencyMeasurementRunner.v
 ResidencyEvidenceReplay.v
 ResidencyPairedRunner.v
+ResidencyPairedEvidenceReplay.v
 NauxCore.v
