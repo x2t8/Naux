@@ -298,7 +298,7 @@ def emit_rocq(
         "",
         "From Stdlib Require Import List ZArith Lia.",
         "From NauxCore Require Import X86ResidencyEncoding ResidencyProcessTarget",
-        "  ELF64ResidencyProcessEnvelope",
+        "  ELF64ResidencyEnvelope ELF64ResidencyProcessEnvelope",
         "  GeneratedWP8EX86Certificates.",
         "Import ListNotations.",
         "Open Scope Z_scope.",
