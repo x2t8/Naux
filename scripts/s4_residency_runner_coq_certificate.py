@@ -85,7 +85,7 @@ def emit_rocq(evidence: RunnerReportEvidence, authority_seal: str) -> str:
         "",
         "From Stdlib Require Import List.",
         "From NauxCore Require Import ResidencyControlledHost",
-        f"  ResidencyMeasurementRunner {modules}.",
+        f"  ResidencyTimingCarrier ResidencyMeasurementRunner {modules}.",
         "Import ListNotations.",
         "",
         "Definition wp8k_static_runner_carriers : list residency_timing_carrier :=",

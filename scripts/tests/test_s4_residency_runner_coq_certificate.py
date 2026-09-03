@@ -69,6 +69,7 @@ class S4ResidencyRunnerCoqCertificateTests(unittest.TestCase):
         for ordinal in ("01", "02", "03", "04"):
             self.assertIn(f"GeneratedWP8JTimingKernel{ordinal}", output)
             self.assertIn(f"wp8j_kernel_{ordinal}_carrier", output)
+        self.assertIn("ResidencyTimingCarrier", output)
         self.assertIn("ResidencyMeasurementRunner", output)
         self.assertIn("wp8k_static_runner_is_admitted", output)
         self.assertIn("is_not_acquisition_ready", output)
