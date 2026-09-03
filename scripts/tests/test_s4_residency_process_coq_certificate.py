@@ -105,7 +105,7 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         candidate, native = self.fixture()
         kernel = bridge.join_authenticated_candidate(candidate, [native])[0]
         output = bridge.emit_rocq(
-            [kernel], "a" * 64, "b" * 64, "c" * 64, "d" * 64
+            [kernel], "a" * 64, "b" * 64, "c" * 64, "d" * 64, "e" * 64
         )
         self.assertIn("GeneratedWP8EX86Certificates", output)
         self.assertIn("wp8e_kernel_01_target", output)
@@ -120,7 +120,57 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         self.assertIn("ResidencyResultProtocol", output)
         self.assertIn("expected_result_protocol_decodes", output)
         self.assertIn("expected_result_protocol_is_well_formed", output)
+        self.assertIn("WP8G replay report root: " + "e" * 64, output)
         self.assertIn("x86 execution, Linux loading", output)
+
+    def test_replay_report_is_exactly_bound_to_two_passes(self) -> None:
+        candidate, _ = self.fixture()
+        record = candidate.kernels[0].record
+        contract = bridge.wp8g.Contract((record,), "a" * 64)
+        authority = bridge.wp8g.Authority((), "b" * 64)
+        admission = bridge.wp8g.Admission(contract, authority, b"", "c" * 64)
+        results = tuple(
+            bridge.wp8g.ProcessResult(
+                pass_number,
+                record.ordinal,
+                record.name,
+                record.oracle,
+                record.expected_outer,
+                record.expected_inner,
+                0,
+            )
+            for pass_number in (1, 2)
+        )
+        raw = bridge.wp8g._report(contract, authority, candidate, results)
+        evidence = bridge.parse_authenticated_replay_report(
+            raw, admission, candidate
+        )
+        self.assertEqual(evidence.results, results)
+        self.assertEqual(len(evidence.report_root), 64)
+
+    def test_replay_report_rejects_coherently_resealed_value_drift(self) -> None:
+        candidate, _ = self.fixture()
+        record = candidate.kernels[0].record
+        contract = bridge.wp8g.Contract((record,), "a" * 64)
+        authority = bridge.wp8g.Authority((), "b" * 64)
+        admission = bridge.wp8g.Admission(contract, authority, b"", "c" * 64)
+        drifted = tuple(
+            bridge.wp8g.ProcessResult(
+                pass_number,
+                record.ordinal,
+                record.name,
+                record.oracle + 1,
+                record.expected_outer,
+                record.expected_inner,
+                0,
+            )
+            for pass_number in (1, 2)
+        )
+        raw = bridge.wp8g._report(contract, authority, candidate, drifted)
+        with self.assertRaisesRegex(
+            bridge.ProcessCertificateError, "identity or value drifted"
+        ):
+            bridge.parse_authenticated_replay_report(raw, admission, candidate)
 
     def test_join_rejects_noncanonical_process_elf_prefix(self) -> None:
         candidate, native = self.fixture()

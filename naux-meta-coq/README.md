@@ -178,10 +178,12 @@ the sealed WP8G candidate report. It authenticates the WP8C, WP8E, and WP8G
 parents, requires each process candidate to equal its admitted WP8E target,
 and emits only the 16-byte patch, 80-byte verifier, exact 384-byte ELF prefix,
 fixed 48-byte expected result, and closed receipt. The bridge independently
-reconstructs the prefix and result serialization before emission. CI generates
-one module per kernel, compiles each with Rocq 9.1, and asks the kernel to
-replay every process, full-image, and result-schema theorem with an empty
-axiom set.
+reconstructs the prefix and result serialization before emission. It also
+requires the authenticated two-pass fresh-process replay report and refuses to
+emit if any observed kernel identity or result field differs from the sealed
+contract. CI generates one module per kernel, compiles each with Rocq 9.1, and
+asks the kernel to replay every process, full-image, and result-schema theorem
+with an empty axiom set.
 
 ```bash
 make -C naux-meta-coq

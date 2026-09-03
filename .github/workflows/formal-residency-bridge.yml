@@ -158,12 +158,14 @@ jobs:
               --plan-report "$RUNNER_TEMP/wp8c-plan.tsv" \
               --encoding-report "$RUNNER_TEMP/wp8e-encoding.tsv" \
               --process-report "$RUNNER_TEMP/wp8g-process.tsv" \
+              --replay-report "$RUNNER_TEMP/wp8g-replay.tsv" \
               --kernel "$kernel" \
               --output "$RUNNER_TEMP/${module}-a.v"
             python3 scripts/s4_residency_process_coq_certificate.py \
               --plan-report "$RUNNER_TEMP/wp8c-plan.tsv" \
               --encoding-report "$RUNNER_TEMP/wp8e-encoding.tsv" \
               --process-report "$RUNNER_TEMP/wp8g-process.tsv" \
+              --replay-report "$RUNNER_TEMP/wp8g-replay.tsv" \
               --kernel "$kernel" \
               --output "$RUNNER_TEMP/${module}-b.v"
             cmp "$RUNNER_TEMP/${module}-a.v" \

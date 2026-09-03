@@ -55,6 +55,12 @@ class ProcessKernel:
     owner_error_delta: int
 
 
+@dataclass(frozen=True)
+class ProcessReplayEvidence:
+    report_root: str
+    results: tuple[wp8g.ProcessResult, ...]
+
+
 def _signed_le32(raw: bytes, label: str) -> int:
     if len(raw) != 4:
         raise ProcessCertificateError(f"{label} is not four bytes")
@@ -197,6 +203,82 @@ def canonical_result_record(record: wp8g.ContractRecord) -> bytes:
     return result
 
 
+def parse_authenticated_replay_report(
+    raw: bytes,
+    admission: wp8g.Admission,
+    candidate: wp8g.Candidate,
+) -> ProcessReplayEvidence:
+    """Authenticate the exact two-pass WP8G execution report."""
+
+    try:
+        lines = wp8g._canonical(raw, "WP8G replay report", wp8g.MAX_FILE_BYTES)
+    except wp8g.ProcessReplayError as error:
+        raise ProcessCertificateError(str(error)) from error
+    records = admission.contract.records
+    expected_lines = 10 + 2 * len(records)
+    if len(lines) != expected_lines:
+        raise ProcessCertificateError("WP8G replay report extent drifted")
+
+    prefix = (
+        wp8g.REPORT_MAGIC,
+        f"contract\t{admission.contract.seal}",
+        f"authority\t{admission.authority.seal}",
+        f"candidate-report-sha256\t{wp8g.CANDIDATE_REPORT_SHA256}",
+        "mode\tuntimed-fresh-process-replay",
+        "replays\t2",
+        "status\tfresh-process-checksum-work-parity-admitted",
+        "claim-status\tuntimed-parity-only",
+        "timing-status\tforbidden",
+    )
+    if tuple(lines[: len(prefix)]) != prefix:
+        raise ProcessCertificateError("WP8G replay report metadata drifted")
+
+    results: list[wp8g.ProcessResult] = []
+    index = len(prefix)
+    for pass_number in (1, 2):
+        for record in records:
+            expected = (
+                "result",
+                str(pass_number),
+                f"{record.ordinal:02}",
+                record.name,
+                str(record.oracle),
+                str(record.expected_outer),
+                str(record.expected_inner),
+                "0",
+            )
+            if tuple(lines[index].split("\t")) != expected:
+                raise ProcessCertificateError(
+                    "WP8G replay result identity or value drifted"
+                )
+            results.append(
+                wp8g.ProcessResult(
+                    pass_number,
+                    record.ordinal,
+                    record.name,
+                    record.oracle,
+                    record.expected_outer,
+                    record.expected_inner,
+                    0,
+                )
+            )
+            index += 1
+
+    result_tuple = tuple(results)
+    expected_raw = wp8g._report(
+        admission.contract,
+        admission.authority,
+        candidate,
+        result_tuple,
+    )
+    if raw != expected_raw:
+        raise ProcessCertificateError("WP8G replay report root drifted")
+    marker = "report-root\t"
+    if not lines[-1].startswith(marker):
+        raise ProcessCertificateError("WP8G replay report root is missing")
+    return ProcessReplayEvidence(lines[-1][len(marker) :], result_tuple)
+
+
 def join_authenticated_candidate(
     candidate: wp8g.Candidate,
     native_kernels: list[x86_bridge.NativeKernel],
@@ -307,6 +389,7 @@ def emit_rocq(
     encoding_root: str,
     process_report_sha256: str,
     process_authority_root: str,
+    process_replay_root: str,
 ) -> str:
     rows = [
         "(**",
@@ -315,6 +398,7 @@ def emit_rocq(
         f"  WP8E report root: {encoding_root}",
         f"  WP8G candidate SHA-256: {process_report_sha256}",
         f"  WP8G authority report root: {process_authority_root}",
+        f"  WP8G replay report root: {process_replay_root}",
         "  The generator is untrusted. Rocq receives only WP8G-owned patch and",
         "  verifier, ELF-prefix, and result-record bytes, reuses the checked",
         "  WP8E target, and validates the exact rewrite, complete process ELF",
@@ -607,6 +691,7 @@ def main() -> int:
     parser.add_argument("--plan-report", required=True, type=Path)
     parser.add_argument("--encoding-report", required=True, type=Path)
     parser.add_argument("--process-report", required=True, type=Path)
+    parser.add_argument("--replay-report", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument(
         "--kernel",
@@ -626,6 +711,7 @@ def main() -> int:
         plan_raw = arguments.plan_report.read_bytes()
         encoding_raw = arguments.encoding_report.read_bytes()
         process_raw = arguments.process_report.read_bytes()
+        replay_raw = arguments.replay_report.read_bytes()
         plan_kernels = semantic.parse_verified_report(plan_raw)
         wp8d_admission = wp8e.wp8d.validate(root)
         native_kernels = x86_bridge.parse_joined_reports(
@@ -637,6 +723,9 @@ def main() -> int:
         process_candidate = wp8g.parse_candidate(
             process_raw, process_admission.contract
         )
+        replay_evidence = parse_authenticated_replay_report(
+            replay_raw, process_admission, process_candidate
+        )
         kernels = _filter_kernels(
             join_authenticated_candidate(process_candidate, native_kernels),
             arguments.kernel,
@@ -647,6 +736,7 @@ def main() -> int:
             encoding_admission.root,
             wp8g.CANDIDATE_REPORT_SHA256,
             process_admission.report_root,
+            replay_evidence.report_root,
         )
         arguments.output.write_text(output, encoding="utf-8", newline="\n")
     except (
