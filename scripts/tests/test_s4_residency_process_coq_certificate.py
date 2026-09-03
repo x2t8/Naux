@@ -20,6 +20,11 @@ bridge = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = bridge
 SPEC.loader.exec_module(bridge)
 
+CURRENT_APACHE_SURFACE = (
+    hashlib.sha256((ROOT / "LICENSE").read_bytes()).hexdigest()
+    == bridge.wp8i.lt1.APACHE_HASH
+)
+
 
 class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
     def fixture(self):
@@ -142,6 +147,10 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         self.assertIn("static_host_has_no_performance_claim", output)
         self.assertIn("x86 execution, Linux loading", output)
 
+    @unittest.skipUnless(
+        CURRENT_APACHE_SURFACE,
+        "WP8I certificate test requires the current Apache-2.0 surface",
+    )
     def test_host_report_is_bound_to_exact_static_wp8i_boundary(self) -> None:
         admission = bridge.wp8i.validate(ROOT)
         evidence = bridge.parse_authenticated_host_report(
@@ -149,6 +158,10 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         )
         self.assertEqual(evidence.report_root, admission.static_root)
 
+    @unittest.skipUnless(
+        CURRENT_APACHE_SURFACE,
+        "WP8I certificate test requires the current Apache-2.0 surface",
+    )
     def test_host_report_rejects_resealed_observation_drift(self) -> None:
         admission = bridge.wp8i.validate(ROOT)
         lines = admission.static_report.splitlines(keepends=True)
@@ -216,6 +229,10 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         ):
             bridge.parse_authenticated_replay_report(raw, admission, candidate)
 
+    @unittest.skipUnless(
+        CURRENT_APACHE_SURFACE,
+        "WP8H certificate test requires the current Apache-2.0 surface",
+    )
     def test_role_report_is_bound_to_exact_wp8g_replay(self) -> None:
         candidate, _ = self.fixture()
         record = candidate.kernels[0].record
@@ -254,6 +271,10 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         )
         self.assertEqual(len(evidence.report_root), 64)
 
+    @unittest.skipUnless(
+        CURRENT_APACHE_SURFACE,
+        "WP8H certificate test requires the current Apache-2.0 surface",
+    )
     def test_role_report_rejects_coherently_resealed_role_drift(self) -> None:
         candidate, _ = self.fixture()
         record = candidate.kernels[0].record

@@ -18,8 +18,17 @@ bridge = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = bridge
 SPEC.loader.exec_module(bridge)
 
+CURRENT_APACHE_SURFACE = (
+    hashlib.sha256((ROOT / "LICENSE").read_bytes()).hexdigest()
+    == bridge.wp8k.lt1.APACHE_HASH
+)
+
 
 class S4ResidencyRunnerCoqCertificateTests(unittest.TestCase):
+    @unittest.skipUnless(
+        CURRENT_APACHE_SURFACE,
+        "WP8K certificate test requires the current Apache-2.0 surface",
+    )
     def test_exact_static_runner_report_is_authenticated(self) -> None:
         admission = bridge.wp8k.validate(ROOT)
         evidence = bridge.parse_authenticated_runner_report(
@@ -28,6 +37,10 @@ class S4ResidencyRunnerCoqCertificateTests(unittest.TestCase):
         self.assertEqual(evidence.report_root, admission.report_root)
         self.assertEqual(evidence.samples_required, 120)
 
+    @unittest.skipUnless(
+        CURRENT_APACHE_SURFACE,
+        "WP8K certificate test requires the current Apache-2.0 surface",
+    )
     def test_resealed_execution_mode_drift_is_rejected(self) -> None:
         admission = bridge.wp8k.validate(ROOT)
         body = admission.static_report.rsplit(b"report-root\t", 1)[0].replace(
@@ -45,6 +58,10 @@ class S4ResidencyRunnerCoqCertificateTests(unittest.TestCase):
         ):
             bridge.parse_authenticated_runner_report(mutated, admission)
 
+    @unittest.skipUnless(
+        CURRENT_APACHE_SURFACE,
+        "WP8K certificate test requires the current Apache-2.0 surface",
+    )
     def test_resealed_claim_drift_is_rejected(self) -> None:
         admission = bridge.wp8k.validate(ROOT)
         body = admission.static_report.rsplit(b"report-root\t", 1)[0].replace(

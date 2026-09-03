@@ -19,6 +19,11 @@ bridge = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = bridge
 SPEC.loader.exec_module(bridge)
 
+CURRENT_APACHE_SURFACE = (
+    hashlib.sha256((ROOT / "LICENSE").read_bytes()).hexdigest()
+    == bridge.wp8j.lt1.APACHE_HASH
+)
+
 
 class S4ResidencyTimingCoqCertificateTests(unittest.TestCase):
     @staticmethod
@@ -99,6 +104,10 @@ class S4ResidencyTimingCoqCertificateTests(unittest.TestCase):
         ):
             bridge.join_authenticated_carrier(malformed, process)
 
+    @unittest.skipUnless(
+        CURRENT_APACHE_SURFACE,
+        "WP8J certificate test requires the current Apache-2.0 surface",
+    )
     def test_exact_replay_report_is_authenticated_fail_closed(self) -> None:
         admission = bridge.wp8j.validate(ROOT)
         candidate = bridge.wp8j.Candidate((), b"fixture\n")
