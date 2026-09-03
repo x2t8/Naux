@@ -207,6 +207,15 @@ host attestation and forbids clock, build, execution, and publication actions.
 The model proves that the static runner is not acquisition-ready, that all four
 carriers remain non-runnable, and that no performance claim is available.
 
+`ResidencyEvidenceReplay.v` closes the static WP8L evidence-replay boundary.
+It binds the admitted WP8K runner to the complete ordered ten-gate read-only
+replay policy and freezes the expected eight payload files, four kernels,
+thirty samples per kernel, and 120-sample total. The checked default state has
+no bundle and forbids replay, live-host observation, clock, build, execution,
+and mutation actions. The model proves that this state is not replay-ready and
+that neither a static nor a ready read-only replay can self-admit a performance
+claim.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
 the sealed WP8G candidate, WP8H role report, and WP8I static host report. It
 authenticates the WP8C through WP8I parents, requires each process candidate
@@ -239,6 +248,15 @@ compiles it with Rocq 9.1, and checks the kernel-replayed object for an empty
 axiom set. An acquisition report, retained host, clock observation, generated
 execution, raw bundle, or performance claim is rejected by this bridge.
 
+`scripts/s4_residency_evidence_coq_certificate.py` is the untrusted WP8L
+bridge. It authenticates the exact sealed static evidence report and its
+WP8J/WP8K parents, then places the generated WP8K runner behind the checked
+WP8L policy. CI regenerates the module twice, compares it byte-for-byte,
+compiles it with Rocq 9.1, and requires an empty axiom set. A raw bundle,
+replay permission, live host, clock, build, execution, mutation, benchmark
+comparison, measurement result, or performance claim is rejected by this
+bridge.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -253,7 +271,7 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ELF64ResidencyProcessEnvelope \
   NauxCore.ResidencyResultProtocol NauxCore.ResidencyCandidateRole \
   NauxCore.ResidencyControlledHost NauxCore.ResidencyTimingCarrier \
-  NauxCore.ResidencyMeasurementRunner
+  NauxCore.ResidencyMeasurementRunner NauxCore.ResidencyEvidenceReplay
 make -C naux-meta-coq clean
 ```
 

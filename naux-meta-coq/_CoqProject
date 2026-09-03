@@ -21,4 +21,5 @@ ResidencyCandidateRole.v
 ResidencyControlledHost.v
 ResidencyTimingCarrier.v
 ResidencyMeasurementRunner.v
+ResidencyEvidenceReplay.v
 NauxCore.v
