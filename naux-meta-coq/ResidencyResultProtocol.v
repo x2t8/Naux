@@ -15,7 +15,6 @@
 From Stdlib Require Import List Bool Arith ZArith.
 From NauxCore Require Import ELF64ResidencyEnvelope.
 Import ListNotations.
-Open Scope Z_scope.
 
 Definition residency_result_magic : list nat :=
   [78; 65; 85; 88; 53; 69; 48; 49].
@@ -29,6 +28,8 @@ Record residency_result_record : Type := {
   residency_result_inner : Z;
   residency_result_owner : Z
 }.
+
+Open Scope Z_scope.
 
 (** Decode exactly eight little-endian bytes as an unsigned 64-bit integer.
     Callers first establish the exact record extent, so the fallback is never
