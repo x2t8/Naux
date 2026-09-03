@@ -164,13 +164,23 @@ extent and recover the process target exactly after the prefix. As at WP8F,
 Linux loading, syscall semantics, native execution, timing, and performance
 remain outside the byte-structure theorem.
 
+`ResidencyResultProtocol.v` models the fixed 48-byte WP8G success record. It
+checks the `NAUX5E01` magic, exact extent, and byte bounds before decoding the
+artifact ordinal, signed checksum, terminal loop counters, and allocation
+owner as little-endian 64-bit fields. Generated certificates instantiate the
+exact expected record for every admitted kernel and ask Rocq to decode it.
+This closes the serialization schema; the Linux `write` syscall and the claim
+that native execution produced those bytes remain governed by the separate
+fresh-process replay gate rather than the formal model.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
 the sealed WP8G candidate report. It authenticates the WP8C, WP8E, and WP8G
 parents, requires each process candidate to equal its admitted WP8E target,
 and emits only the 16-byte patch, 80-byte verifier, exact 384-byte ELF prefix,
-and closed receipt. The bridge independently reconstructs that prefix before
-emission. CI generates one module per kernel, compiles each with Rocq 9.1, and
-asks the kernel to replay every process and full-image theorem with an empty
+fixed 48-byte expected result, and closed receipt. The bridge independently
+reconstructs the prefix and result serialization before emission. CI generates
+one module per kernel, compiles each with Rocq 9.1, and asks the kernel to
+replay every process, full-image, and result-schema theorem with an empty
 axiom set.
 
 ```bash
@@ -184,7 +194,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ControlFlowMachineIRResidency \
   NauxCore.X86ResidencyEncoding \
   NauxCore.ELF64ResidencyEnvelope NauxCore.ResidencyProcessTarget \
-  NauxCore.ELF64ResidencyProcessEnvelope
+  NauxCore.ELF64ResidencyProcessEnvelope \
+  NauxCore.ResidencyResultProtocol
 make -C naux-meta-coq clean
 ```
 

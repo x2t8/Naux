@@ -3,10 +3,11 @@
 
 The translator is intentionally untrusted.  It authenticates the WP8C and
 WP8E reports plus the sealed WP8G authority and candidate report.  It emits
-only the WP8G-owned sixteen-byte return patch, eighty-byte verifier, and
-closed receipts plus the exact WP8G ELF prefix.  Rocq reuses the complete
-WP8E target and checks the rewrite, jump destination, verifier fields, failure
-edges, process extent, byte bounds, and complete fresh-process ELF envelope.
+only the WP8G-owned sixteen-byte return patch, eighty-byte verifier, closed
+receipts, exact WP8G ELF prefix, and fixed-le48-v1 expected result record.
+Rocq reuses the complete WP8E target and checks the rewrite, jump destination,
+verifier fields, failure edges, process extent, byte bounds, complete
+fresh-process ELF envelope, and result-record decoding.
 """
 
 from __future__ import annotations
@@ -34,6 +35,8 @@ class ProcessKernel:
     patch: tuple[int, ...]
     verifier: tuple[int, ...]
     elf_prefix: tuple[int, ...]
+    result_record: tuple[int, ...]
+    oracle: int
     process_bytes: int
     elf_bytes: int
     target_offset: int
@@ -173,6 +176,27 @@ def canonical_process_elf_prefix(
     return bytes(prefix)
 
 
+def canonical_result_record(record: wp8g.ContractRecord) -> bytes:
+    """Construct the exact fixed-le48-v1 success record for a kernel."""
+
+    try:
+        result = wp8g.RESULT_STRUCT.pack(
+            wp8g.RESULT_MAGIC,
+            record.ordinal,
+            record.oracle,
+            record.expected_outer,
+            record.expected_inner,
+            0,
+        )
+    except (OverflowError, ValueError, wp8g.struct.error) as error:
+        raise ProcessCertificateError(
+            "WP8G result field escapes the fixed-le48-v1 protocol"
+        ) from error
+    if len(result) != wp8g.RESULT_BYTES or len(result) != 48:
+        raise ProcessCertificateError("WP8G result protocol extent drifted")
+    return result
+
+
 def join_authenticated_candidate(
     candidate: wp8g.Candidate,
     native_kernels: list[x86_bridge.NativeKernel],
@@ -239,6 +263,8 @@ def join_authenticated_candidate(
                 patch=tuple(patch),
                 verifier=tuple(verifier),
                 elf_prefix=tuple(elf_prefix),
+                result_record=tuple(canonical_result_record(record)),
+                oracle=record.oracle,
                 process_bytes=record.process_bytes,
                 elf_bytes=record.elf_bytes,
                 target_offset=record.target_offset,
@@ -290,8 +316,9 @@ def emit_rocq(
         f"  WP8G candidate SHA-256: {process_report_sha256}",
         f"  WP8G authority report root: {process_authority_root}",
         "  The generator is untrusted. Rocq receives only WP8G-owned patch and",
-        "  verifier and ELF-prefix bytes, reuses the checked WP8E target, and",
-        "  validates the exact rewrite plus complete process ELF envelope.",
+        "  verifier, ELF-prefix, and result-record bytes, reuses the checked",
+        "  WP8E target, and validates the exact rewrite, complete process ELF",
+        "  envelope, and fixed-le48-v1 result decoding.",
         "  x86 execution, Linux loading, syscalls, timing, and performance",
         "  remain explicit non-claims.",
         "*)",
@@ -299,6 +326,7 @@ def emit_rocq(
         "From Stdlib Require Import List ZArith Lia.",
         "From NauxCore Require Import X86ResidencyEncoding ResidencyProcessTarget",
         "  ELF64ResidencyEnvelope ELF64ResidencyProcessEnvelope",
+        "  ResidencyResultProtocol",
         "  GeneratedWP8EX86Certificates.",
         "Import ListNotations.",
         "Open Scope Z_scope.",
@@ -518,6 +546,39 @@ def emit_rocq(
                 "  exact (elf64_residency_process_well_formed_contains_target",
                 f"    {prefix}_process {_coq_nat(kernel.ordinal_value)}",
                 f"    {prefix}_elf_image {prefix}_elf_image_is_well_formed).",
+                "Qed.",
+                "",
+                f"Definition {prefix}_expected_result : residency_result_record :=",
+                "  {| residency_result_ordinal := "
+                f"{_coq_z(kernel.ordinal_value)};",
+                "     residency_result_checksum := "
+                f"{_coq_z(kernel.oracle)};",
+                "     residency_result_outer := "
+                f"{_coq_z(kernel.expected_outer)};",
+                "     residency_result_inner := "
+                f"{_coq_z(kernel.expected_inner)};",
+                "     residency_result_owner := 0%Z |}.",
+                "",
+                f"Definition {prefix}_expected_result_bytes : list nat :=",
+                f"  {_coq_list(kernel.result_record)}.",
+                "",
+                f"Example {prefix}_expected_result_protocol_decodes :",
+                f"  residency_result_decode {prefix}_expected_result_bytes =",
+                f"    Some {prefix}_expected_result.",
+                "Proof. vm_compute. reflexivity. Qed.",
+                "",
+                f"Example {prefix}_expected_result_protocol_extent :",
+                f"  length {prefix}_expected_result_bytes = residency_result_bytes.",
+                "Proof. vm_compute. reflexivity. Qed.",
+                "",
+                f"Theorem {prefix}_expected_result_protocol_is_well_formed :",
+                "  residency_result_record_well_formed",
+                f"    {prefix}_expected_result_bytes.",
+                "Proof.",
+                "  destruct (residency_result_decode_sound",
+                f"    {prefix}_expected_result_bytes {prefix}_expected_result",
+                f"    {prefix}_expected_result_protocol_decodes) as [Hshape _].",
+                "  exact Hshape.",
                 "Qed.",
                 "",
             ]

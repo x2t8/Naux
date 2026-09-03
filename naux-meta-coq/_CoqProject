@@ -16,4 +16,5 @@ X86ResidencyEncoding.v
 ELF64ResidencyEnvelope.v
 ResidencyProcessTarget.v
 ELF64ResidencyProcessEnvelope.v
+ResidencyResultProtocol.v
 NauxCore.v

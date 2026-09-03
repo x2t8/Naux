@@ -75,6 +75,9 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         self.assertEqual(kernel.patch[5:], (0x90,) * 11)
         self.assertEqual(len(kernel.verifier), 80)
         self.assertEqual(len(kernel.elf_prefix), 384)
+        self.assertEqual(len(kernel.result_record), 48)
+        self.assertEqual(kernel.result_record[:8], tuple(b"NAUX5E01"))
+        self.assertEqual(kernel.oracle, 7)
         self.assertEqual(kernel.elf_bytes, 504)
         self.assertEqual(40 + 33 + kernel.outer_error_delta, 40)
         self.assertEqual(40 + 55 + kernel.inner_error_delta, 40)
@@ -114,6 +117,9 @@ class S4ResidencyProcessCoqCertificateTests(unittest.TestCase):
         self.assertIn("elf_image_is_well_formed", output)
         self.assertIn("elf_contains_process", output)
         self.assertIn("ELF64ResidencyProcessEnvelope", output)
+        self.assertIn("ResidencyResultProtocol", output)
+        self.assertIn("expected_result_protocol_decodes", output)
+        self.assertIn("expected_result_protocol_is_well_formed", output)
         self.assertIn("x86 execution, Linux loading", output)
 
     def test_join_rejects_noncanonical_process_elf_prefix(self) -> None:
