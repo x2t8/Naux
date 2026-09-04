@@ -30,6 +30,7 @@ on:
       - "distribution/s4-performance/WP8O-*"
       - "distribution/s4-performance/WP8P-*"
       - "distribution/s4-performance/WP8Q-*"
+      - "distribution/s4-performance/WP8R-*"
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_register_residency_encoding_contract.py"
@@ -46,6 +47,7 @@ on:
       - "scripts/s4_register_residency_paired_threshold.py"
       - "scripts/s4_register_residency_claim_admission.py"
       - "scripts/s4_register_residency_public_protocol.py"
+      - "scripts/s4_register_residency_public_bundle.py"
       - "scripts/s4_residency_coq_certificate.py"
       - "scripts/s4_residency_x86_coq_certificate.py"
       - "scripts/s4_residency_elf_coq_certificate.py"
@@ -58,6 +60,7 @@ on:
       - "scripts/s4_residency_paired_threshold_coq_certificate.py"
       - "scripts/s4_residency_claim_admission_coq_certificate.py"
       - "scripts/s4_residency_public_protocol_coq_certificate.py"
+      - "scripts/s4_residency_public_bundle_coq_certificate.py"
       - "scripts/tests/test_s4_residency_coq_certificate.py"
       - "scripts/tests/test_s4_residency_x86_coq_certificate.py"
       - "scripts/tests/test_s4_residency_elf_coq_certificate.py"
@@ -70,6 +73,7 @@ on:
       - "scripts/tests/test_s4_residency_paired_threshold_coq_certificate.py"
       - "scripts/tests/test_s4_residency_claim_admission_coq_certificate.py"
       - "scripts/tests/test_s4_residency_public_protocol_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_public_bundle_coq_certificate.py"
       - "scripts/tests/test_s4_register_residency_role.py"
       - "scripts/tests/test_s4_register_residency_role_static.py"
       - "scripts/tests/test_s4_register_residency_host.py"
@@ -84,6 +88,7 @@ on:
       - "scripts/tests/test_s4_register_residency_paired_threshold*.py"
       - "scripts/tests/test_s4_register_residency_claim_admission*.py"
       - "scripts/tests/test_s4_register_residency_public_protocol*.py"
+      - "scripts/tests/test_s4_register_residency_public_bundle*.py"
       - ".github/workflows/formal-residency-bridge.yml"
   pull_request:
     paths:
@@ -114,6 +119,7 @@ on:
       - "distribution/s4-performance/WP8O-*"
       - "distribution/s4-performance/WP8P-*"
       - "distribution/s4-performance/WP8Q-*"
+      - "distribution/s4-performance/WP8R-*"
       - "scripts/s4_register_residency_contract.py"
       - "scripts/s4_register_residency_plan_authority.py"
       - "scripts/s4_register_residency_encoding_contract.py"
@@ -130,6 +136,7 @@ on:
       - "scripts/s4_register_residency_paired_threshold.py"
       - "scripts/s4_register_residency_claim_admission.py"
       - "scripts/s4_register_residency_public_protocol.py"
+      - "scripts/s4_register_residency_public_bundle.py"
       - "scripts/s4_residency_coq_certificate.py"
       - "scripts/s4_residency_x86_coq_certificate.py"
       - "scripts/s4_residency_elf_coq_certificate.py"
@@ -142,6 +149,7 @@ on:
       - "scripts/s4_residency_paired_threshold_coq_certificate.py"
       - "scripts/s4_residency_claim_admission_coq_certificate.py"
       - "scripts/s4_residency_public_protocol_coq_certificate.py"
+      - "scripts/s4_residency_public_bundle_coq_certificate.py"
       - "scripts/tests/test_s4_residency_coq_certificate.py"
       - "scripts/tests/test_s4_residency_x86_coq_certificate.py"
       - "scripts/tests/test_s4_residency_elf_coq_certificate.py"
@@ -154,6 +162,7 @@ on:
       - "scripts/tests/test_s4_residency_paired_threshold_coq_certificate.py"
       - "scripts/tests/test_s4_residency_claim_admission_coq_certificate.py"
       - "scripts/tests/test_s4_residency_public_protocol_coq_certificate.py"
+      - "scripts/tests/test_s4_residency_public_bundle_coq_certificate.py"
       - "scripts/tests/test_s4_register_residency_role.py"
       - "scripts/tests/test_s4_register_residency_role_static.py"
       - "scripts/tests/test_s4_register_residency_host.py"
@@ -168,6 +177,7 @@ on:
       - "scripts/tests/test_s4_register_residency_paired_threshold*.py"
       - "scripts/tests/test_s4_register_residency_claim_admission*.py"
       - "scripts/tests/test_s4_register_residency_public_protocol*.py"
+      - "scripts/tests/test_s4_register_residency_public_bundle*.py"
       - ".github/workflows/formal-residency-bridge.yml"
   workflow_dispatch:
 
@@ -184,7 +194,7 @@ jobs:
         run: |
           rustup toolchain install 1.96.0 --profile minimal
           rustup default 1.96.0
-      - name: Emit and authenticate the WP8C through WP8Q reports
+      - name: Emit and authenticate the WP8C through WP8R reports
         run: |
           cargo build --locked -p naux \
             --example naux_s4_register_residency_plan \
@@ -230,6 +240,8 @@ jobs:
             > "$RUNNER_TEMP/wp8p-claim-admission.tsv"
           python3 scripts/s4_register_residency_public_protocol.py \
             > "$RUNNER_TEMP/wp8q-public-protocol.tsv"
+          python3 scripts/s4_register_residency_public_bundle.py \
+            > "$RUNNER_TEMP/wp8r-public-bundle.tsv"
       - name: Generate the untrusted Rocq certificates
         run: |
           python3 -m py_compile scripts/s4_residency_coq_certificate.py
@@ -244,6 +256,7 @@ jobs:
           python3 -m py_compile scripts/s4_residency_paired_threshold_coq_certificate.py
           python3 -m py_compile scripts/s4_residency_claim_admission_coq_certificate.py
           python3 -m py_compile scripts/s4_residency_public_protocol_coq_certificate.py
+          python3 -m py_compile scripts/s4_residency_public_bundle_coq_certificate.py
           python3 -m unittest -v \
             scripts.tests.test_s4_residency_coq_certificate \
             scripts.tests.test_s4_residency_x86_coq_certificate \
@@ -257,6 +270,7 @@ jobs:
             scripts.tests.test_s4_residency_paired_threshold_coq_certificate \
             scripts.tests.test_s4_residency_claim_admission_coq_certificate \
             scripts.tests.test_s4_residency_public_protocol_coq_certificate \
+            scripts.tests.test_s4_residency_public_bundle_coq_certificate \
             scripts.tests.test_s4_register_residency_role_static \
             scripts.tests.test_s4_register_residency_role \
             scripts.tests.test_s4_register_residency_host_static \
@@ -276,7 +290,9 @@ jobs:
             scripts.tests.test_s4_register_residency_claim_admission_refusal \
             scripts.tests.test_s4_register_residency_claim_admission_static \
             scripts.tests.test_s4_register_residency_public_protocol_refusal \
-            scripts.tests.test_s4_register_residency_public_protocol_static
+            scripts.tests.test_s4_register_residency_public_protocol_static \
+            scripts.tests.test_s4_register_residency_public_bundle_static \
+            scripts.tests.test_s4_register_residency_public_bundle_intake
           python3 scripts/s4_residency_coq_certificate.py \
             --report "$RUNNER_TEMP/wp8c-plan.tsv" \
             --output "$RUNNER_TEMP/wp8c-certificates-a.v"
@@ -431,6 +447,16 @@ jobs:
             "$RUNNER_TEMP/GeneratedWP8QPublicProtocol-b.v"
           cp "$RUNNER_TEMP/GeneratedWP8QPublicProtocol-a.v" \
             naux-meta-coq/GeneratedWP8QPublicProtocol.v
+          python3 scripts/s4_residency_public_bundle_coq_certificate.py \
+            --public-bundle-report "$RUNNER_TEMP/wp8r-public-bundle.tsv" \
+            --output "$RUNNER_TEMP/GeneratedWP8RPublicBundle-a.v"
+          python3 scripts/s4_residency_public_bundle_coq_certificate.py \
+            --public-bundle-report "$RUNNER_TEMP/wp8r-public-bundle.tsv" \
+            --output "$RUNNER_TEMP/GeneratedWP8RPublicBundle-b.v"
+          cmp "$RUNNER_TEMP/GeneratedWP8RPublicBundle-a.v" \
+            "$RUNNER_TEMP/GeneratedWP8RPublicBundle-b.v"
+          cp "$RUNNER_TEMP/GeneratedWP8RPublicBundle-a.v" \
+            naux-meta-coq/GeneratedWP8RPublicBundle.v
       - name: Admit the report inside Rocq 9.1
         uses: rocq-prover/docker-opam-action@126d4ac196f8133729a1cb0d2aa1ee7106efec58 # v1.5.2
         with:
@@ -467,6 +493,8 @@ jobs:
               naux-meta-coq/GeneratedWP8PClaimAdmission.v
             rocq c -Q naux-meta-coq NauxCore \
               naux-meta-coq/GeneratedWP8QPublicProtocol.v
+            rocq c -Q naux-meta-coq NauxCore \
+              naux-meta-coq/GeneratedWP8RPublicBundle.v
             rocq check -silent -o -Q naux-meta-coq NauxCore \
                 NauxCore.GeneratedWP8CCertificates \
                 NauxCore.GeneratedWP8EX86Certificates 2>&1 \
@@ -524,6 +552,11 @@ jobs:
               | tee /tmp/naux-wp8q-public-protocol-coqchk-context.txt
             grep -Fq '* Axioms: <none>' \
               /tmp/naux-wp8q-public-protocol-coqchk-context.txt
+            rocq check -silent -o -Q naux-meta-coq NauxCore \
+                NauxCore.GeneratedWP8RPublicBundle 2>&1 \
+              | tee /tmp/naux-wp8r-public-bundle-coqchk-context.txt
+            grep -Fq '* Axioms: <none>' \
+              /tmp/naux-wp8r-public-bundle-coqchk-context.txt
             if grep -n -E '\b(Admitted|admit|Axiom|Parameter)\b' \
               naux-meta-coq/GeneratedWP8CCertificates.v \
               naux-meta-coq/GeneratedWP8EX86Certificates.v \
@@ -536,7 +569,8 @@ jobs:
               naux-meta-coq/GeneratedWP8NPairedEvidence.v \
               naux-meta-coq/GeneratedWP8OThreshold.v \
               naux-meta-coq/GeneratedWP8PClaimAdmission.v \
-              naux-meta-coq/GeneratedWP8QPublicProtocol.v; then
+              naux-meta-coq/GeneratedWP8QPublicProtocol.v \
+              naux-meta-coq/GeneratedWP8RPublicBundle.v; then
               echo "Unchecked generated declaration found" >&2
               exit 1
             fi
@@ -552,7 +586,8 @@ jobs:
               naux-meta-coq/GeneratedWP8NPairedEvidence.v \
               naux-meta-coq/GeneratedWP8OThreshold.v \
               naux-meta-coq/GeneratedWP8PClaimAdmission.v \
-              naux-meta-coq/GeneratedWP8QPublicProtocol.v
+              naux-meta-coq/GeneratedWP8QPublicProtocol.v \
+              naux-meta-coq/GeneratedWP8RPublicBundle.v
       - name: Restore workspace ownership
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
