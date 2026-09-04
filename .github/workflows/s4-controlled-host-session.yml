@@ -1,0 +1,41 @@
+name: S4 controlled-host session helper
+
+on:
+  push:
+    paths:
+      - "scripts/s4_controlled_host_session.py"
+      - "scripts/tests/test_s4_controlled_host_session.py"
+      - ".github/workflows/s4-controlled-host-session.yml"
+  pull_request:
+    paths:
+      - "scripts/s4_controlled_host_session.py"
+      - "scripts/tests/test_s4_controlled_host_session.py"
+      - ".github/workflows/s4-controlled-host-session.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: s4-controlled-host-session-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reversible-host-session:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compile the helper and its tests
+        run: |
+          python3 -m py_compile \
+            scripts/s4_controlled_host_session.py \
+            scripts/tests/test_s4_controlled_host_session.py
+
+      - name: Exercise the reversible fake-host lifecycle
+        run: python3 -m unittest -v scripts.tests.test_s4_controlled_host_session
+
+      - name: Check the read-only CLI surface
+        run: python3 scripts/s4_controlled_host_session.py --help >/dev/null
