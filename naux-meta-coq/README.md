@@ -250,6 +250,12 @@ static state, and has neither admission nor performance-claim authority. It
 also makes language-wide speedup, compiler-leadership, and unmeasured
 extrapolation claims unconditionally inadmissible.
 
+`ResidencyPublicProtocolAcceptance.v` closes only WP8P's public-protocol
+blocker. It requires one exact 20-byte commit identity, three nonzero public
+run identities, successful same-commit review, and the imported WP8P law.
+The model retains the eligible-bundle, exact-request, and distinct-approval
+blockers and proves that the receipt has no path to claim admission.
+
 `scripts/s4_residency_process_coq_certificate.py` is the untrusted bridge for
 the sealed WP8G candidate, WP8H role report, and WP8I static host report. It
 authenticates the WP8C through WP8I parents, requires each process candidate
@@ -324,6 +330,14 @@ CI regenerates it twice, compiles it with Rocq 9.1, and requires an empty
 axiom set. A request, approval, resolved blocker, admission action, or claim
 cannot enter through this bridge.
 
+`scripts/s4_residency_public_protocol_coq_certificate.py` is the untrusted
+WP8Q bridge. It authenticates the sealed offline receipt and its complete
+WP8P parent, converts the exact tracked commit to 20 bytes, and retains the
+three reviewed public run identities. CI regenerates it twice, compiles it
+with Rocq 9.1, and requires an empty axiom set. The generated object closes
+only the public-protocol gate; bundle, request, approval, and claim authority
+remain absent.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -340,7 +354,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ResidencyControlledHost NauxCore.ResidencyTimingCarrier \
   NauxCore.ResidencyMeasurementRunner NauxCore.ResidencyEvidenceReplay \
   NauxCore.ResidencyPairedRunner NauxCore.ResidencyPairedEvidenceReplay \
-  NauxCore.ResidencyPairedThreshold NauxCore.ResidencyClaimAdmission
+  NauxCore.ResidencyPairedThreshold NauxCore.ResidencyClaimAdmission \
+  NauxCore.ResidencyPublicProtocolAcceptance
 make -C naux-meta-coq clean
 ```
 

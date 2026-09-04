@@ -1,0 +1,18 @@
+NAUX-S4-REGISTER-RESIDENCY-PUBLIC-PROTOCOL-ACCEPTANCE-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8Q
+meta	authority-id	s4-register-residency-public-protocol-v1
+meta	status	public-protocol-acceptance-recorded
+meta	admission-status	blocked
+meta	claim-status	not-admitted
+meta	file-count	7
+component	public-protocol-contract	distribution/s4-performance/WP8Q-PUBLIC-PROTOCOL.tsv	a9be967cd9939eb355d0e8b01e55febd7f6b6886a664dc65da9b51ba4ac3257c
+parent	claim-admission-authority	distribution/s4-performance/WP8P-AUTHORITY.tsv	c2b582433f9c28c7b74b624f310754319446e7555d1aeb956b8d1d5b16c55c27
+file	100644	1165	cafdcc400e469e83cc966553078e361b71977301683862061c43b960741deab9	.github/workflows/s4-register-residency-public-protocol.yml	public-protocol
+file	100644	478	e8feefdd4b3108d8c24a503098ba27a693b356f636b360aebd66a744fcc9ea11	distribution/s4-performance/WP8Q-NONCLAIMS.md	public-protocol
+file	100644	1053	309582f6ba74fd0916f819cbf0c738a8a0b13c68abb29251a6dfa75e126d4094	distribution/s4-performance/WP8Q-PUBLIC-PROTOCOL.tsv	public-protocol
+file	100644	612	70b9fec88fc30481f5b2ebe565610ff502a1d7f7f3790b50a02ec439249d5983	distribution/s4-performance/WP8Q-README.md	public-protocol
+file	100644	11002	4f735606fd376bfcf20a8782d49ea8654bba2e832cc19e3c72c68b6eadacf9c5	scripts/s4_register_residency_public_protocol.py	public-protocol
+file	100644	2521	0bccbeb28980d6e2c7092fee831db7213921f01ea1222308b39c32b245f94169	scripts/tests/test_s4_register_residency_public_protocol_refusal.py	public-protocol
+file	100644	4088	4060da09b8b729cf8b70bb6393de30b2351d9a3300e3ce85be398eba4f7cfd79	scripts/tests/test_s4_register_residency_public_protocol_static.py	public-protocol
+seal	ba48acae4b11ee2ceba6873ff45b58998eac43eca76722ff466df4325dfcf952

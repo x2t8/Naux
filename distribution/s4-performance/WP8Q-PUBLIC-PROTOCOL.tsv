@@ -1,0 +1,18 @@
+NAUX-S4-REGISTER-RESIDENCY-PUBLIC-PROTOCOL-ACCEPTANCE-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-claim-admission-authority	c2b582433f9c28c7b74b624f310754319446e7555d1aeb956b8d1d5b16c55c27
+meta	tracked-commit	56b6447a13ac648c8e35e64daa34ddabb7e0b51c
+meta	repository	x2t8/Naux
+meta	branch	main
+meta	status	public-protocol-acceptance-recorded
+meta	observation-mode	reviewed-static-public-record-no-network
+meta	claim-status	not-admitted
+meta	target	x86_64-unknown-linux-gnu
+run	01	ci	33785721821	56b6447a13ac648c8e35e64daa34ddabb7e0b51c	success
+run	02	formal-model	33785721725	56b6447a13ac648c8e35e64daa34ddabb7e0b51c	success
+run	03	formal-residency-bridge	33785721753	56b6447a13ac648c8e35e64daa34ddabb7e0b51c	success
+closure	01	tracked-public-protocol-acceptance-unavailable	closed	exact-tracked-commit-three-green-public-runs
+blocker	01	eligible-public-paired-bundle-unavailable
+blocker	02	exact-public-claim-request-unavailable
+blocker	03	distinct-release-approval-unavailable
+seal	a9be967cd9939eb355d0e8b01e55febd7f6b6886a664dc65da9b51ba4ac3257c

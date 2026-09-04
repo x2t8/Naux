@@ -1,0 +1,32 @@
+name: S4 register-residency public protocol receipt
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-register-residency-public-protocol.yml"
+      - "distribution/s4-performance/WP8Q-*"
+      - "scripts/s4_register_residency_public_protocol.py"
+      - "scripts/tests/test_s4_register_residency_public_protocol*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-register-residency-public-protocol.yml"
+      - "distribution/s4-performance/WP8Q-*"
+      - "scripts/s4_register_residency_public_protocol.py"
+      - "scripts/tests/test_s4_register_residency_public_protocol*.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate reviewed public protocol receipt
+        run: python3 scripts/s4_register_residency_public_protocol.py
+      - name: Test static boundary and mutation refusal
+        run: |
+          python3 -m unittest \
+            scripts.tests.test_s4_register_residency_public_protocol_static \
+            scripts.tests.test_s4_register_residency_public_protocol_refusal

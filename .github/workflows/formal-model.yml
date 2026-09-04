@@ -64,7 +64,8 @@ jobs:
                   NauxCore.ResidencyPairedRunner \
                   NauxCore.ResidencyPairedEvidenceReplay \
                   NauxCore.ResidencyPairedThreshold \
-                  NauxCore.ResidencyClaimAdmission 2>&1 \
+                  NauxCore.ResidencyClaimAdmission \
+                  NauxCore.ResidencyPublicProtocolAcceptance 2>&1 \
                 | tee /tmp/naux-coqchk-context.txt
               grep -Fq '* Axioms: <none>' /tmp/naux-coqchk-context.txt
             endGroup

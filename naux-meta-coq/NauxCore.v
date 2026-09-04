@@ -9,4 +9,5 @@ From NauxCore Require Export
   ResidencyResultProtocol ResidencyCandidateRole ResidencyControlledHost
   ResidencyTimingCarrier ResidencyMeasurementRunner ResidencyEvidenceReplay
   ResidencyPairedRunner ResidencyPairedEvidenceReplay
-  ResidencyPairedThreshold ResidencyClaimAdmission.
+  ResidencyPairedThreshold ResidencyClaimAdmission
+  ResidencyPublicProtocolAcceptance.

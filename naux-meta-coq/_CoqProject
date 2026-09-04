@@ -26,4 +26,5 @@ ResidencyPairedRunner.v
 ResidencyPairedEvidenceReplay.v
 ResidencyPairedThreshold.v
 ResidencyClaimAdmission.v
+ResidencyPublicProtocolAcceptance.v
 NauxCore.v
