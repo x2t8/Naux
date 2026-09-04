@@ -1,0 +1,32 @@
+name: S4 register-residency public bundle
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-register-residency-public-bundle.yml"
+      - "distribution/s4-performance/WP8R-*"
+      - "scripts/s4_register_residency_public_bundle.py"
+      - "scripts/tests/test_s4_register_residency_public_bundle*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-register-residency-public-bundle.yml"
+      - "distribution/s4-performance/WP8R-*"
+      - "scripts/s4_register_residency_public_bundle.py"
+      - "scripts/tests/test_s4_register_residency_public_bundle*.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate static public-bundle authority
+        run: python3 scripts/s4_register_residency_public_bundle.py
+      - name: Test deterministic packaging and fail-closed intake
+        run: |
+          python3 -m unittest \
+            scripts.tests.test_s4_register_residency_public_bundle_static \
+            scripts.tests.test_s4_register_residency_public_bundle_intake

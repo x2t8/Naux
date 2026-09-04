@@ -1,0 +1,27 @@
+NAUX-S4-REGISTER-RESIDENCY-PUBLIC-BUNDLE-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-public-protocol-authority	ba48acae4b11ee2ceba6873ff45b58998eac43eca76722ff466df4325dfcf952
+meta	parent-paired-evidence-authority	c8891c211c5469f1c4e5009674a2b11c68c39839b04712f5e57ebf77165e678e
+meta	repository	x2t8/Naux
+meta	tracked-commit	56b6447a13ac648c8e35e64daa34ddabb7e0b51c
+meta	status	public-bundle-intake-structurally-admitted
+meta	default-mode	static-no-bundle-no-archive-no-network-no-execution
+meta	package-mode	explicit-local-deterministic-archive
+meta	intake-mode	explicit-read-only-archive-replay
+meta	archive-policy	exact-single-root-ustar-gzip-normalized-metadata
+meta	locator-policy	canonical-github-release-url-shape-no-reachability-claim
+meta	claim-status	not-admitted
+meta	target	x86_64-unknown-linux-gnu
+gate	01	static-isolation	required	no-bundle-no-archive-no-network-no-execution
+gate	02	archive-envelope	required	bounded-gzip-ustar-normalized-no-links
+gate	03	archive-inventory	required	single-root-exact-wp8m-inventory
+gate	04	receipt-integrity	required	exact-size-sha256-and-domain-root
+gate	05	paired-replay	required	exact-wp8n-read-only-replay
+gate	06	identity-coherence	required	commit-bundle-session-host-and-evidence
+gate	07	locator-boundary	required	canonical-shape-without-network-observation
+gate	08	claim-boundary	required	package-and-intake-never-admit-claim
+closure	01	public-paired-bundle-packaging-and-intake-unavailable	closed	wp8r-deterministic-package-and-read-only-replay
+blocker	01	eligible-public-paired-bundle-unavailable
+blocker	02	exact-public-claim-request-unavailable
+blocker	03	distinct-release-approval-unavailable
+seal	f9a5c628fcfbfb201fe28108fa41246e5e225b24689caa9b2149578159b96781

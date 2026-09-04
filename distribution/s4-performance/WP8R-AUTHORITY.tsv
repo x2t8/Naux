@@ -1,0 +1,19 @@
+NAUX-S4-REGISTER-RESIDENCY-PUBLIC-BUNDLE-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8R
+meta	authority-id	s4-register-residency-public-bundle-v1
+meta	status	public-bundle-intake-structurally-admitted
+meta	admission-status	blocked
+meta	claim-status	not-admitted
+meta	file-count	7
+component	public-bundle-contract	distribution/s4-performance/WP8R-PUBLIC-BUNDLE.tsv	f9a5c628fcfbfb201fe28108fa41246e5e225b24689caa9b2149578159b96781
+parent	public-protocol-authority	distribution/s4-performance/WP8Q-AUTHORITY.tsv	ba48acae4b11ee2ceba6873ff45b58998eac43eca76722ff466df4325dfcf952
+parent	paired-evidence-authority	distribution/s4-performance/WP8N-AUTHORITY.tsv	c8891c211c5469f1c4e5009674a2b11c68c39839b04712f5e57ebf77165e678e
+file	100644	1144	32c70eb6a4fecf5717c65f1bb9d095f4de413311c9bb7ca4f59f88af01dcfbc2	.github/workflows/s4-register-residency-public-bundle.yml	public-bundle
+file	100644	1729	1c60b81edb785daf51be5291b8f8618e88efbc35de1fc537e3cb4bf8a562a340	distribution/s4-performance/WP8R-PUBLIC-BUNDLE.tsv	public-bundle
+file	100644	326	8dfa7cd66f0e3c1dbe757912771d151479202d3117b3f769c7df557b52771362	distribution/s4-performance/WP8R-NONCLAIMS.md	public-bundle
+file	100644	817	41826aaf76d8c693b0297fb4e80764c054b93ff135871cd11db29020dcd051a5	distribution/s4-performance/WP8R-README.md	public-bundle
+file	100644	29912	da8a0d6e42ef55557c9950827db37b5e7d484c19640ffc79468b7e9d14e27d7b	scripts/s4_register_residency_public_bundle.py	public-bundle
+file	100644	11753	4f6cbbc15a4b884a44a846e04ed50ce5b157b73240c955900dcfca11accadedc	scripts/tests/test_s4_register_residency_public_bundle_intake.py	public-bundle
+file	100644	5686	03c6fb590b59f285dd8342b4787b559c6d20158a2ebbc1b74ae2fc28ebe7a736	scripts/tests/test_s4_register_residency_public_bundle_static.py	public-bundle
+seal	2d58aa292d83e89cf8d2e691b46968f2c31f8acad45d4f89a6063e92f0b30957
