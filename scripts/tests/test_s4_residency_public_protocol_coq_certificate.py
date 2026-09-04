@@ -48,6 +48,8 @@ class ResidencyPublicProtocolCoqCertificateTests(unittest.TestCase):
         self.assertIn("residency_public_protocol_formal_model_success := true", source)
         self.assertIn("residency_public_protocol_formal_bridge_success := true", source)
         self.assertIn(f"{report.ci_run}%nat", source)
+        self.assertEqual(source.count("  - vm_compute.\n"), 3)
+        self.assertIn("  all: reflexivity.\n", source)
         self.assertNotIn("ResidencyClaimRequestRetained", source)
         self.assertNotIn("ResidencyClaimApprovalRetained", source)
         self.assertNotIn("ResidencyRunnerActionPermitted", source)
