@@ -18,9 +18,9 @@ class PublicProtocolCertificateError(RuntimeError):
 class PublicProtocolReport:
     report_root: str
     tracked_commit: str
-    ci_run: int
-    formal_model_run: int
-    formal_bridge_run: int
+    ci_run: str
+    formal_model_run: str
+    formal_bridge_run: str
     blocker_count: int
 
 
@@ -63,9 +63,9 @@ def parse_authenticated_public_protocol_report(
     return PublicProtocolReport(
         root,
         wp8q.TRACKED_COMMIT,
-        int(wp8q.RUNS[0][2]),
-        int(wp8q.RUNS[1][2]),
-        int(wp8q.RUNS[2][2]),
+        wp8q.RUNS[0][2],
+        wp8q.RUNS[1][2],
+        wp8q.RUNS[2][2],
         len(wp8q.BLOCKERS),
     )
 
@@ -87,11 +87,11 @@ def emit_rocq(report: PublicProtocolReport, authority_seal: str) -> str:
             f"  Tracked commit: {report.tracked_commit}",
             f"  Remaining blockers: {report.blocker_count}",
             "  The generator is untrusted. Rocq checks the imported WP8P law,",
-            "  exact commit width, nonzero public run identities, closed public",
+            "  exact commit width, nonempty public run identities, closed public",
             "  gate, retained blockers, absent request/approval, and no claim.",
             "*)",
             "",
-            "From Stdlib Require Import List Lia.",
+            "From Stdlib Require Import List.",
             "Import ListNotations.",
             "From NauxCore Require Import ResidencyControlledHost",
             "  ResidencyMeasurementRunner ResidencyClaimAdmission",
@@ -100,15 +100,24 @@ def emit_rocq(report: PublicProtocolReport, authority_seal: str) -> str:
             "Definition wp8q_tracked_commit : list nat :=",
             f"  {_nat_list(commit_bytes)}.",
             "",
+            "Definition wp8q_ci_run_identity : list nat :=",
+            f"  {_nat_list(report.ci_run.encode('ascii'))}.",
+            "",
+            "Definition wp8q_formal_model_run_identity : list nat :=",
+            f"  {_nat_list(report.formal_model_run.encode('ascii'))}.",
+            "",
+            "Definition wp8q_formal_bridge_run_identity : list nat :=",
+            f"  {_nat_list(report.formal_bridge_run.encode('ascii'))}.",
+            "",
             "Definition wp8q_public_protocol_receipt :",
             "    residency_public_protocol_receipt :=",
             "  {| residency_public_protocol_parent := wp8p_static_claim_protocol;",
             "     residency_public_protocol_commit := wp8q_tracked_commit;",
-            f"     residency_public_protocol_ci_run := {report.ci_run}%nat;",
+            "     residency_public_protocol_ci_run := wp8q_ci_run_identity;",
             "     residency_public_protocol_formal_model_run :=",
-            f"       {report.formal_model_run}%nat;",
+            "       wp8q_formal_model_run_identity;",
             "     residency_public_protocol_formal_bridge_run :=",
-            f"       {report.formal_bridge_run}%nat;",
+            "       wp8q_formal_bridge_run_identity;",
             "     residency_public_protocol_ci_commit := wp8q_tracked_commit;",
             "     residency_public_protocol_formal_model_commit :=",
             "       wp8q_tracked_commit;",
@@ -139,9 +148,9 @@ def emit_rocq(report: PublicProtocolReport, authority_seal: str) -> str:
             "  constructor.",
             "  - exact wp8p_static_claim_protocol_is_admitted.",
             "  - reflexivity.",
-            "  - vm_compute.",
-            "  - vm_compute.",
-            "  - vm_compute.",
+            "  - discriminate.",
+            "  - discriminate.",
+            "  - discriminate.",
             "  all: reflexivity.",
             "Qed.",
             "",

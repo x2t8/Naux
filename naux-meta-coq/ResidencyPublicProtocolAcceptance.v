@@ -8,7 +8,7 @@
   performance claim.
 *)
 
-From Stdlib Require Import List Lia.
+From Stdlib Require Import List.
 From NauxCore Require Import ResidencyControlledHost
   ResidencyMeasurementRunner ResidencyClaimAdmission.
 Import ListNotations.
@@ -26,9 +26,9 @@ Definition residency_public_protocol_remaining_blockers :
 Record residency_public_protocol_receipt : Type := {
   residency_public_protocol_parent : residency_claim_protocol;
   residency_public_protocol_commit : list nat;
-  residency_public_protocol_ci_run : nat;
-  residency_public_protocol_formal_model_run : nat;
-  residency_public_protocol_formal_bridge_run : nat;
+  residency_public_protocol_ci_run : list nat;
+  residency_public_protocol_formal_model_run : list nat;
+  residency_public_protocol_formal_bridge_run : list nat;
   residency_public_protocol_ci_commit : list nat;
   residency_public_protocol_formal_model_commit : list nat;
   residency_public_protocol_formal_bridge_commit : list nat;
@@ -57,12 +57,12 @@ Record residency_public_protocol_receipt_admitted
       (residency_public_protocol_parent receipt);
   residency_public_protocol_commit_is_sha1 :
     length (residency_public_protocol_commit receipt) = 20%nat;
-  residency_public_protocol_ci_run_nonzero :
-    residency_public_protocol_ci_run receipt > 0;
-  residency_public_protocol_formal_model_run_nonzero :
-    residency_public_protocol_formal_model_run receipt > 0;
-  residency_public_protocol_formal_bridge_run_nonzero :
-    residency_public_protocol_formal_bridge_run receipt > 0;
+  residency_public_protocol_ci_run_nonempty :
+    residency_public_protocol_ci_run receipt <> [];
+  residency_public_protocol_formal_model_run_nonempty :
+    residency_public_protocol_formal_model_run receipt <> [];
+  residency_public_protocol_formal_bridge_run_nonempty :
+    residency_public_protocol_formal_bridge_run receipt <> [];
   residency_public_protocol_ci_commit_exact :
     residency_public_protocol_ci_commit receipt =
       residency_public_protocol_commit receipt;
@@ -108,9 +108,9 @@ Record residency_public_protocol_receipt_admitted
 Definition residency_public_protocol_gate_closed
     (receipt : residency_public_protocol_receipt) : Prop :=
   length (residency_public_protocol_commit receipt) = 20%nat /\
-  residency_public_protocol_ci_run receipt > 0 /\
-  residency_public_protocol_formal_model_run receipt > 0 /\
-  residency_public_protocol_formal_bridge_run receipt > 0 /\
+  residency_public_protocol_ci_run receipt <> [] /\
+  residency_public_protocol_formal_model_run receipt <> [] /\
+  residency_public_protocol_formal_bridge_run receipt <> [] /\
   residency_public_protocol_ci_commit receipt =
     residency_public_protocol_commit receipt /\
   residency_public_protocol_formal_model_commit receipt =
@@ -139,9 +139,9 @@ Proof.
   intros receipt Hadmitted.
   repeat split.
   - exact (residency_public_protocol_commit_is_sha1 receipt Hadmitted).
-  - exact (residency_public_protocol_ci_run_nonzero receipt Hadmitted).
-  - exact (residency_public_protocol_formal_model_run_nonzero receipt Hadmitted).
-  - exact (residency_public_protocol_formal_bridge_run_nonzero receipt Hadmitted).
+  - exact (residency_public_protocol_ci_run_nonempty receipt Hadmitted).
+  - exact (residency_public_protocol_formal_model_run_nonempty receipt Hadmitted).
+  - exact (residency_public_protocol_formal_bridge_run_nonempty receipt Hadmitted).
   - exact (residency_public_protocol_ci_commit_exact receipt Hadmitted).
   - exact (residency_public_protocol_formal_model_commit_exact receipt Hadmitted).
   - exact (residency_public_protocol_formal_bridge_commit_exact receipt Hadmitted).

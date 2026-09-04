@@ -251,8 +251,9 @@ also makes language-wide speedup, compiler-leadership, and unmeasured
 extrapolation claims unconditionally inadmissible.
 
 `ResidencyPublicProtocolAcceptance.v` closes only WP8P's public-protocol
-blocker. It requires one exact 20-byte commit identity, three nonzero public
-run identities, successful same-commit review, and the imported WP8P law.
+blocker. It requires one exact 20-byte commit identity, three nonempty public
+run identities encoded as canonical decimal-text bytes, successful
+same-commit review, and the imported WP8P law.
 The model retains the eligible-bundle, exact-request, and distinct-approval
 blockers and proves that the receipt has no path to claim admission.
 
