@@ -29,4 +29,5 @@ ResidencyClaimAdmission.v
 ResidencyPublicProtocolAcceptance.v
 ResidencyPublicBundle.v
 ResidencyExactClaim.v
+ResidencyExactClaimSoundness.v
 NauxCore.v

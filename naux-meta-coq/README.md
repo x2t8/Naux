@@ -356,9 +356,25 @@ text and host/commit/evidence identities are compared to separately tracked
 constants. Theorems forbid rewording, language-wide performance claims,
 cross-implementation comparisons, and absent approval or replay records.
 
+`ResidencyExactClaimSoundness.v` additionally proves the checker equivalent
+to its declarative sample/family specification for **all** input lists, not
+only the measured fixtures. `Forall2` binds all 30 positions and all four
+kernel ordinals without truncated `combine` results. General theorems derive
+120 sample pairs, distinct kernel ordinals, exact positive-duration AB/BA
+coverage, and a wins/ties/losses partition that excludes only ties from the
+effective count. The median's insertion sort is proved both a permutation
+and monotonically ordered; both middle positions are in bounds. Generated
+WP8S certificates import these theorems to establish full coverage and the
+declarative specification for the approved observation.
+
+These general proofs cover the WP8S checker. They do not establish a general
+equivalence to the older unary WP8O model or to the Python implementation;
+the differential fixtures and exact observed-metric checks remain separate.
+
 `.github/workflows/formal-exact-claim.yml` downloads the public assets without
 credentials, regenerates the certificate twice, and checks it with Rocq 9.1.
-It also requires eleven deliberately corrupted certificates to fail, tests
+It also requires eleven deliberately corrupted certificates and eight
+weakened executable checkers to fail their respective proofs, tests
 threshold boundaries and 51 differential fixtures against the sealed Python
 decision law, and requires `Axioms: <none>`. To run the same tests
 locally with Rocq on PATH and both public assets already downloaded:
@@ -397,7 +413,7 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ResidencyPairedRunner NauxCore.ResidencyPairedEvidenceReplay \
   NauxCore.ResidencyPairedThreshold NauxCore.ResidencyClaimAdmission \
   NauxCore.ResidencyPublicProtocolAcceptance NauxCore.ResidencyPublicBundle \
-  NauxCore.ResidencyExactClaim
+  NauxCore.ResidencyExactClaim NauxCore.ResidencyExactClaimSoundness
 make -C naux-meta-coq clean
 ```
 

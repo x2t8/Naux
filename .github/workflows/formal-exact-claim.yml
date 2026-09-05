@@ -68,14 +68,18 @@ jobs:
             python3 -m unittest -v scripts.tests.test_s4_residency_exact_claim_coq_certificate
             proof_dir=$(mktemp -d /tmp/naux-wp8s-proof.XXXXXX)
             cp naux-meta-coq/ResidencyExactClaim.v "$proof_dir/ResidencyExactClaim.v"
+            cp naux-meta-coq/ResidencyExactClaimSoundness.v "$proof_dir/ResidencyExactClaimSoundness.v"
             cp .wp8s-formal-input/Generated-a.v "$proof_dir/GeneratedWP8SExactClaim.v"
+            cd "$proof_dir"
             rocq c -Q "$proof_dir" NauxCore "$proof_dir/ResidencyExactClaim.v"
+            rocq c -Q "$proof_dir" NauxCore "$proof_dir/ResidencyExactClaimSoundness.v"
             rocq c -Q "$proof_dir" NauxCore "$proof_dir/GeneratedWP8SExactClaim.v"
             rocq check -silent -o -Q "$proof_dir" NauxCore \
               NauxCore.GeneratedWP8SExactClaim 2>&1 | tee "$proof_dir/kernel-check.txt"
             grep -Fq '* Axioms: <none>' "$proof_dir/kernel-check.txt"
             if grep -n -E '\b(Admitted|admit|Axiom|Parameter|native_compute)\b' \
-                "$proof_dir/ResidencyExactClaim.v" "$proof_dir/GeneratedWP8SExactClaim.v"; then
+                "$proof_dir/ResidencyExactClaim.v" "$proof_dir/ResidencyExactClaimSoundness.v" \
+                "$proof_dir/GeneratedWP8SExactClaim.v"; then
               echo 'Unchecked generated declaration found' >&2
               exit 1
             fi

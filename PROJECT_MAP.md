@@ -217,6 +217,9 @@ Its finite Rocq certificate is in `naux-meta-coq/ResidencyExactClaim.v`, with
 the authenticated generator `scripts/s4_residency_exact_claim_coq_certificate.py`.
 The dedicated `formal-exact-claim.yml` workflow recomputes the 120 raw sample
 pairs, checks exact claim identity/scope, and exercises mutation refusals.
+`ResidencyExactClaimSoundness.v` proves the sample/family checker equivalent
+to its declarative specification for arbitrary inputs, including complete
+coverage, count partitioning, and a permutation-preserving sorted median.
 See `naux-meta-coq/README.md` for reproduction and the external trust boundary.
 
 ## Token-efficient agent workflow

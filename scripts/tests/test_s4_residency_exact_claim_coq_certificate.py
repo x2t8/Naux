@@ -69,6 +69,8 @@ class ExactClaimPublicCertificateTests(unittest.TestCase):
         ))
         self.assertEqual(self.source.count("exact_baseline_ns :="), 120)
         self.assertEqual(self.source.count("_metrics_match :"), 4)
+        self.assertIn("wp8s_observation_satisfies_declarative_spec", self.source)
+        self.assertIn("wp8s_observation_has_full_coverage", self.source)
         self.assertNotRegex(self.source, r"\b(?:Axiom|Admitted|admit|Parameter|native_compute)\b")
 
     def test_static_refusal_cannot_become_a_certificate(self) -> None:
@@ -132,11 +134,15 @@ class ExactClaimPublicCertificateTests(unittest.TestCase):
         def compile_source(path: Path) -> subprocess.CompletedProcess[str]:
             return subprocess.run(
                 [ROCQ, "c", "-Q", str(self.directory), "NauxCore", str(path)],
-                capture_output=True, text=True, timeout=60,
+                capture_output=True, text=True, timeout=60, cwd=self.directory,
             )
 
         compiled_model = compile_source(model)
         self.assertEqual(compiled_model.returncode, 0, compiled_model.stdout + compiled_model.stderr)
+        soundness = self.directory / "ResidencyExactClaimSoundness.v"
+        shutil.copyfile(ROOT / "naux-meta-coq/ResidencyExactClaimSoundness.v", soundness)
+        compiled_soundness = compile_source(soundness)
+        self.assertEqual(compiled_soundness.returncode, 0, compiled_soundness.stdout + compiled_soundness.stderr)
         proof = self.directory / "GeneratedWP8SExactClaim.v"
         proof.write_text(self.source)
         good = compile_source(proof)
@@ -144,7 +150,7 @@ class ExactClaimPublicCertificateTests(unittest.TestCase):
         checked = subprocess.run(
             [ROCQ, "check", "-silent", "-o", "-Q", str(self.directory), "NauxCore",
              "NauxCore.GeneratedWP8SExactClaim"],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, timeout=60, cwd=self.directory,
         )
         self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
         self.assertIn("* Axioms: <none>", checked.stdout + checked.stderr)
@@ -257,6 +263,53 @@ Proof. vm_compute. reflexivity. Qed.
         differential_path.write_text("\n".join(differential) + "\n")
         agreement = compile_source(differential_path)
         self.assertEqual(agreement.returncode, 0, agreement.stdout + agreement.stderr)
+
+
+@unittest.skipUnless(ROCQ, "Rocq is required for general soundness tests")
+class ExactClaimSoundnessTests(unittest.TestCase):
+    def test_general_proofs_reject_weakened_checker(self) -> None:
+        # A mutated executable model must still compile before we ask whether
+        # the unchanged general proof rejects it. No fixture/sample or public
+        # asset is needed for this test of universally quantified theorems.
+        model = (ROOT / "naux-meta-coq/ResidencyExactClaim.v").read_text()
+        soundness = ROOT / "naux-meta-coq/ResidencyExactClaimSoundness.v"
+        mutations = (
+            ("Nat.eqb (List.length samples) 30 &&", "true &&"),
+            ("Nat.eqb (List.length kernels) 4 &&", "true &&"),
+            ("Nat.eqb (exact_pair_number p) number &&", "true &&"),
+            ("Bool.eqb (exact_baseline_first p) (Nat.odd number) &&", "true &&"),
+            ("(0 <? exact_baseline_ns p) && (0 <? exact_candidate_ns p).",
+             "(0 <? exact_baseline_ns p) && true."),
+            ("| head :: tail => exact_insert head (exact_sort tail)",
+             "| head :: tail => exact_sort tail"),
+            ("21 * exact_candidate_total samples <=?", "20 * exact_candidate_total samples <=?"),
+            ("100 * exact_tail_num samples <=?", "99 * exact_tail_num samples <=?"),
+        )
+        for old, new in ((None, None), *mutations):
+            with self.subTest(mutation=old), tempfile.TemporaryDirectory(prefix="naux-wp8s-law-") as name:
+                directory = Path(name)
+                changed = model if old is None else model.replace(old, new, 1)
+                if old is not None:
+                    self.assertNotEqual(changed, model)
+                path = directory / "ResidencyExactClaim.v"
+                path.write_text(changed)
+                proof = directory / soundness.name
+                shutil.copyfile(soundness, proof)
+
+                def compile_source(source: Path) -> subprocess.CompletedProcess[str]:
+                    return subprocess.run(
+                        [ROCQ, "c", "-Q", str(directory), "NauxCore", str(source)],
+                        capture_output=True, text=True, timeout=60, cwd=directory,
+                    )
+
+                compiled = compile_source(path)
+                self.assertEqual(compiled.returncode, 0, compiled.stdout + compiled.stderr)
+                checked = compile_source(proof)
+                if old is None:
+                    self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+                else:
+                    self.assertNotEqual(checked.returncode, 0, "general theorem accepted weakened checker")
+                    self.assertIn("Error:", checked.stdout + checked.stderr)
 
 
 if __name__ == "__main__":

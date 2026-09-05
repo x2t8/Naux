@@ -10,4 +10,5 @@ From NauxCore Require Export
   ResidencyTimingCarrier ResidencyMeasurementRunner ResidencyEvidenceReplay
   ResidencyPairedRunner ResidencyPairedEvidenceReplay
   ResidencyPairedThreshold ResidencyClaimAdmission
-  ResidencyPublicProtocolAcceptance ResidencyPublicBundle ResidencyExactClaim.
+  ResidencyPublicProtocolAcceptance ResidencyPublicBundle ResidencyExactClaim
+  ResidencyExactClaimSoundness.
