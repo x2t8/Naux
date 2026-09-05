@@ -339,6 +339,46 @@ with Rocq 9.1, and requires an empty axiom set. The generated object closes
 only the public-protocol gate; bundle, request, approval, and claim authority
 remain absent.
 
+### WP8S: the one approved, measured observation
+
+`ResidencyExactClaim.v` and
+`scripts/s4_residency_exact_claim_coq_certificate.py` cover the exact WP8S
+observation, without relaxing any earlier static refusal model. The generator
+requires the pinned public archive, receipt, and a byte-identical dynamic
+admission report; a static report cannot generate this certificate.
+
+Unlike the earlier static-policy certificates, this certificate contains all
+120 raw sample pairs (warmups excluded). Rocq recomputes wins/ties/losses,
+the paired median, exact binomial tail and total-time ratio using binary
+integers. It checks the four WP8O decisions and their reduced fractions,
+30 pairs per kernel, positive durations, and the AB/BA ordering. The claim
+text and host/commit/evidence identities are compared to separately tracked
+constants. Theorems forbid rewording, language-wide performance claims,
+cross-implementation comparisons, and absent approval or replay records.
+
+`.github/workflows/formal-exact-claim.yml` downloads the public assets without
+credentials, regenerates the certificate twice, and checks it with Rocq 9.1.
+It also requires eleven deliberately corrupted certificates to fail, tests
+threshold boundaries and 51 differential fixtures against the sealed Python
+decision law, and requires `Axioms: <none>`. To run the same tests
+locally with Rocq on PATH and both public assets already downloaded:
+
+```bash
+NAUX_WP8S_PUBLIC_DIR=/path/to/downloaded-assets \
+  python3 -m unittest -v scripts.tests.test_s4_residency_exact_claim_coq_certificate
+```
+
+Without that directory, public-artifact tests are explicitly skipped; without
+Rocq, kernel tests are explicitly skipped. Python-only tests are not formal
+verification. `--help` on the generator lists the report/archive/receipt and
+fresh output path required to reproduce the generated module.
+
+Trust boundary: the kernel checks arithmetic and scope over the supplied
+finite data. The external Python validators still authenticate SHA-256,
+archive contents, replay lineage, and the recorded release approval. This is
+not a proof of those validators, physical timing, public reachability, owner
+identity, a digital signature, the whole compiler, or a comparison against C.
+
 ```bash
 make -C naux-meta-coq
 rocq check -silent -o -Q naux-meta-coq NauxCore \
@@ -356,7 +396,8 @@ rocq check -silent -o -Q naux-meta-coq NauxCore \
   NauxCore.ResidencyMeasurementRunner NauxCore.ResidencyEvidenceReplay \
   NauxCore.ResidencyPairedRunner NauxCore.ResidencyPairedEvidenceReplay \
   NauxCore.ResidencyPairedThreshold NauxCore.ResidencyClaimAdmission \
-  NauxCore.ResidencyPublicProtocolAcceptance
+  NauxCore.ResidencyPublicProtocolAcceptance NauxCore.ResidencyPublicBundle \
+  NauxCore.ResidencyExactClaim
 make -C naux-meta-coq clean
 ```
 

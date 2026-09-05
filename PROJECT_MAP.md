@@ -213,6 +213,12 @@ assets emits `admitted-exact-observation`. Start with
 `python3 scripts/s4_register_residency_exact_claim.py --help` and do not
 generalize the admitted text beyond `WP8S-APPROVED-CLAIM.txt`.
 
+Its finite Rocq certificate is in `naux-meta-coq/ResidencyExactClaim.v`, with
+the authenticated generator `scripts/s4_residency_exact_claim_coq_certificate.py`.
+The dedicated `formal-exact-claim.yml` workflow recomputes the 120 raw sample
+pairs, checks exact claim identity/scope, and exercises mutation refusals.
+See `naux-meta-coq/README.md` for reproduction and the external trust boundary.
+
 ## Token-efficient agent workflow
 
 Serena indexes Rust and Python locally. Its cache is ignored under

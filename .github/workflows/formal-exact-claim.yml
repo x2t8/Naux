@@ -1,0 +1,81 @@
+name: Formal exact observation certificate
+
+on:
+  push:
+    paths:
+      - "naux-meta-coq/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+      - "scripts/license_transition.py"
+      - "distribution/s4-performance/**"
+      - "distribution/license-transition/**"
+      - ".github/workflows/formal-exact-claim.yml"
+      - ".github/workflows/s4-*.yml"
+      - "LICENSE"
+  pull_request:
+    paths:
+      - "naux-meta-coq/**"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+      - "scripts/license_transition.py"
+      - "distribution/s4-performance/**"
+      - "distribution/license-transition/**"
+      - ".github/workflows/formal-exact-claim.yml"
+      - ".github/workflows/s4-*.yml"
+      - "LICENSE"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-observation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Retrieve pinned public evidence without credentials
+        run: |
+          mkdir .wp8s-formal-input
+          asset=naux-s4-register-residency-paired-56b6447a13ac648c8e35e64daa34ddabb7e0b51c.tar.gz
+          base=https://github.com/x2t8/Naux/releases/download/s4-wp8m-56b6447
+          for name in "$asset" "$asset.receipt.tsv"; do
+            curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+              --connect-timeout 15 --max-time 120 "$base/$name" -o ".wp8s-formal-input/$name"
+          done
+          python3 scripts/s4_register_residency_exact_claim.py \
+            --archive ".wp8s-formal-input/$asset" \
+            --receipt ".wp8s-formal-input/$asset.receipt.tsv" \
+            > .wp8s-formal-input/admission.tsv
+          for copy in a b; do
+            python3 scripts/s4_residency_exact_claim_coq_certificate.py \
+              --archive ".wp8s-formal-input/$asset" \
+              --receipt ".wp8s-formal-input/$asset.receipt.tsv" \
+              --admission-report .wp8s-formal-input/admission.tsv \
+              --output ".wp8s-formal-input/Generated-$copy.v"
+          done
+          cmp .wp8s-formal-input/Generated-a.v .wp8s-formal-input/Generated-b.v
+      - name: Check finite arithmetic, exact claim, and mutation refusals in Rocq
+        uses: rocq-prover/docker-opam-action@126d4ac196f8133729a1cb0d2aa1ee7106efec58 # v1.5.2
+        with:
+          custom_image: rocq/rocq-prover:9.1
+          custom_script: |
+            set -eo pipefail
+            eval "$(opam env)"
+            rocq --version
+            export NAUX_WP8S_PUBLIC_DIR="$PWD/.wp8s-formal-input"
+            export NAUX_ROCQ="$(command -v rocq)"
+            python3 -m unittest -v scripts.tests.test_s4_residency_exact_claim_coq_certificate
+            proof_dir=$(mktemp -d /tmp/naux-wp8s-proof.XXXXXX)
+            cp naux-meta-coq/ResidencyExactClaim.v "$proof_dir/ResidencyExactClaim.v"
+            cp .wp8s-formal-input/Generated-a.v "$proof_dir/GeneratedWP8SExactClaim.v"
+            rocq c -Q "$proof_dir" NauxCore "$proof_dir/ResidencyExactClaim.v"
+            rocq c -Q "$proof_dir" NauxCore "$proof_dir/GeneratedWP8SExactClaim.v"
+            rocq check -silent -o -Q "$proof_dir" NauxCore \
+              NauxCore.GeneratedWP8SExactClaim 2>&1 | tee "$proof_dir/kernel-check.txt"
+            grep -Fq '* Axioms: <none>' "$proof_dir/kernel-check.txt"
+            if grep -n -E '\b(Admitted|admit|Axiom|Parameter|native_compute)\b' \
+                "$proof_dir/ResidencyExactClaim.v" "$proof_dir/GeneratedWP8SExactClaim.v"; then
+              echo 'Unchecked generated declaration found' >&2
+              exit 1
+            fi
