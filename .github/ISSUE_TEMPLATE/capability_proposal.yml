@@ -1,0 +1,105 @@
+name: Capability or design proposal
+description: Establish a demonstrated NAUX capability gap before implementation
+title: "[proposal] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a new capability or a design change. For a reproducible defect, use the bug-report form instead.
+
+        Read `CONTRIBUTING.md`, `PROJECT_MAP.md`, and the contracts for the affected subsystem before proposing work. An issue records a problem and an acceptance target; it is not a promise that an implementation will be merged.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Concrete problem
+      description: Describe the workload, user-visible limitation, or research problem that exists now.
+      placeholder: Existing behavior prevents...
+    validations:
+      required: true
+
+  - type: textarea
+    id: subsystem
+    attributes:
+      label: Affected subsystem and risk
+      description: Identify the subsystem, its route in PROJECT_MAP.md, and the low, medium, or high risk boundary this proposal may affect.
+      placeholder: "Subsystem: canonical Machine IR; risk: high; route: ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: existing
+    attributes:
+      label: Existing mechanism and repository research
+      description: Link the closest implementation, tests, documentation, and related open or closed issues and PRs. Explain what the existing mechanism already handles.
+      placeholder: Existing mechanism A handles B and C...
+    validations:
+      required: true
+
+  - type: textarea
+    id: gap
+    attributes:
+      label: Demonstrated capability gap
+      description: State the exact unsupported condition, why the current implementation cannot handle it, and why another subsystem does not already solve it.
+      placeholder: Existing mechanism A does not support D under condition E because F.
+    validations:
+      required: true
+
+  - type: textarea
+    id: delta
+    attributes:
+      label: Proposed capability delta
+      description: Explain precisely what would become possible or correct after the change. Avoid prescribing implementation details unless the design requires them.
+    validations:
+      required: true
+
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Contracts, invariants, and boundaries
+      description: Identify affected semantics, parity, memory, compatibility, performance, provenance, evidence, resource, or fallback boundaries. Write "none identified" only after checking the relevant contracts.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and validation plan
+      description: State what evidence would demonstrate the claimed delta and what that evidence would not establish. Match the plan to the risk of the change.
+      placeholder: Regression tests, parity, replay, mutation, benchmark protocol, verifier result, bounded proof, or another reproducible check as applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and architectural cost
+      description: Describe simpler options considered, why reuse is insufficient, and the expected maintenance, dependency, review, or compatibility cost.
+    validations:
+      required: true
+
+  - type: textarea
+    id: exclusions
+    attributes:
+      label: Deliberate exclusions
+      description: State what this proposal will not change, unsupported cases that remain, and any claim deliberately kept out of scope.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I searched the repository and existing open and closed issues and pull requests.
+          required: true
+        - label: I read PROJECT_MAP.md and the contracts relevant to the affected subsystem.
+          required: true
+        - label: I identified the closest existing mechanism and explained why this is not duplicate functionality.
+          required: true
+        - label: For major or high-risk work, I will wait for an agreed design boundary before substantial implementation.
+          required: true
+        - label: This proposal contains no secret or unpatched vulnerability details.
+          required: true
