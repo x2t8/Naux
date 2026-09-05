@@ -222,6 +222,13 @@ to its declarative specification for arbitrary inputs, including complete
 coverage, count partitioning, and a permutation-preserving sorted median.
 See `naux-meta-coq/README.md` for reproduction and the external trust boundary.
 
+The next C-comparison slice is a draft, not a benchmark result. Start with
+`scripts/s4_comparison_plan.py` and
+`distribution/s4-performance/COMPARISON-PLAN.md`: the planner checks the current
+r12 carrier and historical C/threshold authorities, then proposes a balanced
+three-role schedule. It cannot acquire samples or combine old observations.
+Regression tests are in `scripts/tests/test_s4_comparison_plan.py`.
+
 ## Token-efficient agent workflow
 
 Serena indexes Rust and Python locally. Its cache is ignored under

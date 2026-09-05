@@ -41,3 +41,7 @@ jobs:
             scripts.tests.test_s4_register_residency_paired_threshold_replay \
             scripts.tests.test_s4_register_residency_claim_admission_static \
             scripts.tests.test_s4_register_residency_claim_admission_refusal
+      - name: Check the draft r12 and C comparison plan (no measurement)
+        run: |
+          python3 scripts/s4_comparison_plan.py --schedule
+          python3 -m unittest scripts.tests.test_s4_comparison_plan
