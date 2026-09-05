@@ -1,0 +1,53 @@
+NAUX-S4-REGISTER-RESIDENCY-EXACT-CLAIM-CONTRACT	1
+meta	policy-version	1.0.0
+meta	parent-claim-protocol-authority	c2b582433f9c28c7b74b624f310754319446e7555d1aeb956b8d1d5b16c55c27
+meta	parent-public-bundle-authority	2d58aa292d83e89cf8d2e691b46968f2c31f8acad45d4f89a6063e92f0b30957
+meta	parent-paired-threshold-authority	582e3b7036a1909ed0234c1c421226891a52184c819a1b3f0d8d96b8b4c3209c
+meta	claim-class	exact-four-kernel-register-residency-threshold-observation
+meta	claim-scope	exact-host-commit-bundle-threshold-and-four-kernels-only
+meta	static-status	approval-recorded-evidence-required
+meta	dynamic-status	admitted-only-after-exact-read-only-replay
+meta	target	x86_64-unknown-linux-gnu
+release	repository	x2t8/Naux
+release	tag	s4-wp8m-56b6447
+release	id	382979878
+release	url	https://github.com/x2t8/Naux/releases/tag/s4-wp8m-56b6447
+release	author	x2t8
+release	updated-at	2026-09-05T06:31:18Z
+release	body-bytes	1256
+release	body-sha256	d4127d9b3870765e04dc8ea22ea66d6344d4c24b05e26162db30e68430cf59f6
+asset	archive-id	544820377
+asset	archive-name	naux-s4-register-residency-paired-56b6447a13ac648c8e35e64daa34ddabb7e0b51c.tar.gz
+asset	archive-bytes	11699
+asset	archive-sha256	c94dd7bb8743f2a740227e57b75a51e56b0ff309492f2277628a297de0cfee69
+asset	receipt-id	544820376
+asset	receipt-name	naux-s4-register-residency-paired-56b6447a13ac648c8e35e64daa34ddabb7e0b51c.tar.gz.receipt.tsv
+asset	receipt-bytes	956
+asset	receipt-sha256	6441d7effac7f21a692ff28ee0504473c90f7cd77a2d8d599888e69c33d45d81
+evidence	source-commit	56b6447a13ac648c8e35e64daa34ddabb7e0b51c
+evidence	host-attestation	85eae3c1b490e94f8c5ca06f224965e79bd66a54ab3828343499a282eb8ead9c
+evidence	bundle-root	81fbe0034fb2561d8b86f31552d170ccb4f7273545fcc1596e46ccb7f1c02bb9
+evidence	session-root	77c5447ef1db3bf95a517926383f3ff17eebd53dfa832cef98348a9d337ecc04
+evidence	evidence-root	16f5c8eec57f4a1c36a2f1a02d04f81684bfd9f1b859d836995525323f0e12c5
+evidence	public-intake-root	a77a45ddf18b4611a569acb65bb1347370ef021f354b46ff0bfbed671b67d2fc
+evidence	threshold-root	9bb2df954d9e8f03bc5119906fcdc3e7a5ccc6aaa0601809ff762489f102d79f
+evidence	kernel-count	4
+evidence	pairs-per-kernel	30
+claim	path	distribution/s4-performance/WP8S-APPROVED-CLAIM.txt
+claim	bytes	703
+claim	sha256	4c2067dc2734669e4ac9f98d453c5c54180d3cfb59760cffd38236ac1bf19505
+approval	path	distribution/s4-performance/WP8S-RELEASE-APPROVAL.md
+approval	status	explicit-owner-approved
+approval	authority	github-release-author-x2t8
+approval	durability	public-release-plus-tracked-snapshot
+approval	signature-status	not-a-cryptographic-signature
+gate	01	parent-protocol	required	exact-wp8p-authority
+gate	02	public-bundle	required	exact-wp8r-read-only-intake
+gate	03	paired-evidence	required	exact-wp8n-evidence-root
+gate	04	paired-threshold	required	exact-wp8o-four-of-four-pass
+gate	05	claim-text	required	exact-bytes-and-sha256
+gate	06	public-assets	required	exact-release-locators-sizes-and-sha256
+gate	07	owner-approval	required	exact-public-release-body-snapshot
+gate	08	non-self-admission	required	checker-cannot-create-or-edit-approval
+gate	09	non-extrapolation	required	exact-scope-only
+seal	07d2fa5bc99ecf7eba10d78494f6f04e984c0c8a73605af12627151b1dc93000

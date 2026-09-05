@@ -1,0 +1,43 @@
+name: S4 public evidence review helper
+
+on:
+  push:
+    paths:
+      - ".github/workflows/s4-*.yml"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+      - "distribution/s4-performance/**"
+      - "LICENSE"
+  pull_request:
+    paths:
+      - ".github/workflows/s4-*.yml"
+      - "scripts/s4_*.py"
+      - "scripts/tests/test_s4_*.py"
+      - "distribution/s4-performance/**"
+      - "LICENSE"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate current static authorities
+        run: |
+          python3 scripts/s4_register_residency_public_bundle.py
+          python3 scripts/s4_register_residency_paired_threshold.py
+      - name: Test offline review and sealed replay boundaries
+        run: |
+          python3 -m unittest \
+            scripts.tests.test_s4_review_public_evidence \
+            scripts.tests.test_s4_register_residency_public_bundle_static \
+            scripts.tests.test_s4_register_residency_public_bundle_intake \
+            scripts.tests.test_s4_register_residency_paired_evidence_static \
+            scripts.tests.test_s4_register_residency_paired_evidence_replay \
+            scripts.tests.test_s4_register_residency_paired_threshold_static \
+            scripts.tests.test_s4_register_residency_paired_threshold_replay \
+            scripts.tests.test_s4_register_residency_claim_admission_static \
+            scripts.tests.test_s4_register_residency_claim_admission_refusal

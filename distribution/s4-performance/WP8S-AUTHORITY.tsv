@@ -1,0 +1,21 @@
+NAUX-S4-REGISTER-RESIDENCY-EXACT-CLAIM-AUTHORITY	1
+meta	scope	S4
+meta	work-package	S4-WP8S
+meta	authority-id	s4-register-residency-exact-claim-v1
+meta	static-status	approval-recorded-evidence-required
+meta	dynamic-status	exact-replay-admission-enabled
+meta	file-count	9
+component	claim-contract	distribution/s4-performance/WP8S-CLAIM-ADMISSION.tsv	07d2fa5bc99ecf7eba10d78494f6f04e984c0c8a73605af12627151b1dc93000
+parent	claim-protocol-authority	distribution/s4-performance/WP8P-AUTHORITY.tsv	c2b582433f9c28c7b74b624f310754319446e7555d1aeb956b8d1d5b16c55c27
+parent	public-bundle-authority	distribution/s4-performance/WP8R-AUTHORITY.tsv	2d58aa292d83e89cf8d2e691b46968f2c31f8acad45d4f89a6063e92f0b30957
+parent	paired-threshold-authority	distribution/s4-performance/WP8O-AUTHORITY.tsv	582e3b7036a1909ed0234c1c421226891a52184c819a1b3f0d8d96b8b4c3209c
+file	100644	4893	a872559f91ee95c0925bb8e141d828cf01cda24e24ab14493ed79374e38dac69	.github/workflows/s4-register-residency-exact-claim.yml	exact-claim
+file	100644	703	4c2067dc2734669e4ac9f98d453c5c54180d3cfb59760cffd38236ac1bf19505	distribution/s4-performance/WP8S-APPROVED-CLAIM.txt	exact-claim
+file	100644	3189	8d49f957f2012a9e3fe45699556a08e77802dad38424b2eb6fe20736e6d764fb	distribution/s4-performance/WP8S-CLAIM-ADMISSION.tsv	exact-claim
+file	100644	690	4eee435224b5d8f248368f0df92e9107d4c0441c79e1c7b545aa4f8f4a558177	distribution/s4-performance/WP8S-NONCLAIMS.md	exact-claim
+file	100644	979	1271cc26ea3e65b442587af5d14d759025f32b6b5b320384aed647c4f65ffa96	distribution/s4-performance/WP8S-README.md	exact-claim
+file	100644	1256	d4127d9b3870765e04dc8ea22ea66d6344d4c24b05e26162db30e68430cf59f6	distribution/s4-performance/WP8S-RELEASE-APPROVAL.md	exact-claim
+file	100644	18842	8ea8585575f66d660e3ed51f019ab3c59acf55e826c9c68ebb29dd4057087a15	scripts/s4_register_residency_exact_claim.py	exact-claim
+file	100644	7081	1a21701a35d08d42db0da6a2a2b6f4d5abaa06a64df2db3c3bc262c549847e98	scripts/tests/test_s4_register_residency_exact_claim_replay.py	exact-claim
+file	100644	6623	9a93997c87f0f69fcaf624ad30a86e4ce4dfecfd4dc7fa6400af108bf685384f	scripts/tests/test_s4_register_residency_exact_claim_static.py	exact-claim
+seal	319b9325cdba206037908ec3663d09f945ce3358fa91f9a25ed2e5ff791ad481

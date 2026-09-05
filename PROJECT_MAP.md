@@ -192,6 +192,27 @@ Rules that should shape changes:
 | Performance evidence | current Scope 4 ADR, carrier, matching script and TSV schema | static/replay tests before any real acquisition |
 | Release/docs | scope ladder, provenance, distribution contract | link, package, and clean-install scripts |
 
+### Public evidence review helper (2026-09-05)
+
+For an already downloaded S4 paired archive and receipt, start with
+`python3 scripts/s4_review_public_evidence.py --help`. The helper composes
+WP8R intake, WP8N replay, and WP8O threshold evaluation without changing their
+sealed validators. It emits the two original reports; exit zero means a
+passing threshold candidate, never claim admission. Pin the expected bundle
+and threshold roots when reviewing a specific observation. Its regression
+tests are in `scripts/tests/test_s4_review_public_evidence.py`; its independent
+CI workflow is `.github/workflows/s4-public-evidence-review.yml`.
+
+### Exact Scope 4 observation (2026-09-05)
+
+WP8S is the first claim-recognition layer. It binds the byte-exact owner
+approval on release `s4-wp8m-56b6447` to the pinned archive, receipt, host,
+commit, WP8N evidence, and WP8O threshold roots. Static validation remains
+`not-admitted`; only a successful read-only replay of those exact public
+assets emits `admitted-exact-observation`. Start with
+`python3 scripts/s4_register_residency_exact_claim.py --help` and do not
+generalize the admitted text beyond `WP8S-APPROVED-CLAIM.txt`.
+
 ## Token-efficient agent workflow
 
 Serena indexes Rust and Python locally. Its cache is ignored under
